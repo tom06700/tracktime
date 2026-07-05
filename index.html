@@ -626,6 +626,18 @@ function parseCsv(text){
 function parseJson(text){
   try{
     const j = JSON.parse(text);
+    // Format d'import propre généré depuis l'export GDPR TV Time
+    if(j && j.tracktime_import){
+      for(const s of (j.shows||[])){
+        const list = (parsed.byShow[s.name] ||= []);
+        for(const [se, ep, date] of (s.episodes||[])) list.push({s:se, e:ep, date});
+        // série suivie sans épisode : on la garde quand même
+        if(!(s.episodes||[]).length) parsed.byShow[s.name] = list;
+      }
+      for(const m of (j.movies||[]))
+        parsed.movies.push({title:m.title, date:m.date, watched:m.watched!==false});
+      return;
+    }
     const objects = Array.isArray(j) ? j : (j.data?.objects || j.objects || j.data);
     if(!Array.isArray(objects)) return;
     for(const o of objects){
@@ -640,7 +652,7 @@ function parseJson(text){
       if(!isNaN(season) && !isNaN(ep)){
         (parsed.byShow[name] ||= []).push({s:season, e:ep, date});
       } else if(type.includes('movie') || (isNaN(season) && isNaN(ep))){
-        parsed.movies.push({title:name, date});
+        parsed.movies.push({title:name, date, watched:true});
       }
     }
   }catch(e){
@@ -690,7 +702,8 @@ async function runImport(){
       else {
         if(!S.movies.some(x=>x.id===r.id))
           S.movies.push({ id:r.id, title:r.title||m.title, poster:r.poster_path,
-            runtime:110, watchedAt:m.date||new Date().toISOString() });
+            runtime:110,
+            watchedAt: m.watched===false ? null : (m.date||new Date().toISOString()) });
         matched++;
       }
     }catch(e){ failed++; importLog.push('⚠️ '+m.title+' : '+e.message); }
