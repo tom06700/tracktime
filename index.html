@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1017">
+<title>TrackTime</title>
+<style>
+  :root{
+    --bg:#0d1017; --surface:#161b26; --surface-hi:#1f2634;
+    --amber:#f5b942; --teal:#4fd1c5; --dim:#8b93a7; --text:#f2f4f8;
+    --danger:#e5636f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    overscroll-behavior-y:none}
+  body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+
+  header{position:sticky;top:0;z-index:20;background:rgba(13,16,23,.92);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+    display:flex;align-items:center;gap:8px}
+  header h1{font-size:22px;font-weight:800;letter-spacing:-.5px;margin:0;flex:1}
+  header h1 span{color:var(--amber)}
+  .icon-btn{background:var(--surface);border:none;color:var(--text);
+    width:38px;height:38px;border-radius:12px;font-size:17px;cursor:pointer}
+
+  main{padding:8px 16px 24px}
+  .section-label{font-size:11px;font-weight:700;letter-spacing:1.5px;
+    color:var(--dim);margin:14px 4px 8px}
+  .card{background:var(--surface);border-radius:16px;padding:12px;margin-bottom:10px}
+  .row{display:flex;align-items:center;gap:12px}
+  .poster{width:52px;height:78px;border-radius:10px;object-fit:cover;
+    background:var(--surface-hi);flex-shrink:0;display:flex;align-items:center;
+    justify-content:center;font-size:22px}
+  .poster.sm{width:44px;height:66px}
+  .grow{flex:1;min-width:0}
+  .title{font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .sub{font-size:12.5px;color:var(--dim);margin-top:3px}
+  .bar{height:6px;border-radius:4px;background:var(--surface-hi);margin-top:8px;overflow:hidden}
+  .bar>div{height:100%;background:var(--amber);border-radius:4px;transition:width .3s}
+  .bar>div.full{background:var(--teal)}
+  .chev{color:var(--dim);font-size:18px}
+
+  .empty{text-align:center;color:var(--dim);padding:56px 32px;line-height:1.6;font-size:14px}
+  .empty .big{font-size:44px;margin-bottom:12px}
+
+  nav{position:fixed;bottom:0;left:0;right:0;z-index:20;background:var(--surface);
+    display:flex;padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+    border-top:1px solid #232a38}
+  nav button{flex:1;background:none;border:none;color:var(--dim);font-size:10.5px;
+    font-weight:600;padding:6px 0;cursor:pointer;border-radius:12px}
+  nav button .ni{display:block;font-size:19px;margin-bottom:2px}
+  nav button.active{color:var(--amber);background:rgba(245,185,66,.1)}
+
+  /* Overlays plein écran */
+  .overlay{position:fixed;inset:0;z-index:40;background:var(--bg);display:none;
+    flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .overlay.open{display:flex}
+  .ov-head{position:sticky;top:0;background:rgba(13,16,23,.94);z-index:5;
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+    display:flex;align-items:center;gap:10px}
+  .ov-head h2{font-size:17px;font-weight:800;margin:0;flex:1;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .ov-body{padding:8px 16px calc(24px + env(safe-area-inset-bottom))}
+
+  input[type=text],input[type=search]{width:100%;background:var(--surface);
+    border:none;border-radius:14px;padding:13px 16px;color:var(--text);
+    font-size:16px;outline:none}
+  .btn{background:var(--amber);color:#131313;border:none;border-radius:12px;
+    padding:12px 18px;font-size:14px;font-weight:700;cursor:pointer}
+  .btn.ghost{background:var(--surface-hi);color:var(--text)}
+  .btn.sm{padding:8px 13px;font-size:13px;border-radius:10px}
+  .btn:disabled{opacity:.45}
+
+  .check{width:26px;height:26px;border-radius:50%;border:2px solid var(--dim);
+    background:none;color:transparent;font-size:14px;cursor:pointer;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;padding:0}
+  .check.on{background:var(--amber);border-color:var(--amber);color:#131313}
+  .check.teal.on{background:var(--teal);border-color:var(--teal)}
+
+  .season{background:var(--surface);border-radius:16px;margin-bottom:8px;overflow:hidden}
+  .season-head{display:flex;align-items:center;padding:13px 14px;cursor:pointer;gap:10px}
+  .season-head .t{flex:1;font-weight:700;font-size:15px}
+  .ep{display:flex;align-items:center;gap:11px;padding:9px 14px}
+  .ep .name{flex:1;font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ep.watched .name{color:var(--dim);text-decoration:line-through}
+  .season-actions{display:flex;gap:8px;padding:4px 14px 12px}
+
+  .stat-hero{text-align:center;padding:26px 16px}
+  .stat-hero .label{font-size:11px;letter-spacing:1.5px;font-weight:700;color:var(--dim)}
+  .stat-hero .val{font-size:42px;font-weight:800;color:var(--amber);letter-spacing:-1px;margin-top:8px}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .stat-card .ic{font-size:19px}
+  .stat-card .v{font-size:26px;font-weight:800;margin-top:8px}
+  .stat-card .l{font-size:12.5px;color:var(--dim)}
+  .stat-card .s{font-size:11.5px;color:var(--dim);margin-top:3px}
+
+  .log{font-size:12px;color:var(--dim);line-height:1.7;word-break:break-word}
+  .prog{height:8px;border-radius:4px;background:var(--surface-hi);overflow:hidden;margin:10px 0 6px}
+  .prog>div{height:100%;background:var(--amber);transition:width .2s}
+  .hint{font-size:13px;color:var(--dim);line-height:1.6}
+  .del{background:none;border:none;color:var(--dim);font-size:16px;cursor:pointer;padding:6px}
+  .banner{background:linear-gradient(135deg,#2a2113,#1f1a10);border:1px solid rgba(245,185,66,.3);
+    border-radius:16px;padding:13px 14px;font-size:13px;line-height:1.55;margin-bottom:10px}
+  a{color:var(--amber)}
+  .spin{display:inline-block;width:16px;height:16px;border:2px solid var(--dim);
+    border-top-color:var(--amber);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-3px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .toast{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom));left:50%;
+    transform:translateX(-50%);background:var(--surface-hi);color:var(--text);
+    padding:10px 18px;border-radius:14px;font-size:13.5px;z-index:60;
+    box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:86vw;text-align:center;
+    opacity:0;transition:opacity .25s;pointer-events:none}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Track<span>Time</span></h1>
+  <button class="icon-btn" onclick="openSearch()">🔍</button>
+  <button class="icon-btn" onclick="openSettings()">⚙️</button>
+</header>
+
+<main id="main"></main>
+
+<nav>
+  <button id="nav-shows" class="active" onclick="setTab('shows')"><span class="ni">📺</span>Séries</button>
+  <button id="nav-movies" onclick="setTab('movies')"><span class="ni">🎬</span>Films</button>
+  <button id="nav-stats" onclick="setTab('stats')"><span class="ni">📊</span>Stats</button>
+  <button id="nav-import" onclick="setTab('import')"><span class="ni">📥</span>Import</button>
+</nav>
+
+<!-- Recherche -->
+<div class="overlay" id="ov-search">
+  <div class="ov-head">
+    <button class="icon-btn" onclick="closeOv('ov-search')">←</button>
+    <h2>Recherche</h2>
+  </div>
+  <div class="ov-body">
+    <input type="search" id="q" placeholder="Série ou film…" enterkeyhint="search">
+    <div id="search-results" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- Détail série -->
+<div class="overlay" id="ov-show">
+  <div class="ov-head">
+    <button class="icon-btn" onclick="closeOv('ov-show')">←</button>
+    <h2 id="show-title"></h2>
+    <button class="icon-btn" onclick="deleteCurrentShow()">🗑️</button>
+  </div>
+  <div class="ov-body" id="show-body"></div>
+</div>
+
+<!-- Réglages -->
+<div class="overlay" id="ov-settings">
+  <div class="ov-head">
+    <button class="icon-btn" onclick="closeOv('ov-settings')">←</button>
+    <h2>Réglages</h2>
+  </div>
+  <div class="ov-body">
+    <div class="card">
+      <div class="title" style="font-size:16px">Clé API TMDB</div>
+      <p class="hint">Gratuite : compte sur <a href="https://www.themoviedb.org/settings/api" target="_blank">themoviedb.org</a> → Paramètres → API → « Clé d'API » (v3). Elle sert uniquement aux affiches, épisodes et durées.</p>
+      <input type="text" id="tmdb-key" placeholder="Colle ta clé API v3…" autocapitalize="off" autocorrect="off">
+      <div style="margin-top:10px"><button class="btn" onclick="saveKey()">Enregistrer</button></div>
+    </div>
+    <div class="card">
+      <div class="title" style="font-size:16px">Sauvegarde</div>
+      <p class="hint">Tes données vivent dans le stockage local de Safari. Exporte régulièrement une copie de secours.</p>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="btn ghost sm" onclick="exportBackup()">Exporter (JSON)</button>
+        <button class="btn ghost sm" onclick="document.getElementById('backup-file').click()">Restaurer</button>
+        <input type="file" id="backup-file" accept=".json" style="display:none" onchange="importBackup(this)">
+      </div>
+    </div>
+    <p class="hint" style="padding:0 4px">TrackTime v1.0 — 100 % local, aucun compte, aucune donnée envoyée ailleurs que TMDB (métadonnées).</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+/* ================= État ================= */
+const LS_KEY = 'tracktime_v1';
+let S = { shows: [], movies: [], key: '' };
+try { S = Object.assign(S, JSON.parse(localStorage.getItem(LS_KEY) || '{}')); } catch(e){}
+let tab = 'shows';
+let currentShowId = null;
+const seasonCache = {}; // "showId-season" -> episodes[]
+
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(S)); }
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ================= TMDB ================= */
+async function tmdb(path, params={}){
+  if(!S.key) throw new Error('Ajoute ta clé API TMDB dans ⚙️ Réglages.');
+  const u = new URL('https://api.themoviedb.org/3' + path);
+  u.searchParams.set('api_key', S.key);
+  u.searchParams.set('language', 'fr-FR');
+  for(const [k,v] of Object.entries(params)) u.searchParams.set(k, v);
+  const r = await fetch(u);
+  if(!r.ok) throw new Error('TMDB ' + r.status + ' — vérifie ta clé API.');
+  return r.json();
+}
+const img = (p, size='w185') => p ? `https://image.tmdb.org/t/p/${size}${p}` : null;
+
+/* ================= Navigation ================= */
+function setTab(t){
+  tab = t;
+  for(const id of ['shows','movies','stats','import'])
+    document.getElementById('nav-'+id).classList.toggle('active', id===t);
+  render();
+}
+function closeOv(id){ document.getElementById(id).classList.remove('open'); render(); }
+
+/* ================= Rendu principal ================= */
+function render(){
+  const m = document.getElementById('main');
+  if(tab==='shows') m.innerHTML = renderShows();
+  else if(tab==='movies') m.innerHTML = renderMovies();
+  else if(tab==='stats') m.innerHTML = renderStats();
+  else m.innerHTML = renderImport();
+}
+
+function posterHtml(p, emoji, sm){
+  const src = img(p, 'w154');
+  return src
+    ? `<img class="poster${sm?' sm':''}" src="${src}" loading="lazy" onerror="this.outerHTML='<div class=&quot;poster${sm?' sm':''}&quot;>${emoji}</div>'">`
+    : `<div class="poster${sm?' sm':''}">${emoji}</div>`;
+}
+
+/* ---- Séries ---- */
+function showProgress(s){
+  const w = Object.keys(s.watched||{}).length;
+  return { w, p: s.total ? Math.min(1, w/s.total) : 0 };
+}
+function renderShows(){
+  if(!S.shows.length) return `<div class="empty"><div class="big">📺</div>Aucune série pour l'instant.<br>Ajoute-en via 🔍 ou importe ton export TV Time.</div>`;
+  const sorted = [...S.shows].sort((a,b)=>a.name.localeCompare(b.name,'fr'));
+  const inProg = sorted.filter(s=>showProgress(s).p < 1);
+  const done = sorted.filter(s=>showProgress(s).p >= 1);
+  const card = s => {
+    const {w,p} = showProgress(s);
+    return `<div class="card row" onclick="openShow(${s.id})">
+      ${posterHtml(s.poster,'📺')}
+      <div class="grow">
+        <div class="title">${esc(s.name)}</div>
+        <div class="sub">${w}${s.total?' / '+s.total:''} épisodes vus</div>
+        <div class="bar"><div class="${p>=1?'full':''}" style="width:${(p*100).toFixed(0)}%"></div></div>
+      </div><span class="chev">›</span></div>`;
+  };
+  let h = '';
+  if(inProg.length) h += `<div class="section-label">EN COURS</div>` + inProg.map(card).join('');
+  if(done.length) h += `<div class="section-label">TERMINÉES / À JOUR</div>` + done.map(card).join('');
+  return h;
+}
+
+/* ---- Films ---- */
+function renderMovies(){
+  if(!S.movies.length) return `<div class="empty"><div class="big">🎬</div>Aucun film pour l'instant.<br>Ajoute-en via 🔍 ou importe ton export TV Time.</div>`;
+  const sorted = [...S.movies].sort((a,b)=>a.title.localeCompare(b.title,'fr'));
+  const wl = sorted.filter(m=>!m.watchedAt), seen = sorted.filter(m=>m.watchedAt);
+  const card = m => `<div class="card row">
+    ${posterHtml(m.poster,'🎬',true)}
+    <div class="grow"><div class="title" style="${m.watchedAt?'color:var(--dim)':''}">${esc(m.title)}</div></div>
+    <button class="check teal ${m.watchedAt?'on':''}" onclick="toggleMovie(${m.id})">✓</button>
+    <button class="del" onclick="removeMovie(${m.id})">✕</button></div>`;
+  let h = '';
+  if(wl.length) h += `<div class="section-label">À VOIR</div>` + wl.map(card).join('');
+  if(seen.length) h += `<div class="section-label">VUS (${seen.length})</div>` + seen.map(card).join('');
+  return h;
+}
+function toggleMovie(id){
+  const m = S.movies.find(x=>x.id===id); if(!m) return;
+  m.watchedAt = m.watchedAt ? null : new Date().toISOString();
+  save(); render();
+}
+function removeMovie(id){
+  S.movies = S.movies.filter(x=>x.id!==id); save(); render();
+}
+
+/* ---- Stats ---- */
+function fmtTime(min){
+  const d = Math.floor(min/1440), h = Math.floor((min%1440)/60), m = min%60;
+  if(d>0) return `${d} j ${h} h`;
+  if(h>0) return `${h} h ${String(m).padStart(2,'0')}`;
+  return `${m} min`;
+}
+function renderStats(){
+  const epCount = S.shows.reduce((s,x)=>s+Object.keys(x.watched||{}).length, 0);
+  const tvMin = S.shows.reduce((s,x)=>s+Object.keys(x.watched||{}).length*(x.runtime||42), 0);
+  const seen = S.movies.filter(m=>m.watchedAt);
+  const mvMin = seen.reduce((s,m)=>s+(m.runtime||110), 0);
+  const doneShows = S.shows.filter(s=>showProgress(s).p>=1).length;
+  const sc = (ic,v,l,s) => `<div class="card stat-card"><div class="ic">${ic}</div><div class="v">${v}</div><div class="l">${l}</div><div class="s">${s}</div></div>`;
+  return `<div class="card stat-hero">
+      <div class="label">TEMPS TOTAL DE VISIONNAGE</div>
+      <div class="val">${fmtTime(tvMin+mvMin)}</div></div>
+    <div class="stat-grid">
+      ${sc('📺', epCount, 'épisodes vus', fmtTime(tvMin))}
+      ${sc('🎬', seen.length, 'films vus', fmtTime(mvMin))}
+      ${sc('📚', S.shows.length, 'séries suivies', doneShows+' terminées')}
+      ${sc('🔖', S.movies.length-seen.length, 'films à voir', 'dans la watchlist')}
+    </div>`;
+}
+
+/* ================= Recherche ================= */
+function openSearch(){
+  document.getElementById('ov-search').classList.add('open');
+  document.getElementById('search-results').innerHTML = '';
+  const q = document.getElementById('q'); q.value=''; setTimeout(()=>q.focus(),100);
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('q').addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.target.blur(); doSearch(); }
+  });
+});
+async function doSearch(){
+  const q = document.getElementById('q').value.trim();
+  const box = document.getElementById('search-results');
+  if(!q) return;
+  box.innerHTML = `<div class="empty"><span class="spin"></span></div>`;
+  try{
+    const j = await tmdb('/search/multi', {query:q});
+    const results = j.results.filter(r=>r.media_type==='tv'||r.media_type==='movie');
+    if(!results.length){ box.innerHTML = `<div class="empty">Aucun résultat.</div>`; return; }
+    box.innerHTML = results.map(r=>{
+      const isTv = r.media_type==='tv';
+      const name = r.name||r.title||'';
+      const year = (r.first_air_date||r.release_date||'').slice(0,4);
+      const already = isTv ? S.shows.some(s=>s.id===r.id) : S.movies.some(m=>m.id===r.id);
+      return `<div class="card row">
+        ${posterHtml(r.poster_path, isTv?'📺':'🎬', true)}
+        <div class="grow"><div class="title">${esc(name)}</div>
+          <div class="sub">${isTv?'Série':'Film'}${year?' · '+year:''}</div></div>
+        ${already ? `<span style="color:var(--teal);font-size:19px">✓</span>`
+          : `<button class="btn sm" onclick='addFromSearch(${r.id}, ${isTv})'>＋</button>`}
+      </div>`;
+    }).join('');
+  }catch(e){ box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function addFromSearch(id, isTv){
+  try{
+    if(isTv){
+      if(!S.shows.some(s=>s.id===id)){
+        const d = await tmdb('/tv/'+id);
+        S.shows.push({ id, name:d.name, poster:d.poster_path,
+          total:d.number_of_episodes, seasons:d.number_of_seasons,
+          runtime:(d.episode_run_time&&d.episode_run_time[0])||42,
+          status:d.status, watched:{} });
+        toast(`« ${d.name} » ajoutée 📺`);
+      }
+    } else {
+      if(!S.movies.some(m=>m.id===id)){
+        const d = await tmdb('/movie/'+id);
+        S.movies.push({ id, title:d.title, poster:d.poster_path,
+          runtime:d.runtime||110, watchedAt:null });
+        toast(`« ${d.title} » ajouté 🎬`);
+      }
+    }
+    save(); doSearch();
+  }catch(e){ toast(e.message); }
+}
+
+/* ================= Détail série ================= */
+async function openShow(id){
+  currentShowId = id;
+  const s = S.shows.find(x=>x.id===id); if(!s) return;
+  document.getElementById('show-title').textContent = s.name;
+  const body = document.getElementById('show-body');
+  document.getElementById('ov-show').classList.add('open');
+  body.innerHTML = `<div class="empty"><span class="spin"></span></div>`;
+  try{
+    const d = await tmdb('/tv/'+id);
+    s.total = d.number_of_episodes; s.seasons = d.number_of_seasons;
+    s.status = d.status; s.poster = d.poster_path;
+    if(d.episode_run_time && d.episode_run_time[0]) s.runtime = d.episode_run_time[0];
+    save();
+    const seasonNums = d.seasons.map(x=>x.season_number).filter(n=>n>0);
+    renderShowBody(s, seasonNums);
+  }catch(e){ body.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function renderShowBody(s, seasonNums){
+  const {w,p} = showProgress(s);
+  document.getElementById('show-body').innerHTML = `
+    <div class="card">
+      <div class="row"><div class="grow" style="font-weight:700;font-size:14.5px">${w}${s.total?' / '+s.total:''} épisodes</div>
+        <span class="sub">${s.status==='Ended'?'Terminée':'En diffusion'}</span></div>
+      <div class="bar" style="height:8px"><div class="${p>=1?'full':''}" style="width:${(p*100).toFixed(0)}%"></div></div>
+    </div>
+    ${seasonNums.map(n=>{
+      const wCount = Object.keys(s.watched).filter(k=>k.startsWith('S'+n+'E')).length;
+      return `<div class="season" id="season-${n}">
+        <div class="season-head" onclick="toggleSeason(${n})">
+          <span class="t">Saison ${n}</span>
+          <span class="sub" id="season-sub-${n}">${wCount} vus</span>
+          <span class="chev">▾</span></div>
+        <div id="season-eps-${n}" style="display:none"></div>
+      </div>`;
+    }).join('')}`;
+}
+async function toggleSeason(n){
+  const box = document.getElementById('season-eps-'+n);
+  if(box.style.display!=='none'){ box.style.display='none'; return; }
+  box.style.display='block';
+  const key = currentShowId+'-'+n;
+  if(!seasonCache[key]){
+    box.innerHTML = `<div style="padding:14px"><span class="spin"></span></div>`;
+    try{
+      const j = await tmdb(`/tv/${currentShowId}/season/${n}`);
+      seasonCache[key] = j.episodes || [];
+    }catch(e){ box.innerHTML = `<div style="padding:14px" class="hint">${esc(e.message)}</div>`; return; }
+  }
+  renderSeasonEps(n);
+}
+function renderSeasonEps(n){
+  const s = S.shows.find(x=>x.id===currentShowId);
+  const eps = seasonCache[currentShowId+'-'+n] || [];
+  const box = document.getElementById('season-eps-'+n);
+  box.innerHTML = `
+    <div class="season-actions">
+      <button class="btn ghost sm" onclick="setSeason(${n}, true)">✓ Tout vu</button>
+      <button class="btn ghost sm" onclick="setSeason(${n}, false)">Tout décocher</button>
+    </div>
+    ${eps.map(e=>{
+      const k = 'S'+n+'E'+e.episode_number;
+      const on = !!s.watched[k];
+      return `<div class="ep ${on?'watched':''}">
+        <button class="check ${on?'on':''}" onclick="toggleEp(${n},${e.episode_number})">✓</button>
+        <span class="name">${e.episode_number}. ${esc(e.name||'Épisode '+e.episode_number)}</span>
+      </div>`;
+    }).join('')}<div style="height:8px"></div>`;
+  const wCount = Object.keys(s.watched).filter(k=>k.startsWith('S'+n+'E')).length;
+  document.getElementById('season-sub-'+n).textContent = `${wCount} / ${eps.length} vus`;
+}
+function toggleEp(n, ep){
+  const s = S.shows.find(x=>x.id===currentShowId);
+  const k = 'S'+n+'E'+ep;
+  if(s.watched[k]) delete s.watched[k];
+  else s.watched[k] = new Date().toISOString();
+  save(); renderSeasonEps(n); updateShowHeader(s);
+}
+function setSeason(n, on){
+  const s = S.shows.find(x=>x.id===currentShowId);
+  const eps = seasonCache[currentShowId+'-'+n] || [];
+  for(const e of eps){
+    const k = 'S'+n+'E'+e.episode_number;
+    if(on){ if(!s.watched[k]) s.watched[k] = new Date().toISOString(); }
+    else delete s.watched[k];
+  }
+  save(); renderSeasonEps(n); updateShowHeader(s);
+}
+function updateShowHeader(s){
+  // Rafraîchit juste la carte du haut sans refermer les saisons
+  const {w,p} = showProgress(s);
+  const card = document.querySelector('#show-body .card');
+  if(card) card.innerHTML = `
+    <div class="row"><div class="grow" style="font-weight:700;font-size:14.5px">${w}${s.total?' / '+s.total:''} épisodes</div>
+      <span class="sub">${s.status==='Ended'?'Terminée':'En diffusion'}</span></div>
+    <div class="bar" style="height:8px"><div class="${p>=1?'full':''}" style="width:${(p*100).toFixed(0)}%"></div></div>`;
+}
+function deleteCurrentShow(){
+  const s = S.shows.find(x=>x.id===currentShowId); if(!s) return;
+  if(!confirm(`Retirer « ${s.name} » et sa progression ?`)) return;
+  S.shows = S.shows.filter(x=>x.id!==currentShowId);
+  save(); closeOv('ov-show');
+}
+
+/* ================= Réglages ================= */
+function openSettings(){
+  document.getElementById('tmdb-key').value = S.key;
+  document.getElementById('ov-settings').classList.add('open');
+}
+function saveKey(){
+  S.key = document.getElementById('tmdb-key').value.trim();
+  save(); toast('Clé enregistrée ✓');
+}
+function exportBackup(){
+  const blob = new Blob([JSON.stringify(S, null, 1)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tracktime-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+function importBackup(input){
+  const f = input.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const j = JSON.parse(r.result);
+      if(!Array.isArray(j.shows)) throw new Error('format inattendu');
+      S = Object.assign({shows:[],movies:[],key:S.key}, j);
+      save(); toast('Sauvegarde restaurée ✓'); render();
+    }catch(e){ toast('Fichier non reconnu'); }
+  };
+  r.readAsText(f);
+  input.value = '';
+}
+
+/* ================= Import TV Time ================= */
+let parsed = { byShow:{}, movies:[] };
+let importLog = [];
+let importing = false, importPct = 0;
+
+function renderImport(){
+  const showNames = Object.keys(parsed.byShow);
+  const epCount = showNames.reduce((s,k)=>s+parsed.byShow[k].length, 0);
+  return `
+    <div class="banner">⏳ <b>Exporte tes données TV Time avant le 15 juillet 2026</b> sur <a href="https://gdpr.tvtime.com/gdpr/self-service" target="_blank">gdpr.tvtime.com</a> — après, tout est supprimé définitivement.</div>
+    <div class="card">
+      <div class="title" style="font-size:16px">Importer l'export TV Time</div>
+      <p class="hint">Dézippe l'archive dans l'app Fichiers, puis sélectionne les CSV/JSON (épisodes vus, films…).</p>
+      <button class="btn" onclick="document.getElementById('import-files').click()" ${importing?'disabled':''}>📂 Choisir les fichiers</button>
+      <input type="file" id="import-files" multiple accept=".csv,.json,.txt" style="display:none" onchange="handleFiles(this)">
+    </div>
+    ${(showNames.length||parsed.movies.length) ? `
+    <div class="card">
+      <div class="title" style="font-size:15px">Détecté : ${showNames.length} séries (${epCount} épisodes), ${parsed.movies.length} films</div>
+      ${importing
+        ? `<div class="prog"><div style="width:${(importPct*100).toFixed(0)}%"></div></div>
+           <div class="hint">Correspondance TMDB… ${(importPct*100).toFixed(0)} %</div>`
+        : `<div style="display:flex;gap:8px;margin-top:10px">
+             <button class="btn" onclick="runImport()">Importer via TMDB</button>
+             <button class="btn ghost" onclick="resetImport()">Vider</button></div>`}
+    </div>` : ''}
+    ${importLog.length ? `<div class="card log">${importLog.slice(-40).reverse().map(esc).join('<br>')}</div>` : ''}`;
+}
+
+function handleFiles(input){
+  const files = [...input.files];
+  let pending = files.length;
+  for(const f of files){
+    const r = new FileReader();
+    r.onload = () => {
+      const before = totalParsed();
+      const txt = r.result;
+      if(/^\s*[\[{]/.test(txt)) parseJson(txt); else parseCsv(txt);
+      importLog.push(`✅ ${f.name} : ${totalParsed()-before} entrées détectées`);
+      if(--pending===0) render();
+    };
+    r.onerror = () => { importLog.push(`⚠️ ${f.name} : lecture impossible`); if(--pending===0) render(); };
+    r.readAsText(f);
+  }
+  input.value = '';
+}
+function totalParsed(){
+  return Object.values(parsed.byShow).reduce((s,l)=>s+l.length,0) + parsed.movies.length;
+}
+function resetImport(){ parsed = {byShow:{},movies:[]}; importLog = []; render(); }
+
+/* Parseur CSV avec guillemets */
+function readCsv(text){
+  const rows = []; let row = [], field = '', q = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){ field+='"'; i++; } else q=false; }
+      else field+=c;
+    } else {
+      if(c==='"') q=true;
+      else if(c===','){ row.push(field); field=''; }
+      else if(c==='\n'||c==='\r'){
+        if(c==='\r'&&text[i+1]==='\n') i++;
+        row.push(field); field='';
+        if(row.some(f=>f.trim())) rows.push(row);
+        row=[];
+      } else field+=c;
+    }
+  }
+  if(field||row.length){ row.push(field); if(row.some(f=>f.trim())) rows.push(row); }
+  return rows;
+}
+function findCol(headers, kws, excl=[]){
+  for(let i=0;i<headers.length;i++){
+    const h = headers[i];
+    if(excl.some(x=>h.includes(x))) continue;
+    if(kws.some(k=>h.includes(k))) return i;
+  }
+  return null;
+}
+function cleanDate(raw){
+  if(!raw) return null;
+  return String(raw).split('T')[0].split(' ')[0] || null;
+}
+function parseCsv(text){
+  const rows = readCsv(text);
+  if(rows.length<2) return;
+  const headers = rows[0].map(h=>h.trim().toLowerCase());
+  const cShow = findCol(headers, ['tv_show_name','series_name','show_name','series','show']);
+  const cSeason = findCol(headers, ['season']);
+  let cEp = findCol(headers, ['episode_number','episode_num'], ['season']);
+  if(cEp===null) cEp = findCol(headers, ['episode'], ['season','id','name']);
+  const cMovie = findCol(headers, ['movie_name','movie_title','movie']);
+  const cTitle = findCol(headers, ['title','name'], ['show','series','episode','user','file']);
+  const cDate = findCol(headers, ['watched_at','watch_date','watched','created_at','date']);
+
+  for(const row of rows.slice(1)){
+    const cell = i => (i!==null && i<row.length) ? row[i].trim() : null;
+    const season = parseInt(cell(cSeason)), ep = parseInt(cell(cEp));
+    const showName = cell(cShow);
+    const date = cleanDate(cell(cDate));
+    if(showName && !isNaN(season) && !isNaN(ep)){
+      (parsed.byShow[showName] ||= []).push({s:season, e:ep, date});
+    } else {
+      const title = cell(cMovie) || (cSeason===null ? cell(cTitle) : null);
+      if(title) parsed.movies.push({title, date});
+    }
+  }
+}
+function parseJson(text){
+  try{
+    const j = JSON.parse(text);
+    const objects = Array.isArray(j) ? j : (j.data?.objects || j.objects || j.data);
+    if(!Array.isArray(objects)) return;
+    for(const o of objects){
+      if(typeof o !== 'object' || !o) continue;
+      const meta = o.meta || o;
+      const name = String(meta.name || meta.title || '');
+      if(!name) continue;
+      const type = String(o.entity_type || meta.type || '');
+      const date = cleanDate(o.watched_at || o.created_at);
+      const season = parseInt(o.season_number ?? meta.season_number);
+      const ep = parseInt(o.episode_number ?? o.number ?? meta.number);
+      if(!isNaN(season) && !isNaN(ep)){
+        (parsed.byShow[name] ||= []).push({s:season, e:ep, date});
+      } else if(type.includes('movie') || (isNaN(season) && isNaN(ep))){
+        parsed.movies.push({title:name, date});
+      }
+    }
+  }catch(e){
+    importLog.push('⚠️ JSON non reconnu — envoie un extrait à Claude pour adapter le parseur.');
+  }
+}
+
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+async function runImport(){
+  if(!S.key){ toast('Ajoute d’abord ta clé TMDB dans ⚙️ Réglages'); return; }
+  importing = true; importPct = 0; render();
+  const showNames = Object.keys(parsed.byShow);
+  const uniqMovies = {};
+  for(const m of parsed.movies) uniqMovies[m.title.toLowerCase()] ||= m;
+  const movieList = Object.values(uniqMovies);
+  const total = showNames.length + movieList.length;
+  let done = 0, matched = 0, failed = 0;
+
+  for(const name of showNames){
+    try{
+      const j = await tmdb('/search/tv', {query:name});
+      const r = j.results && j.results[0];
+      if(!r){ failed++; importLog.push('❓ Série introuvable sur TMDB : '+name); }
+      else {
+        let s = S.shows.find(x=>x.id===r.id);
+        if(!s){
+          const d = await tmdb('/tv/'+r.id);
+          s = { id:r.id, name:d.name||name, poster:d.poster_path,
+            total:d.number_of_episodes, seasons:d.number_of_seasons,
+            runtime:(d.episode_run_time&&d.episode_run_time[0])||42,
+            status:d.status, watched:{} };
+          S.shows.push(s);
+        }
+        for(const ep of parsed.byShow[name])
+          s.watched['S'+ep.s+'E'+ep.e] = ep.date || new Date().toISOString();
+        matched++;
+      }
+    }catch(e){ failed++; importLog.push('⚠️ '+name+' : '+e.message); }
+    done++; importPct = done/total; render();
+    await sleep(120);
+  }
+  for(const m of movieList){
+    try{
+      const j = await tmdb('/search/movie', {query:m.title});
+      const r = j.results && j.results[0];
+      if(!r){ failed++; importLog.push('❓ Film introuvable sur TMDB : '+m.title); }
+      else {
+        if(!S.movies.some(x=>x.id===r.id))
+          S.movies.push({ id:r.id, title:r.title||m.title, poster:r.poster_path,
+            runtime:110, watchedAt:m.date||new Date().toISOString() });
+        matched++;
+      }
+    }catch(e){ failed++; importLog.push('⚠️ '+m.title+' : '+e.message); }
+    done++; importPct = done/total; render();
+    await sleep(120);
+  }
+  save();
+  importing = false;
+  importLog.push(`🎉 Import terminé : ${matched} trouvés, ${failed} non résolus.`);
+  render();
+  toast('Import terminé 🎉');
+}
+
+/* ================= Init ================= */
+render();
+</script>
+</body>
+</html>
