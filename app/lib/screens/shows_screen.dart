@@ -120,14 +120,10 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
         final staleCards = [for (final n in feed.stale) _card(n)];
         final historyCards = feed.history.map(historyCard).toList();
 
-        final belowSections = <Widget>[
-          if (toWatchCards.isNotEmpty) _pillSection('À voir', toWatchCards),
-          if (staleCards.isNotEmpty)
-            _pillSection('Pas regardé depuis un moment', staleCards),
-        ];
+        final hasBelow = toWatchCards.isNotEmpty || staleCards.isNotEmpty;
 
         // Tout est à jour (rien « à voir ») : simple liste de l'historique.
-        if (belowSections.isEmpty) {
+        if (!hasBelow) {
           return ListView(
             padding: EdgeInsets.only(bottom: bottomNavInset(context)),
             children: [
@@ -137,31 +133,49 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
           );
         }
 
-        // Vue bidirectionnelle : « À voir » démarre en haut (offset 0),
-        // l'historique est au-dessus (scroll vers le haut). L'historique est
-        // une seule section-widget (donc pas d'inversion des enfants du sliver
-        // avant-centre) : on inverse manuellement pour coller le plus récent
-        // au « À voir ».
+        // Sections « à voir » / délaissées : en-tête collant (pastille centrée
+        // qui reste en tête et glisse avec la catégorie), contenu défilant
+        // dessous. Le centre du scroll = la 1re pastille collante (l'onglet
+        // s'ouvre au niveau « À voir »).
         const centerKey = ValueKey('to-watch-center');
+        final belowSlivers = <Widget>[];
+        var centerAssigned = false;
+        void addSection(String label, List<Widget> cards) {
+          belowSlivers.add(SliverPersistentHeader(
+            key: centerAssigned ? null : centerKey,
+            pinned: true,
+            delegate: _StickyPillHeader(label),
+          ));
+          centerAssigned = true;
+          belowSlivers.add(SliverList.list(children: cards));
+        }
+
+        if (toWatchCards.isNotEmpty) addSection('À voir', toWatchCards);
+        if (staleCards.isNotEmpty) {
+          addSection('Pas regardé depuis un moment', staleCards);
+        }
+
         return CustomScrollView(
           center: centerKey,
           slivers: [
+            // Historique au-dessus (scroll vers le haut) ; pastille non
+            // collante. Inversé pour coller le plus récent au « À voir ».
             SliverList.list(children: [
               if (historyCards.isNotEmpty)
                 _pillSection('Historique de visionnage',
                     historyCards.reversed.toList()),
             ]),
-            SliverList.list(key: centerKey, children: [
-              ...belowSections,
-              SizedBox(height: bottomNavInset(context)),
-            ]),
+            ...belowSlivers,
+            SliverToBoxAdapter(
+                child: SizedBox(height: bottomNavInset(context))),
           ],
         );
       },
     );
   }
 
-  /// Section = capsule grise centrée qui chevauche le haut de la 1re carte.
+  /// Section non collante = capsule grise centrée qui chevauche la 1re carte
+  /// (utilisée pour l'historique, au-dessus du centre).
   Widget _pillSection(String label, List<Widget> cards) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -248,4 +262,28 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
       onMarkWatched: () => _markWatched(n),
     );
   }
+}
+
+/// En-tête de section collant : bande transparente avec la capsule centrée.
+/// Épinglée en haut, le contenu défile dessous et la pastille suit la
+/// catégorie (poussée par la suivante).
+class _StickyPillHeader extends SliverPersistentHeaderDelegate {
+  const _StickyPillHeader(this.label);
+
+  final String label;
+  static const double _height = 46;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Center(child: SectionPill(label));
+  }
+
+  @override
+  bool shouldRebuild(_StickyPillHeader oldDelegate) => oldDelegate.label != label;
 }
