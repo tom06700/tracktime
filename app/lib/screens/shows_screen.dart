@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_sticky_header/flutter_sticky_header.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers.dart';
@@ -11,6 +12,10 @@ import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/episode_card.dart';
 
+// Hauteurs fixes → calcul exact de l'offset d'ouverture sur « À voir ».
+const double _kCardExtent = 130; // EpisodeCard 120 + marge Card 2×5
+const double _kHeaderExtent = 46;
+
 class ShowsScreen extends ConsumerStatefulWidget {
   const ShowsScreen({super.key});
 
@@ -20,6 +25,14 @@ class ShowsScreen extends ConsumerStatefulWidget {
 
 class _ShowsScreenState extends ConsumerState<ShowsScreen> {
   bool _syncStarted = false;
+  final _scrollController = ScrollController();
+  bool _positioned = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   Future<void> _sync() async {
     await syncStaleShows(
@@ -118,86 +131,45 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
             _card(feed.toWatch[i], badge: i == 0 ? 'PLUS RÉCENT' : null),
         ];
         final staleCards = [for (final n in feed.stale) _card(n)];
-        final historyCards = feed.history.map(historyCard).toList();
+        // Historique inversé : le plus récent en bas, collé au « À voir ».
+        final historyCards = feed.history.reversed.map(historyCard).toList();
 
-        final hasBelow = toWatchCards.isNotEmpty || staleCards.isNotEmpty;
-
-        // Tout est à jour (rien « à voir ») : simple liste de l'historique.
-        if (!hasBelow) {
-          return ListView(
-            padding: EdgeInsets.only(bottom: bottomNavInset(context)),
-            children: [
-              if (historyCards.isNotEmpty)
-                _pillSection('Historique de visionnage', historyCards),
-            ],
-          );
+        // Ouverture calée sur « À voir » : on saute la hauteur (exacte, car
+        // hauteurs fixes) de la section Historique. Déclenché seulement quand
+        // l'historique est réellement chargé (les flux arrivent de façon
+        // asynchrone), et une seule fois.
+        if (!_positioned && historyCards.isNotEmpty) {
+          _positioned = true;
+          final offset = _kHeaderExtent + historyCards.length * _kCardExtent;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) _scrollController.jumpTo(offset);
+          });
         }
 
-        // Sections « à voir » / délaissées : en-tête collant (pastille centrée
-        // qui reste en tête et glisse avec la catégorie), contenu défilant
-        // dessous. Le centre du scroll = la 1re pastille collante (l'onglet
-        // s'ouvre au niveau « À voir »).
-        const centerKey = ValueKey('to-watch-center');
-        final belowSlivers = <Widget>[];
-        var centerAssigned = false;
-        void addSection(String label, List<Widget> cards) {
-          belowSlivers.add(SliverPersistentHeader(
-            key: centerAssigned ? null : centerKey,
-            pinned: true,
-            delegate: _StickyPillHeader(label),
-          ));
-          centerAssigned = true;
-          belowSlivers.add(SliverList.list(children: cards));
-        }
+        final slivers = <Widget>[
+          if (historyCards.isNotEmpty)
+            _section('Historique de visionnage', historyCards),
+          if (toWatchCards.isNotEmpty) _section('À voir', toWatchCards),
+          if (staleCards.isNotEmpty)
+            _section('Pas regardé depuis un moment', staleCards),
+          SliverToBoxAdapter(child: SizedBox(height: bottomNavInset(context))),
+        ];
 
-        if (toWatchCards.isNotEmpty) addSection('À voir', toWatchCards);
-        if (staleCards.isNotEmpty) {
-          addSection('Pas regardé depuis un moment', staleCards);
-        }
-
-        return CustomScrollView(
-          center: centerKey,
-          slivers: [
-            // Historique au-dessus (scroll vers le haut) ; pastille non
-            // collante. Inversé pour coller le plus récent au « À voir ».
-            SliverList.list(children: [
-              if (historyCards.isNotEmpty)
-                _pillSection('Historique de visionnage',
-                    historyCards.reversed.toList()),
-            ]),
-            ...belowSlivers,
-            SliverToBoxAdapter(
-                child: SizedBox(height: bottomNavInset(context))),
-          ],
-        );
+        return CustomScrollView(controller: _scrollController, slivers: slivers);
       },
     );
   }
 
-  /// Section non collante = capsule grise centrée qui chevauche la 1re carte
-  /// (utilisée pour l'historique, au-dessus du centre).
-  Widget _pillSection(String label, List<Widget> cards) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 18),
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 13),
-              child: cards.first,
-            ),
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Center(child: SectionPill(label)),
-            ),
-          ],
-        ),
-        ...cards.skip(1),
-      ],
+  /// Section à en-tête collant : la pastille reste en tête de sa catégorie et
+  /// est poussée dehors par la suivante (pas d'empilement).
+  Widget _section(String label, List<Widget> cards) {
+    return SliverStickyHeader(
+      header: Container(
+        height: _kHeaderExtent,
+        alignment: Alignment.center,
+        child: SectionPill(label),
+      ),
+      sliver: SliverList.list(children: cards),
     );
   }
 
@@ -262,28 +234,4 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
       onMarkWatched: () => _markWatched(n),
     );
   }
-}
-
-/// En-tête de section collant : bande transparente avec la capsule centrée.
-/// Épinglée en haut, le contenu défile dessous et la pastille suit la
-/// catégorie (poussée par la suivante).
-class _StickyPillHeader extends SliverPersistentHeaderDelegate {
-  const _StickyPillHeader(this.label);
-
-  final String label;
-  static const double _height = 46;
-
-  @override
-  double get minExtent => _height;
-
-  @override
-  double get maxExtent => _height;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Center(child: SectionPill(label));
-  }
-
-  @override
-  bool shouldRebuild(_StickyPillHeader oldDelegate) => oldDelegate.label != label;
 }
