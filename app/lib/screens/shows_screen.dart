@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../providers.dart';
 import '../series/feed.dart';
@@ -9,8 +10,6 @@ import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/episode_card.dart';
-import 'episode_detail_screen.dart';
-import 'show_detail_screen.dart';
 
 class ShowsScreen extends ConsumerStatefulWidget {
   const ShowsScreen({super.key});
@@ -31,22 +30,15 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
   }
 
   void _openShow(int id, String name) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => ShowDetailScreen(showId: id, title: name),
-    ));
+    context.push('/show/$id', extra: name);
   }
 
   void _openEpisode(int showId, String showName, int season, int episode,
       String? poster) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => EpisodeDetailScreen(
-        showId: showId,
-        showName: showName,
-        season: season,
-        episode: episode,
-        posterPath: poster,
-      ),
-    ));
+    context.push(
+      '/episode/$showId/$season/$episode',
+      extra: {'name': showName, 'poster': poster},
+    );
   }
 
   void _markWatched(NextUp n) {

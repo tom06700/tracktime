@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../import/importer.dart';
 import '../import/parser.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
-import '../settings/settings_screen.dart';
 import '../theme.dart';
 import '../widgets/glass.dart';
 
@@ -86,10 +86,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     final key = ref.read(tmdbKeyProvider).value ?? '';
     if (key.isEmpty) {
       _toast('Ajoute d’abord ta clé TMDB dans ⚙️ Réglages');
-      if (mounted) {
-        Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const SettingsScreen()));
-      }
+      if (mounted) context.push('/settings');
       return;
     }
     setState(() {

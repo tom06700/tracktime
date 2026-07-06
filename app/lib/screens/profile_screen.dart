@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../backup/backup.dart';
 import '../profile/profile.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
-import '../settings/settings_screen.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/stats_summary.dart';
-import 'import_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -57,16 +56,14 @@ class ProfileScreen extends ConsumerWidget {
                 icon: Icons.download_outlined,
                 title: 'Importer / restaurer',
                 subtitle: 'Backup TrackTime ou export TV Time',
-                onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ImportPage())),
+                onTap: () => context.push('/import'),
               ),
               const _TileDivider(),
               _ActionTile(
                 icon: Icons.key_outlined,
                 title: 'Clé API TMDB',
                 subtitle: 'Réglages de connexion à TMDB',
-                onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                onTap: () => context.push('/settings'),
               ),
             ],
           ),

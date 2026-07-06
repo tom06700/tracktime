@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../screens/import_screen.dart';
 import '../theme.dart';
 import '../widgets/glass.dart';
 import 'prefs.dart';
@@ -107,8 +107,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   'Backup TrackTime (JSON) ou export TV Time (CSV/JSON)',
                   style: TextStyle(fontSize: 12.5, color: TtColors.dim)),
               trailing: const Icon(Icons.chevron_right, color: TtColors.dim),
-              onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ImportPage())),
+              onTap: () => context.push('/import'),
             ),
           ),
           const Padding(

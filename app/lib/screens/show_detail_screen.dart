@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../db/database.dart';
 import '../providers.dart';
@@ -114,7 +115,7 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
     );
     if (ok != true) return;
     await ref.read(databaseProvider).deleteShow(widget.showId);
-    if (mounted) Navigator.pop(context);
+    if (mounted) context.pop();
   }
 
   @override
