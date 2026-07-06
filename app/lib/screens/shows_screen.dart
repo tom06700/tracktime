@@ -19,12 +19,7 @@ class ShowsScreen extends ConsumerStatefulWidget {
 }
 
 class _ShowsScreenState extends ConsumerState<ShowsScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Réchauffe le cache d'épisodes en tâche de fond (silencieux sans clé).
-    WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
-  }
+  bool _syncStarted = false;
 
   Future<void> _sync() async {
     await syncStaleShows(
@@ -47,6 +42,15 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Lance la synchro TMDB dès que la clé API est réellement chargée
+    // (SharedPreferences est asynchrone : au montage, elle est souvent encore
+    // vide, d'où l'onglet « À venir » resté vide sans ce déclenchement tardif).
+    final key = ref.watch(tmdbKeyProvider).value;
+    if (!_syncStarted && key != null && key.isNotEmpty) {
+      _syncStarted = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
+    }
+
     return DefaultTabController(
       length: 2,
       child: Column(

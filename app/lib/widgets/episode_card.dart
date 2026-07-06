@@ -45,7 +45,7 @@ class EpisodeCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          height: 98,
+          height: 120,
           child: Row(
             children: [
               _Still(path: stillPath, posterPath: posterPath, seed: seed),
@@ -126,8 +126,8 @@ class _Still extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Vignette au format affiche (portrait 2:3), affichée EN ENTIER : une
-    // affiche 2:3 dans une boîte 2:3 remplit sans recadrer.
-    const w = 66.0;
+    // affiche 2:3 dans une boîte 2:3 remplit sans recadrer. (80×120 = 2:3.)
+    const w = 80.0;
     final placeholder = DecoratedBox(
       decoration: BoxDecoration(gradient: _seedGradient(seed)),
       child: const Center(
