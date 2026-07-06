@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'screens/import_screen.dart';
 import 'screens/movies_screen.dart';
+import 'screens/profile_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/shows_screen.dart';
-import 'screens/stats_screen.dart';
 import 'settings/settings_screen.dart';
 import 'theme.dart';
 
@@ -37,15 +37,14 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
 
-  static const _screens = [
-    ShowsScreen(),
-    MoviesScreen(),
-    StatsScreen(),
-    ImportScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final screens = [
+      const ShowsScreen(),
+      const MoviesScreen(),
+      ProfileScreen(onGoToImport: () => setState(() => _tab = 3)),
+      const ImportScreen(),
+    ];
     return Scaffold(
       appBar: AppBar(
         title: const Text.rich(TextSpan(children: [
@@ -67,14 +66,15 @@ class _HomeShellState extends State<HomeShell> {
           ),
         ],
       ),
-      body: IndexedStack(index: _tab, children: _screens),
+      body: IndexedStack(index: _tab, children: screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (i) => setState(() => _tab = i),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.tv), label: 'Séries'),
           NavigationDestination(icon: Icon(Icons.movie_outlined), label: 'Films'),
-          NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Stats'),
+          NavigationDestination(
+              icon: Icon(Icons.person_outline), label: 'Profil'),
           NavigationDestination(
               icon: Icon(Icons.download_outlined), label: 'Import'),
         ],

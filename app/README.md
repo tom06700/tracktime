@@ -22,7 +22,9 @@ flutter run
   - `watched_episodes` : un enregistrement par épisode vu (équivalent des clés
     `S3E7` de la version web)
   - `movies` : films, `watched_at` null = watchlist
-- **Écrans** : `lib/screens/` — Séries, Films, Stats, Import (onglets)
+- **Écrans** : `lib/screens/` — Séries, Films, Profil, Import (onglets)
+- **Profil** : identité locale (nom + avatar emoji, `lib/profile/`), chiffres
+  de visionnage et gestion des données (export/backup, `lib/backup/`)
 - **Thème** : `lib/theme.dart` — palette sombre ambre/teal reprise de la
   version web (`index.html` à la racine du repo)
 
@@ -33,5 +35,6 @@ flutter run
    réglages (clé API TMDB, attribution)
 3. ✅ Recherche/ajout TMDB (multi), détail série (saisons + épisodes,
    coche unitaire et par saison), suppression
-4. ⬜ Stats avancées
+4. ✅ Page Profil v1 : identité locale (nom + avatar), chiffres de
+   visionnage, export/sauvegarde des données
 5. ⬜ Polish (icône, splash, politique de confidentialité) → TestFlight → stores

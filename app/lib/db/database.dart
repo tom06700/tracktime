@@ -126,6 +126,23 @@ class AppDatabase extends _$AppDatabase {
   Future<Show?> showById(int id) =>
       (select(shows)..where((s) => s.id.equals(id))).getSingleOrNull();
 
+  Future<List<Show>> allShows() => select(shows).get();
+
+  Future<List<WatchedEpisode>> allWatchedEpisodes() =>
+      select(watchedEpisodes).get();
+
+  Future<List<Movie>> allMovies() => select(movies).get();
+
+  /// Date d'ajout la plus ancienne (proxy « membre depuis »), ou null si vide.
+  Future<DateTime?> earliestActivity() async {
+    final dates = <DateTime>[
+      for (final s in await allShows()) s.addedAt,
+      for (final m in await allMovies()) m.addedAt,
+    ];
+    if (dates.isEmpty) return null;
+    return dates.reduce((a, b) => a.isBefore(b) ? a : b);
+  }
+
   Future<Movie?> movieById(int id) =>
       (select(movies)..where((m) => m.id.equals(id))).getSingleOrNull();
 

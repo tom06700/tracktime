@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:tracktime/db/database.dart';
 import 'package:tracktime/main.dart';
@@ -9,6 +10,7 @@ import 'package:tracktime/providers.dart';
 
 void main() {
   testWidgets('affiche la coquille avec les 4 onglets', (tester) async {
+    SharedPreferences.setMockInitialValues({});
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
 
@@ -20,7 +22,7 @@ void main() {
 
     expect(find.text('Séries'), findsOneWidget);
     expect(find.text('Films'), findsOneWidget);
-    expect(find.text('Stats'), findsOneWidget);
+    expect(find.text('Profil'), findsOneWidget);
     expect(find.text('Import'), findsOneWidget);
     expect(find.textContaining('Aucune série'), findsOneWidget);
 
