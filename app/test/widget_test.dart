@@ -24,9 +24,10 @@ void main() {
     expect(find.text('Import'), findsOneWidget);
     expect(find.textContaining('Aucune série'), findsOneWidget);
 
-    // Démonte l'arbre puis purge les timers de fermeture des streams drift,
-    // sinon le framework de test les signale comme fuites.
+    // Démonte l'arbre puis avance l'horloge simulée pour déclencher les
+    // timers de fermeture des streams drift, sinon le framework de test
+    // les signale comme fuites.
     await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
   });
 }
