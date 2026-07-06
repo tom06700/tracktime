@@ -80,7 +80,7 @@ SeriesFeed buildSeriesFeed({
   required List<Episode> episodes,
   required List<WatchedEpisode> watched,
   required DateTime now,
-  Duration staleAfter = const Duration(days: 21),
+  Duration staleAfter = const Duration(days: 18),
   int historyLimit = 8,
 }) {
   final episodesByShow = <int, List<Episode>>{};

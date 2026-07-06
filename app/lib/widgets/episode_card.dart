@@ -10,6 +10,7 @@ class EpisodeCard extends StatelessWidget {
     required this.code,
     required this.stillPath,
     required this.seed,
+    this.posterPath,
     this.episodeTitle,
     this.remaining,
     this.badge,
@@ -21,6 +22,9 @@ class EpisodeCard extends StatelessWidget {
   final String showName;
   final String code; // "S03 | E02"
   final String? stillPath;
+
+  /// Affiche de la série, utilisée en repli quand l'image d'épisode manque.
+  final String? posterPath;
   final String seed; // pour le dégradé de repli (stable par série)
   final String? episodeTitle;
   final int? remaining; // « +N »
@@ -39,7 +43,7 @@ class EpisodeCard extends StatelessWidget {
           height: 98,
           child: Row(
             children: [
-              _Still(path: stillPath, seed: seed),
+              _Still(path: stillPath, posterPath: posterPath, seed: seed),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
@@ -109,9 +113,10 @@ class EpisodeCard extends StatelessWidget {
 }
 
 class _Still extends StatelessWidget {
-  const _Still({required this.path, required this.seed});
+  const _Still({required this.path, required this.posterPath, required this.seed});
 
   final String? path;
+  final String? posterPath;
   final String seed;
 
   @override
@@ -123,15 +128,27 @@ class _Still extends StatelessWidget {
         child: Icon(Icons.tv, color: Colors.white54, size: 22),
       ),
     );
-    final child = (path == null || path!.isEmpty)
+
+    // Repli en cascade : still d'épisode → affiche de la série → dégradé.
+    Widget imageOr(String url, Widget fallback) => Image.network(
+          url,
+          width: w,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => fallback,
+        );
+
+    Widget posterOrPlaceholder() => (posterPath == null || posterPath!.isEmpty)
         ? placeholder
-        : Image.network(
-            'https://image.tmdb.org/t/p/w300$path',
-            width: w,
-            height: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => placeholder,
-          );
+        : imageOr('https://image.tmdb.org/t/p/w300$posterPath', placeholder);
+
+    final Widget child;
+    if (path != null && path!.isNotEmpty) {
+      child = imageOr(
+          'https://image.tmdb.org/t/p/w300$path', posterOrPlaceholder());
+    } else {
+      child = posterOrPlaceholder();
+    }
     return SizedBox(width: w, height: double.infinity, child: child);
   }
 

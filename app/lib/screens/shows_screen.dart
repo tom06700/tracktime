@@ -18,11 +18,24 @@ class ShowsScreen extends ConsumerStatefulWidget {
 }
 
 class _ShowsScreenState extends ConsumerState<ShowsScreen> {
+  // Ancre posée sur la section « À voir » : à la première ouverture, on
+  // s'aligne dessus (l'historique reste au-dessus, accessible en scrollant).
+  final _toWatchAnchor = GlobalKey();
+  bool _positioned = false;
+
   @override
   void initState() {
     super.initState();
     // Réchauffe le cache d'épisodes en tâche de fond (silencieux sans clé).
     WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
+  }
+
+  void _positionAtToWatch() {
+    if (_positioned) return;
+    final ctx = _toWatchAnchor.currentContext;
+    if (ctx == null) return;
+    _positioned = true;
+    Scrollable.ensureVisible(ctx, duration: Duration.zero, alignment: 0);
   }
 
   Future<void> _sync() async {
@@ -58,8 +71,17 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
                 "Aucune série pour l'instant.\nAjoute-en via Explorer ou importe ton export TV Time.",
           );
         }
+
+        // Après la mise en page, on cale la vue sur « À voir ».
+        WidgetsBinding.instance
+            .addPostFrameCallback((_) => _positionAtToWatch());
+
+        // La section qui reçoit l'ancre : « À voir » si présente, sinon
+        // « Pas regardé depuis un moment ».
+        final anchorOnToWatch = feed.toWatch.isNotEmpty;
+
         return ListView(
-          padding: EdgeInsets.only(top: 4, bottom: bottomNavInset(context)),
+          padding: EdgeInsets.only(bottom: bottomNavInset(context)),
           children: [
             if (feed.history.isNotEmpty) ...[
               const SectionLabel('Historique de visionnage'),
@@ -68,18 +90,21 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
                     showName: h.show.name,
                     code: h.code,
                     stillPath: h.still,
+                    posterPath: h.show.poster,
                     seed: h.show.name,
                     episodeTitle: h.episodeName,
                     onTap: () => _openShow(h.show.id, h.show.name),
                   )),
             ],
             if (feed.toWatch.isNotEmpty) ...[
-              const SectionLabel('À voir'),
-              ..._buildToWatch(feed.toWatch),
+              SectionLabel('À voir', anchor: _toWatchAnchor),
+              for (var i = 0; i < feed.toWatch.length; i++)
+                _card(feed.toWatch[i], badge: i == 0 ? 'PLUS RÉCENT' : null),
             ],
             if (feed.stale.isNotEmpty) ...[
-              const SectionLabel('Pas regardé depuis un moment'),
-              ...feed.stale.map(_card),
+              SectionLabel('Pas regardé depuis un moment',
+                  anchor: anchorOnToWatch ? null : _toWatchAnchor),
+              ...feed.stale.map((n) => _card(n)),
             ],
           ],
         );
@@ -87,18 +112,12 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
     );
   }
 
-  List<Widget> _buildToWatch(List<NextUp> list) {
-    return [
-      for (var i = 0; i < list.length; i++)
-        _card(list[i], badge: i == 0 ? 'PLUS RÉCENT' : null),
-    ];
-  }
-
   Widget _card(NextUp n, {String? badge}) {
     return EpisodeCard(
       showName: n.show.name,
       code: n.code,
       stillPath: n.still,
+      posterPath: n.show.poster,
       seed: n.show.name,
       episodeTitle: n.episodeName,
       remaining: n.remaining,

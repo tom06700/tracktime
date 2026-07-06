@@ -20,13 +20,17 @@ String fmtTime(int min) {
 }
 
 class SectionLabel extends StatelessWidget {
-  const SectionLabel(this.text, {super.key});
+  const SectionLabel(this.text, {super.key, this.anchor});
 
   final String text;
+
+  /// Clé posée sur le libellé pour s'y aligner (ex. ouverture au « À voir »).
+  final Key? anchor;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
+      key: anchor,
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
       child: Text(
         text.toUpperCase(),
