@@ -63,7 +63,10 @@ class _ShowCard extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              PosterBox(posterPath: show.poster, fallbackIcon: Icons.tv),
+              PosterBox(
+                  posterPath: show.poster,
+                  fallbackIcon: Icons.tv,
+                  label: show.name),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

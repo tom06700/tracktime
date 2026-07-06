@@ -42,11 +42,21 @@ class SectionLabel extends StatelessWidget {
 }
 
 class PosterBox extends StatelessWidget {
-  const PosterBox({super.key, this.posterPath, required this.fallbackIcon, this.small = false});
+  const PosterBox({
+    super.key,
+    this.posterPath,
+    required this.fallbackIcon,
+    this.small = false,
+    this.label,
+  });
 
   final String? posterPath;
   final IconData fallbackIcon;
   final bool small;
+
+  /// Titre servant à teinter le placeholder (dégradé stable par titre)
+  /// quand il n'y a pas d'affiche.
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -56,8 +66,16 @@ class PosterBox extends StatelessWidget {
     final placeholder = Container(
       width: w,
       height: h,
-      decoration: BoxDecoration(color: TtColors.surfaceHi, borderRadius: radius),
-      child: Icon(fallbackIcon, color: TtColors.dim, size: 22),
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        color: label == null ? TtColors.surfaceHi : null,
+        gradient: label == null ? null : _posterGradient(label!),
+      ),
+      child: Icon(fallbackIcon,
+          color: label == null
+              ? TtColors.dim
+              : Colors.white.withValues(alpha: 0.8),
+          size: 22),
     );
     final path = posterPath;
     if (path == null || path.isEmpty) return placeholder;
@@ -70,6 +88,19 @@ class PosterBox extends StatelessWidget {
         fit: BoxFit.cover,
         errorBuilder: (_, _, _) => placeholder,
       ),
+    );
+  }
+
+  static Gradient _posterGradient(String seed) {
+    final hue = (seed.codeUnits.fold<int>(0, (a, c) => a * 31 + c) % 360)
+        .toDouble();
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        HSLColor.fromAHSL(1, hue, 0.55, 0.42).toColor(),
+        HSLColor.fromAHSL(1, (hue + 40) % 360, 0.60, 0.26).toColor(),
+      ],
     );
   }
 }

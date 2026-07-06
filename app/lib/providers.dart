@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'db/database.dart';
+import 'demo/demo_seed.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
   ref.onDispose(db.close);
+  // Web + ?demo=1 : peuple une base vide d'exemples (fire-and-forget).
+  maybeSeedDemo(db);
   return db;
 });
 

@@ -56,7 +56,8 @@ class _MovieCard extends ConsumerWidget {
             PosterBox(
                 posterPath: movie.poster,
                 fallbackIcon: Icons.movie_outlined,
-                small: true),
+                small: true,
+                label: movie.title),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
