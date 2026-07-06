@@ -123,6 +123,12 @@ class AppDatabase extends _$AppDatabase {
         .toList());
   }
 
+  Future<Show?> showById(int id) =>
+      (select(shows)..where((s) => s.id.equals(id))).getSingleOrNull();
+
+  Future<Movie?> movieById(int id) =>
+      (select(movies)..where((m) => m.id.equals(id))).getSingleOrNull();
+
   Future<void> upsertShow(ShowsCompanion entry) =>
       into(shows).insertOnConflictUpdate(entry);
 

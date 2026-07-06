@@ -5,6 +5,7 @@ import 'screens/import_screen.dart';
 import 'screens/movies_screen.dart';
 import 'screens/shows_screen.dart';
 import 'screens/stats_screen.dart';
+import 'settings/settings_screen.dart';
 import 'theme.dart';
 
 void main() {
@@ -61,9 +62,8 @@ class _HomeShellState extends State<HomeShell> {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Réglages',
-            onPressed: () {
-              // Étape 3 : réglages (sauvegarde, attribution TMDB).
-            },
+            onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen())),
           ),
         ],
       ),

@@ -29,7 +29,8 @@ flutter run
 ## Feuille de route
 
 1. ✅ Squelette 4 onglets + modèle de données SQLite
-2. ⬜ Import du backup JSON de la version web + export TV Time (CSV/JSON)
+2. ✅ Import du backup JSON de la version web + export TV Time (CSV/JSON),
+   réglages (clé API TMDB, attribution)
 3. ⬜ Recherche/ajout TMDB, détail série, coche épisodes
 4. ⬜ Stats avancées
 5. ⬜ Polish (icône, splash, politique de confidentialité) → TestFlight → stores
