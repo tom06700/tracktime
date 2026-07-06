@@ -66,5 +66,26 @@ ThemeData buildTheme() {
     ),
     progressIndicatorTheme:
         const ProgressIndicatorThemeData(color: TtColors.amber),
+    // Boutons standards restants (dialogues) : coins arrondis cohérents avec
+    // le système « verre ». Les actions principales utilisent GlassButton /
+    // ProminentGlassButton (lib/widgets/glass.dart).
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: TtColors.amber,
+        foregroundColor: const Color(0xFF131313),
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: TtColors.amber),
+    ),
+    snackBarTheme: const SnackBarThemeData(
+      backgroundColor: TtColors.surfaceHi,
+      contentTextStyle: TextStyle(color: TtColors.text),
+      behavior: SnackBarBehavior.floating,
+    ),
   );
 }

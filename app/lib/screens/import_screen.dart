@@ -10,6 +10,7 @@ import '../providers.dart';
 import '../settings/prefs.dart';
 import '../settings/settings_screen.dart';
 import '../theme.dart';
+import '../widgets/glass.dart';
 
 /// Page autonome (avec AppBar) enveloppant [ImportScreen], à pousser depuis
 /// les Réglages ou le Profil.
@@ -156,10 +157,13 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                       fontSize: 13, color: TtColors.dim, height: 1.6),
                 ),
                 const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: _importing ? null : _pickFiles,
-                  icon: const Icon(Icons.folder_open),
-                  label: const Text('Choisir les fichiers'),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ProminentGlassButton(
+                    onPressed: _importing ? null : _pickFiles,
+                    icon: Icons.folder_open,
+                    child: const Text('Choisir les fichiers'),
+                  ),
                 ),
               ],
             ),
@@ -195,12 +199,12 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                   ] else
                     Row(
                       children: [
-                        FilledButton(
+                        ProminentGlassButton(
                           onPressed: _runImport,
                           child: const Text('Importer via TMDB'),
                         ),
                         const SizedBox(width: 8),
-                        OutlinedButton(
+                        GlassButton(
                           onPressed: () => setState(_parsed.clear),
                           child: const Text('Vider'),
                         ),

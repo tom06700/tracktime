@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../screens/import_screen.dart';
 import '../theme.dart';
+import '../widgets/glass.dart';
 import 'prefs.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -67,17 +68,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  FilledButton(
-                    onPressed: () async {
-                      await ref
-                          .read(tmdbKeyProvider.notifier)
-                          .save(_keyController.text);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Clé enregistrée ✓')));
-                      }
-                    },
-                    child: const Text('Enregistrer'),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: ProminentGlassButton(
+                      onPressed: () async {
+                        await ref
+                            .read(tmdbKeyProvider.notifier)
+                            .save(_keyController.text);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Clé enregistrée ✓')));
+                        }
+                      },
+                      child: const Text('Enregistrer'),
+                    ),
                   ),
                 ],
               ),

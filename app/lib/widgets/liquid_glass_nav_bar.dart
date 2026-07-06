@@ -1,21 +1,20 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import 'glass.dart';
 
 class NavItem {
-  const NavItem({required this.icon, required this.activeIcon, required this.label});
+  const NavItem(
+      {required this.icon, required this.activeIcon, required this.label});
 
   final IconData icon;
   final IconData activeIcon;
   final String label;
 }
 
-/// Barre de navigation flottante « liquid glass » : pilule arrondie,
-/// translucide avec flou d'arrière-plan (le contenu de la page défile
-/// derrière), reflet clair sur le bord supérieur. Pensée pour un Scaffold
-/// avec `extendBody: true`.
+/// Barre de navigation flottante « Liquid Glass » : pilule translucide avec
+/// flou d'arrière-plan (le contenu défile derrière), reflet spéculaire sur le
+/// bord, et lueur de réfraction ambrée sous l'onglet actif.
 class LiquidGlassNavBar extends StatelessWidget {
   const LiquidGlassNavBar({
     super.key,
@@ -33,46 +32,23 @@ class LiquidGlassNavBar extends StatelessWidget {
     final bottomSafe = MediaQuery.paddingOf(context).bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(18, 0, 18, bottomSafe > 0 ? bottomSafe : 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-          child: Container(
-            height: 64,
-            decoration: BoxDecoration(
-              // Matériau translucide : teinte sombre + léger voile clair.
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.white.withValues(alpha: 0.10),
-                  Colors.white.withValues(alpha: 0.03),
-                ],
-              ),
-              color: TtColors.surface.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.12), width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                for (var i = 0; i < items.length; i++)
-                  Expanded(
-                    child: _NavButton(
-                      item: items[i],
-                      selected: i == selectedIndex,
-                      onTap: () => onSelected(i),
-                    ),
+      child: GlassSurface(
+        borderRadius: 30,
+        blurSigma: 24,
+        tintOpacity: 0.5,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: [
+              for (var i = 0; i < items.length; i++)
+                Expanded(
+                  child: _NavButton(
+                    item: items[i],
+                    selected: i == selectedIndex,
+                    onTap: () => onSelected(i),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
       ),
@@ -103,14 +79,24 @@ class _NavButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
+              duration: const Duration(milliseconds: 240),
               curve: Curves.easeOut,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
               decoration: BoxDecoration(
                 color: selected
-                    ? TtColors.amber.withValues(alpha: 0.16)
+                    ? TtColors.amber.withValues(alpha: 0.18)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(14),
+                boxShadow: selected
+                    ? [
+                        // Lueur de réfraction sous l'onglet actif.
+                        BoxShadow(
+                          color: TtColors.amber.withValues(alpha: 0.35),
+                          blurRadius: 16,
+                          spreadRadius: -2,
+                        ),
+                      ]
+                    : null,
               ),
               child: Icon(selected ? item.activeIcon : item.icon,
                   size: 22, color: color),

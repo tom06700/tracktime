@@ -30,6 +30,11 @@ flutter run
   de visionnage et gestion des données (export/backup, `lib/backup/`)
 - **Thème** : `lib/theme.dart` — palette sombre ambre/teal reprise de la
   version web (`index.html` à la racine du repo)
+- **Système « Liquid Glass »** (`lib/widgets/glass.dart`) : surface de verre
+  partagée (flou d'arrière-plan, reflet spéculaire, lueur de réfraction,
+  repli opaque si « Réduire la transparence ») + boutons `GlassButton`
+  (neutre) et `ProminentGlassButton` (teinté). Utilisés par la nav bar et les
+  actions principales (Réglages, Import). Inspiré des HIG Apple WWDC25.
 
 ## Feuille de route
 
