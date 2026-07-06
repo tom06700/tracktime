@@ -18,24 +18,11 @@ class ShowsScreen extends ConsumerStatefulWidget {
 }
 
 class _ShowsScreenState extends ConsumerState<ShowsScreen> {
-  // Ancre posée sur la section « À voir » : à la première ouverture, on
-  // s'aligne dessus (l'historique reste au-dessus, accessible en scrollant).
-  final _toWatchAnchor = GlobalKey();
-  bool _positioned = false;
-
   @override
   void initState() {
     super.initState();
     // Réchauffe le cache d'épisodes en tâche de fond (silencieux sans clé).
     WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
-  }
-
-  void _positionAtToWatch() {
-    if (_positioned) return;
-    final ctx = _toWatchAnchor.currentContext;
-    if (ctx == null) return;
-    _positioned = true;
-    Scrollable.ensureVisible(ctx, duration: Duration.zero, alignment: 0);
   }
 
   Future<void> _sync() async {
@@ -72,40 +59,61 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
           );
         }
 
-        // Après la mise en page, on cale la vue sur « À voir ».
-        WidgetsBinding.instance
-            .addPostFrameCallback((_) => _positionAtToWatch());
+        Widget historyCard(HistoryEntry h) => EpisodeCard(
+              history: true,
+              showName: h.show.name,
+              code: h.code,
+              stillPath: h.still,
+              posterPath: h.show.poster,
+              seed: h.show.name,
+              episodeTitle: h.episodeName,
+              onTap: () => _openShow(h.show.id, h.show.name),
+            );
 
-        // La section qui reçoit l'ancre : « À voir » si présente, sinon
-        // « Pas regardé depuis un moment ».
-        final anchorOnToWatch = feed.toWatch.isNotEmpty;
+        // La partie basse (À voir + délaissées), affichée à partir du haut.
+        final belowChildren = <Widget>[
+          if (feed.toWatch.isNotEmpty) ...[
+            const SectionLabel('À voir'),
+            for (var i = 0; i < feed.toWatch.length; i++)
+              _card(feed.toWatch[i], badge: i == 0 ? 'PLUS RÉCENT' : null),
+          ],
+          if (feed.stale.isNotEmpty) ...[
+            const SectionLabel('Pas regardé depuis un moment'),
+            ...feed.stale.map((n) => _card(n)),
+          ],
+          SizedBox(height: bottomNavInset(context)),
+        ];
 
-        return ListView(
-          padding: EdgeInsets.only(bottom: bottomNavInset(context)),
-          children: [
-            if (feed.history.isNotEmpty) ...[
+        // Rien « à voir » (tout est à jour) : simple liste de l'historique.
+        if (belowChildren.length == 1) {
+          return ListView(
+            padding: EdgeInsets.only(bottom: bottomNavInset(context)),
+            children: [
               const SectionLabel('Historique de visionnage'),
-              ...feed.history.map((h) => EpisodeCard(
-                    history: true,
-                    showName: h.show.name,
-                    code: h.code,
-                    stillPath: h.still,
-                    posterPath: h.show.poster,
-                    seed: h.show.name,
-                    episodeTitle: h.episodeName,
-                    onTap: () => _openShow(h.show.id, h.show.name),
-                  )),
+              ...feed.history.map(historyCard),
             ],
-            if (feed.toWatch.isNotEmpty) ...[
-              SectionLabel('À voir', anchor: _toWatchAnchor),
-              for (var i = 0; i < feed.toWatch.length; i++)
-                _card(feed.toWatch[i], badge: i == 0 ? 'PLUS RÉCENT' : null),
-            ],
-            if (feed.stale.isNotEmpty) ...[
-              SectionLabel('Pas regardé depuis un moment',
-                  anchor: anchorOnToWatch ? null : _toWatchAnchor),
-              ...feed.stale.map((n) => _card(n)),
-            ],
+          );
+        }
+
+        // Vue bidirectionnelle : « À voir » démarre en haut (offset 0),
+        // l'historique est au-dessus (scroll vers le haut).
+        // Les enfants AVANT le centre sont inversés par le growth reverse,
+        // d'où l'ordre [historique (récent→ancien), libellé] qui se lit
+        // [libellé, ancien→récent] avec le plus récent collé au « À voir ».
+        const centerKey = ValueKey('to-watch-center');
+        final aboveChildren = <Widget>[
+          if (feed.history.isNotEmpty) ...[
+            ...feed.history.map(historyCard),
+            const SectionLabel('Historique de visionnage'),
+          ],
+          const SizedBox(height: 8),
+        ];
+
+        return CustomScrollView(
+          center: centerKey,
+          slivers: [
+            SliverList.list(children: aboveChildren),
+            SliverList.list(key: centerKey, children: belowChildren),
           ],
         );
       },
