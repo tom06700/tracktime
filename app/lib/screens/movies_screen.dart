@@ -26,12 +26,12 @@ class MoviesScreen extends ConsumerWidget {
         final watchlist = list.where((m) => m.watchedAt == null).toList();
         final seen = list.where((m) => m.watchedAt != null).toList();
         return ListView(
+          padding: EdgeInsets.only(bottom: bottomNavInset(context)),
           children: [
             if (watchlist.isNotEmpty) const SectionLabel('À voir'),
             ...watchlist.map((m) => _MovieCard(m)),
             if (seen.isNotEmpty) SectionLabel('Vus (${seen.length})'),
             ...seen.map((m) => _MovieCard(m)),
-            const SizedBox(height: 16),
           ],
         );
       },

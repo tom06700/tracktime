@@ -22,7 +22,10 @@ flutter run
   - `watched_episodes` : un enregistrement par épisode vu (équivalent des clés
     `S3E7` de la version web)
   - `movies` : films, `watched_at` null = watchlist
-- **Écrans** : `lib/screens/` — Séries, Films, Profil, Import (onglets)
+- **Écrans** : `lib/screens/` — onglets Séries, Films, Explorer, Profil.
+  Nav bar « liquid glass » flottante (`lib/widgets/liquid_glass_nav_bar.dart`,
+  Scaffold en `extendBody`). L'import n'est plus un onglet : il vit dans une
+  section des Réglages (et un raccourci du Profil) via `ImportPage`.
 - **Profil** : identité locale (nom + avatar emoji, `lib/profile/`), chiffres
   de visionnage et gestion des données (export/backup, `lib/backup/`)
 - **Thème** : `lib/theme.dart` — palette sombre ambre/teal reprise de la

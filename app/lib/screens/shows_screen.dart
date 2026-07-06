@@ -30,12 +30,12 @@ class ShowsScreen extends ConsumerWidget {
         final inProgress = list.where((s) => !s.isDone).toList();
         final done = list.where((s) => s.isDone).toList();
         return ListView(
+          padding: EdgeInsets.only(bottom: bottomNavInset(context)),
           children: [
             if (inProgress.isNotEmpty) const SectionLabel('En cours'),
             ...inProgress.map((s) => _ShowCard(s)),
             if (done.isNotEmpty) const SectionLabel('Terminées / à jour'),
             ...done.map((s) => _ShowCard(s)),
-            const SizedBox(height: 16),
           ],
         );
       },

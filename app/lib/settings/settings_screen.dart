@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../screens/import_screen.dart';
 import '../theme.dart';
 import 'prefs.dart';
 
@@ -80,6 +81,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ],
               ),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 14, 20, 4),
+            child: Text('IMPORT / RESTAURATION',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.5,
+                    color: TtColors.dim)),
+          ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.download_outlined, color: TtColors.amber),
+              title: const Text('Importer des données',
+                  style:
+                      TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              subtitle: const Text(
+                  'Backup TrackTime (JSON) ou export TV Time (CSV/JSON)',
+                  style: TextStyle(fontSize: 12.5, color: TtColors.dim)),
+              trailing: const Icon(Icons.chevron_right, color: TtColors.dim),
+              onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ImportPage())),
             ),
           ),
           const Padding(

@@ -11,6 +11,20 @@ import '../settings/prefs.dart';
 import '../settings/settings_screen.dart';
 import '../theme.dart';
 
+/// Page autonome (avec AppBar) enveloppant [ImportScreen], à pousser depuis
+/// les Réglages ou le Profil.
+class ImportPage extends StatelessWidget {
+  const ImportPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Importer des données')),
+      body: const ImportScreen(),
+    );
+  }
+}
+
 class ImportScreen extends ConsumerStatefulWidget {
   const ImportScreen({super.key});
 

@@ -10,16 +10,17 @@ import '../tmdb/tmdb.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 
-class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+/// Onglet Explorer : champ de recherche TMDB + résultats (séries et films).
+/// Conçu comme corps d'onglet (pas de Scaffold ni d'AppBar propre).
+class ExplorerScreen extends ConsumerStatefulWidget {
+  const ExplorerScreen({super.key});
 
   @override
-  ConsumerState<SearchScreen> createState() => _SearchScreenState();
+  ConsumerState<ExplorerScreen> createState() => _ExplorerScreenState();
 }
 
-class _SearchScreenState extends ConsumerState<SearchScreen> {
+class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   final _controller = TextEditingController();
-  final _focus = FocusNode();
   Timer? _debounce;
 
   List<Map<String, dynamic>> _results = [];
@@ -28,20 +29,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   String _lastQuery = '';
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
-  }
-
-  @override
   void dispose() {
     _debounce?.cancel();
     _controller.dispose();
-    _focus.dispose();
     super.dispose();
   }
 
   void _onChanged(String value) {
+    setState(() {}); // rafraîchit le bouton d'effacement
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), () => _search(value));
   }
@@ -83,37 +78,43 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: TextField(
-          controller: _controller,
-          focusNode: _focus,
-          autocorrect: false,
-          textInputAction: TextInputAction.search,
-          onChanged: _onChanged,
-          onSubmitted: _search,
-          style: const TextStyle(fontSize: 16),
-          decoration: const InputDecoration(
-            hintText: 'Série ou film…',
-            border: InputBorder.none,
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: TextField(
+            controller: _controller,
+            autocorrect: false,
+            textInputAction: TextInputAction.search,
+            onChanged: _onChanged,
+            onSubmitted: _search,
+            decoration: InputDecoration(
+              hintText: 'Chercher une série ou un film…',
+              prefixIcon: const Icon(Icons.search, color: TtColors.dim),
+              suffixIcon: _controller.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close, color: TtColors.dim),
+                      onPressed: () {
+                        _controller.clear();
+                        _search('');
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: TtColors.surface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+            ),
           ),
         ),
-        actions: [
-          if (_controller.text.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () {
-                _controller.clear();
-                _search('');
-              },
-            ),
-        ],
-      ),
-      body: _buildBody(),
+        Expanded(child: _buildResults()),
+      ],
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildResults() {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -122,30 +123,31 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
     if (_controller.text.trim().isEmpty) {
       return const EmptyState(
-        icon: Icons.search,
-        message: 'Cherche une série ou un film à ajouter.',
+        icon: Icons.travel_explore,
+        message: 'Cherche une série ou un film à ajouter à ton suivi.',
       );
     }
     if (_results.isEmpty) {
       return const EmptyState(icon: Icons.search_off, message: 'Aucun résultat.');
     }
     return ListView.builder(
+      padding: EdgeInsets.only(bottom: bottomNavInset(context)),
       itemCount: _results.length,
-      itemBuilder: (_, i) => _SearchResultCard(_results[i]),
+      itemBuilder: (_, i) => _ResultCard(_results[i]),
     );
   }
 }
 
-class _SearchResultCard extends ConsumerStatefulWidget {
-  const _SearchResultCard(this.result);
+class _ResultCard extends ConsumerStatefulWidget {
+  const _ResultCard(this.result);
 
   final Map<String, dynamic> result;
 
   @override
-  ConsumerState<_SearchResultCard> createState() => _SearchResultCardState();
+  ConsumerState<_ResultCard> createState() => _ResultCardState();
 }
 
-class _SearchResultCardState extends ConsumerState<_SearchResultCard> {
+class _ResultCardState extends ConsumerState<_ResultCard> {
   bool _busy = false;
 
   @override

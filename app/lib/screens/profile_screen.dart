@@ -9,12 +9,10 @@ import '../settings/settings_screen.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/stats_summary.dart';
+import 'import_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
-  const ProfileScreen({super.key, this.onGoToImport});
-
-  /// Rappel pour basculer sur l'onglet Import (fourni par la coquille).
-  final VoidCallback? onGoToImport;
+  const ProfileScreen({super.key});
 
   static const _months = [
     'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
@@ -27,7 +25,7 @@ class ProfileScreen extends ConsumerWidget {
     final statsAsync = ref.watch(statsProvider);
 
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.fromLTRB(0, 8, 0, bottomNavInset(context)),
       children: [
         profileAsync.when(
           loading: () => const SizedBox(
@@ -59,7 +57,8 @@ class ProfileScreen extends ConsumerWidget {
                 icon: Icons.download_outlined,
                 title: 'Importer / restaurer',
                 subtitle: 'Backup TrackTime ou export TV Time',
-                onTap: onGoToImport,
+                onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ImportPage())),
               ),
               const _TileDivider(),
               _ActionTile(

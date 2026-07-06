@@ -22,8 +22,8 @@ void main() {
 
     expect(find.text('Séries'), findsOneWidget);
     expect(find.text('Films'), findsOneWidget);
+    expect(find.text('Explorer'), findsOneWidget);
     expect(find.text('Profil'), findsOneWidget);
-    expect(find.text('Import'), findsOneWidget);
     expect(find.textContaining('Aucune série'), findsOneWidget);
 
     // Démonte l'arbre puis avance l'horloge simulée pour déclencher les
