@@ -113,53 +113,77 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
               onShowTap: () => _openShow(h.show.id, h.show.name),
             );
 
-        // La partie basse (À voir + délaissées), affichée à partir du haut.
-        final belowChildren = <Widget>[
-          if (feed.toWatch.isNotEmpty) ...[
-            const SectionLabel('À voir'),
-            for (var i = 0; i < feed.toWatch.length; i++)
-              _card(feed.toWatch[i], badge: i == 0 ? 'PLUS RÉCENT' : null),
-          ],
-          if (feed.stale.isNotEmpty) ...[
-            const SectionLabel('Pas regardé depuis un moment'),
-            ...feed.stale.map((n) => _card(n)),
-          ],
-          SizedBox(height: bottomNavInset(context)),
+        final toWatchCards = [
+          for (var i = 0; i < feed.toWatch.length; i++)
+            _card(feed.toWatch[i], badge: i == 0 ? 'PLUS RÉCENT' : null),
+        ];
+        final staleCards = [for (final n in feed.stale) _card(n)];
+        final historyCards = feed.history.map(historyCard).toList();
+
+        final belowSections = <Widget>[
+          if (toWatchCards.isNotEmpty) _pillSection('À voir', toWatchCards),
+          if (staleCards.isNotEmpty)
+            _pillSection('Pas regardé depuis un moment', staleCards),
         ];
 
-        // Rien « à voir » (tout est à jour) : simple liste de l'historique.
-        if (belowChildren.length == 1) {
+        // Tout est à jour (rien « à voir ») : simple liste de l'historique.
+        if (belowSections.isEmpty) {
           return ListView(
             padding: EdgeInsets.only(bottom: bottomNavInset(context)),
             children: [
-              const SectionLabel('Historique de visionnage'),
-              ...feed.history.map(historyCard),
+              if (historyCards.isNotEmpty)
+                _pillSection('Historique de visionnage', historyCards),
             ],
           );
         }
 
         // Vue bidirectionnelle : « À voir » démarre en haut (offset 0),
-        // l'historique est au-dessus (scroll vers le haut).
-        // Les enfants AVANT le centre sont inversés par le growth reverse,
-        // d'où l'ordre [historique (récent→ancien), libellé] qui se lit
-        // [libellé, ancien→récent] avec le plus récent collé au « À voir ».
+        // l'historique est au-dessus (scroll vers le haut). L'historique est
+        // une seule section-widget (donc pas d'inversion des enfants du sliver
+        // avant-centre) : on inverse manuellement pour coller le plus récent
+        // au « À voir ».
         const centerKey = ValueKey('to-watch-center');
-        final aboveChildren = <Widget>[
-          if (feed.history.isNotEmpty) ...[
-            ...feed.history.map(historyCard),
-            const SectionLabel('Historique de visionnage'),
-          ],
-          const SizedBox(height: 8),
-        ];
-
         return CustomScrollView(
           center: centerKey,
           slivers: [
-            SliverList.list(children: aboveChildren),
-            SliverList.list(key: centerKey, children: belowChildren),
+            SliverList.list(children: [
+              if (historyCards.isNotEmpty)
+                _pillSection('Historique de visionnage',
+                    historyCards.reversed.toList()),
+            ]),
+            SliverList.list(key: centerKey, children: [
+              ...belowSections,
+              SizedBox(height: bottomNavInset(context)),
+            ]),
           ],
         );
       },
+    );
+  }
+
+  /// Section = capsule grise centrée qui chevauche le haut de la 1re carte.
+  Widget _pillSection(String label, List<Widget> cards) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 18),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 13),
+              child: cards.first,
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Center(child: SectionPill(label)),
+            ),
+          ],
+        ),
+        ...cards.skip(1),
+      ],
     );
   }
 
