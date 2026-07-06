@@ -125,7 +125,9 @@ class _Still extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const w = 128.0;
+    // Vignette au format affiche (portrait 2:3), affichée EN ENTIER : une
+    // affiche 2:3 dans une boîte 2:3 remplit sans recadrer.
+    const w = 66.0;
     final placeholder = DecoratedBox(
       decoration: BoxDecoration(gradient: _seedGradient(seed)),
       child: const Center(
@@ -133,7 +135,6 @@ class _Still extends StatelessWidget {
       ),
     );
 
-    // Repli en cascade : still d'épisode → affiche de la série → dégradé.
     Widget imageOr(String url, Widget fallback) => Image.network(
           url,
           width: w,
@@ -142,16 +143,15 @@ class _Still extends StatelessWidget {
           errorBuilder: (_, _, _) => fallback,
         );
 
-    Widget posterOrPlaceholder() => (posterPath == null || posterPath!.isEmpty)
-        ? placeholder
-        : imageOr('https://image.tmdb.org/t/p/w300$posterPath', placeholder);
-
+    // On privilégie l'affiche (portrait), qui remplit la vignette sans coupe.
+    // La vignette d'épisode (paysage) ne sert que si aucune affiche.
     final Widget child;
-    if (path != null && path!.isNotEmpty) {
-      child = imageOr(
-          'https://image.tmdb.org/t/p/w300$path', posterOrPlaceholder());
+    if (posterPath != null && posterPath!.isNotEmpty) {
+      child = imageOr('https://image.tmdb.org/t/p/w185$posterPath', placeholder);
+    } else if (path != null && path!.isNotEmpty) {
+      child = imageOr('https://image.tmdb.org/t/p/w300$path', placeholder);
     } else {
-      child = posterOrPlaceholder();
+      child = placeholder;
     }
     return SizedBox(width: w, height: double.infinity, child: child);
   }
