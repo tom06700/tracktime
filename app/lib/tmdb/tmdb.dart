@@ -72,4 +72,15 @@ class TmdbClient {
   Future<Map<String, dynamic>> episode(
           int tvId, int seasonNumber, int episodeNumber) =>
       _get('/tv/$tvId/season/$seasonNumber/episode/$episodeNumber');
+
+  /// Plateformes de streaming (par région) et lien JustWatch.
+  Future<Map<String, dynamic>> watchProviders(int tvId) =>
+      _get('/tv/$tvId/watch/providers');
+
+  Future<List<Map<String, dynamic>>> similarTv(int tvId) async {
+    final j = await _get('/tv/$tvId/similar');
+    return ((j['results'] as List?) ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .toList();
+  }
 }
