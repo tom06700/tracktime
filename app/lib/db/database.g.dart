@@ -520,6 +520,9 @@ class $WatchedEpisodesTable extends WatchedEpisodes
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shows (id) ON DELETE CASCADE',
+    ),
   );
   static const VerificationMeta _seasonMeta = const VerificationMeta('season');
   @override
@@ -1221,6 +1224,16 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     watchedEpisodes,
     movies,
   ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'shows',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('watched_episodes', kind: UpdateKind.delete)],
+    ),
+  ]);
 }
 
 typedef $$ShowsTableCreateCompanionBuilder =
@@ -1245,6 +1258,31 @@ typedef $$ShowsTableUpdateCompanionBuilder =
       Value<String?> status,
       Value<DateTime> addedAt,
     });
+
+final class $$ShowsTableReferences
+    extends BaseReferences<_$AppDatabase, $ShowsTable, Show> {
+  $$ShowsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$WatchedEpisodesTable, List<WatchedEpisode>>
+  _watchedEpisodesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.watchedEpisodes,
+    aliasName: 'shows__id__watched_episodes__show_id',
+  );
+
+  $$WatchedEpisodesTableProcessedTableManager get watchedEpisodesRefs {
+    final manager = $$WatchedEpisodesTableTableManager(
+      $_db,
+      $_db.watchedEpisodes,
+    ).filter((f) => f.showId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _watchedEpisodesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
 
 class $$ShowsTableFilterComposer extends Composer<_$AppDatabase, $ShowsTable> {
   $$ShowsTableFilterComposer({
@@ -1293,6 +1331,31 @@ class $$ShowsTableFilterComposer extends Composer<_$AppDatabase, $ShowsTable> {
     column: $table.addedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> watchedEpisodesRefs(
+    Expression<bool> Function($$WatchedEpisodesTableFilterComposer f) f,
+  ) {
+    final $$WatchedEpisodesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.watchedEpisodes,
+      getReferencedColumn: (t) => t.showId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WatchedEpisodesTableFilterComposer(
+            $db: $db,
+            $table: $db.watchedEpisodes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ShowsTableOrderingComposer
@@ -1381,6 +1444,31 @@ class $$ShowsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get addedAt =>
       $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  Expression<T> watchedEpisodesRefs<T extends Object>(
+    Expression<T> Function($$WatchedEpisodesTableAnnotationComposer a) f,
+  ) {
+    final $$WatchedEpisodesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.watchedEpisodes,
+      getReferencedColumn: (t) => t.showId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WatchedEpisodesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.watchedEpisodes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ShowsTableTableManager
@@ -1394,9 +1482,9 @@ class $$ShowsTableTableManager
           $$ShowsTableAnnotationComposer,
           $$ShowsTableCreateCompanionBuilder,
           $$ShowsTableUpdateCompanionBuilder,
-          (Show, BaseReferences<_$AppDatabase, $ShowsTable, Show>),
+          (Show, $$ShowsTableReferences),
           Show,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool watchedEpisodesRefs})
         > {
   $$ShowsTableTableManager(_$AppDatabase db, $ShowsTable table)
     : super(
@@ -1450,9 +1538,42 @@ class $$ShowsTableTableManager
                 addedAt: addedAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) =>
+                    (e.readTable(table), $$ShowsTableReferences(db, table, e)),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({watchedEpisodesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (watchedEpisodesRefs) db.watchedEpisodes,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (watchedEpisodesRefs)
+                    await $_getPrefetchedData<
+                      Show,
+                      $ShowsTable,
+                      WatchedEpisode
+                    >(
+                      currentTable: table,
+                      referencedTable: $$ShowsTableReferences
+                          ._watchedEpisodesRefsTable(db),
+                      managerFromTypedResult: (p0) => $$ShowsTableReferences(
+                        db,
+                        table,
+                        p0,
+                      ).watchedEpisodesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.showId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
         ),
       );
 }
@@ -1467,9 +1588,9 @@ typedef $$ShowsTableProcessedTableManager =
       $$ShowsTableAnnotationComposer,
       $$ShowsTableCreateCompanionBuilder,
       $$ShowsTableUpdateCompanionBuilder,
-      (Show, BaseReferences<_$AppDatabase, $ShowsTable, Show>),
+      (Show, $$ShowsTableReferences),
       Show,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool watchedEpisodesRefs})
     >;
 typedef $$WatchedEpisodesTableCreateCompanionBuilder =
     WatchedEpisodesCompanion Function({
@@ -1488,6 +1609,33 @@ typedef $$WatchedEpisodesTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
+final class $$WatchedEpisodesTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $WatchedEpisodesTable, WatchedEpisode> {
+  $$WatchedEpisodesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShowsTable _showIdTable(_$AppDatabase db) =>
+      db.shows.createAlias('watched_episodes__show_id__shows__id');
+
+  $$ShowsTableProcessedTableManager get showId {
+    final $_column = $_itemColumn<int>('show_id')!;
+
+    final manager = $$ShowsTableTableManager(
+      $_db,
+      $_db.shows,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_showIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
 class $$WatchedEpisodesTableFilterComposer
     extends Composer<_$AppDatabase, $WatchedEpisodesTable> {
   $$WatchedEpisodesTableFilterComposer({
@@ -1497,11 +1645,6 @@ class $$WatchedEpisodesTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get showId => $composableBuilder(
-    column: $table.showId,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<int> get season => $composableBuilder(
     column: $table.season,
     builder: (column) => ColumnFilters(column),
@@ -1516,6 +1659,29 @@ class $$WatchedEpisodesTableFilterComposer
     column: $table.watchedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  $$ShowsTableFilterComposer get showId {
+    final $$ShowsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.showId,
+      referencedTable: $db.shows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShowsTableFilterComposer(
+            $db: $db,
+            $table: $db.shows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$WatchedEpisodesTableOrderingComposer
@@ -1527,11 +1693,6 @@ class $$WatchedEpisodesTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get showId => $composableBuilder(
-    column: $table.showId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<int> get season => $composableBuilder(
     column: $table.season,
     builder: (column) => ColumnOrderings(column),
@@ -1546,6 +1707,29 @@ class $$WatchedEpisodesTableOrderingComposer
     column: $table.watchedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$ShowsTableOrderingComposer get showId {
+    final $$ShowsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.showId,
+      referencedTable: $db.shows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShowsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$WatchedEpisodesTableAnnotationComposer
@@ -1557,9 +1741,6 @@ class $$WatchedEpisodesTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get showId =>
-      $composableBuilder(column: $table.showId, builder: (column) => column);
-
   GeneratedColumn<int> get season =>
       $composableBuilder(column: $table.season, builder: (column) => column);
 
@@ -1568,6 +1749,29 @@ class $$WatchedEpisodesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get watchedAt =>
       $composableBuilder(column: $table.watchedAt, builder: (column) => column);
+
+  $$ShowsTableAnnotationComposer get showId {
+    final $$ShowsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.showId,
+      referencedTable: $db.shows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShowsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$WatchedEpisodesTableTableManager
@@ -1581,16 +1785,9 @@ class $$WatchedEpisodesTableTableManager
           $$WatchedEpisodesTableAnnotationComposer,
           $$WatchedEpisodesTableCreateCompanionBuilder,
           $$WatchedEpisodesTableUpdateCompanionBuilder,
-          (
-            WatchedEpisode,
-            BaseReferences<
-              _$AppDatabase,
-              $WatchedEpisodesTable,
-              WatchedEpisode
-            >,
-          ),
+          (WatchedEpisode, $$WatchedEpisodesTableReferences),
           WatchedEpisode,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool showId})
         > {
   $$WatchedEpisodesTableTableManager(
     _$AppDatabase db,
@@ -1634,9 +1831,56 @@ class $$WatchedEpisodesTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$WatchedEpisodesTableReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({showId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (showId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.showId,
+                                referencedTable:
+                                    $$WatchedEpisodesTableReferences
+                                        ._showIdTable(db),
+                                referencedColumn:
+                                    $$WatchedEpisodesTableReferences
+                                        ._showIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ),
       );
 }
@@ -1651,12 +1895,9 @@ typedef $$WatchedEpisodesTableProcessedTableManager =
       $$WatchedEpisodesTableAnnotationComposer,
       $$WatchedEpisodesTableCreateCompanionBuilder,
       $$WatchedEpisodesTableUpdateCompanionBuilder,
-      (
-        WatchedEpisode,
-        BaseReferences<_$AppDatabase, $WatchedEpisodesTable, WatchedEpisode>,
-      ),
+      (WatchedEpisode, $$WatchedEpisodesTableReferences),
       WatchedEpisode,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool showId})
     >;
 typedef $$MoviesTableCreateCompanionBuilder =
     MoviesCompanion Function({

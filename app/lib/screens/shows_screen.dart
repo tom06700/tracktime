@@ -14,7 +14,10 @@ class ShowsScreen extends ConsumerWidget {
     final shows = ref.watch(showsProvider);
     return shows.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => EmptyState(icon: Icons.error_outline, message: '$e'),
+      error: (e, st) {
+        debugPrint('DB error: $e\n$st');
+        return EmptyState(icon: Icons.error_outline, message: '$e');
+      },
       data: (list) {
         if (list.isEmpty) {
           return const EmptyState(

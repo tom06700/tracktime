@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+pubspec_overrides.yaml
+web/drift_worker.js.map
+web/drift_worker.js.deps
