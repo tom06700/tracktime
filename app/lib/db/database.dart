@@ -13,9 +13,27 @@ class Shows extends Table {
   IntColumn get runtime => integer().withDefault(const Constant(42))();
   TextColumn get status => text().nullable()();
   DateTimeColumn get addedAt => dateTime().withDefault(currentDateAndTime)();
+  // Dernière synchro des épisodes TMDB (null = jamais).
+  DateTimeColumn get episodesSyncedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
+}
+
+/// Métadonnées d'un épisode (cache TMDB) : titre, image, date de diffusion.
+/// Sert à construire le fil « à voir » (prochain épisode, restants).
+@DataClassName('Episode')
+class Episodes extends Table {
+  IntColumn get showId =>
+      integer().references(Shows, #id, onDelete: KeyAction.cascade)();
+  IntColumn get season => integer()();
+  IntColumn get episode => integer()();
+  TextColumn get name => text().nullable()();
+  TextColumn get still => text().nullable()();
+  DateTimeColumn get airDate => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {showId, season, episode};
 }
 
 /// Un épisode vu, équivalent de la clé "S3E7" de la version web.
@@ -83,14 +101,25 @@ class WatchStats {
   int get totalMinutes => tvMinutes + movieMinutes;
 }
 
-@DriftDatabase(tables: [Shows, WatchedEpisodes, Movies])
+@DriftDatabase(tables: [Shows, Episodes, WatchedEpisodes, Movies])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(episodes);
+            await m.addColumn(shows, shows.episodesSyncedAt);
+          }
+        },
+      );
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -130,6 +159,20 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<WatchedEpisode>> allWatchedEpisodes() =>
       select(watchedEpisodes).get();
+
+  // ---- Épisodes (cache TMDB) ----
+
+  Future<void> upsertEpisodes(List<EpisodesCompanion> rows) =>
+      batch((b) => b.insertAllOnConflictUpdate(episodes, rows));
+
+  Future<void> markShowSynced(int showId, DateTime at) =>
+      (update(shows)..where((s) => s.id.equals(showId)))
+          .write(ShowsCompanion(episodesSyncedAt: Value(at)));
+
+  Stream<List<Episode>> watchAllEpisodes() => select(episodes).watch();
+
+  Stream<List<WatchedEpisode>> watchAllWatched() =>
+      select(watchedEpisodes).watch();
 
   Future<List<Movie>> allMovies() => select(movies).get();
 

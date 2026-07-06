@@ -72,12 +72,23 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
         .toList();
     final numbers = <int>[];
     final names = <int, String>{};
+    final rows = <EpisodesCompanion>[];
     for (final e in eps) {
       final n = (e['episode_number'] as num?)?.toInt();
       if (n == null) continue;
       numbers.add(n);
       names[n] = '${e['name'] ?? 'Épisode $n'}';
+      rows.add(EpisodesCompanion.insert(
+        showId: widget.showId,
+        season: season,
+        episode: n,
+        name: Value(e['name'] as String?),
+        still: Value(e['still_path'] as String?),
+        airDate: Value(DateTime.tryParse('${e['air_date'] ?? ''}')),
+      ));
     }
+    // Réchauffe le cache pour le fil « à voir ».
+    if (rows.isNotEmpty) await ref.read(databaseProvider).upsertEpisodes(rows);
     _episodesBySeason[season] = numbers;
     _episodeNames[season] = names;
     return numbers;

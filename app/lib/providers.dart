@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'db/database.dart';
 import 'demo/demo_seed.dart';
+import 'series/feed.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -23,3 +24,27 @@ final statsProvider = StreamProvider<WatchStats>(
 /// Ensemble réactif des clés "SxEy" vues, pour l'écran de détail d'une série.
 final watchedKeysProvider = StreamProvider.family<Set<String>, int>(
     (ref, showId) => ref.watch(databaseProvider).watchWatchedKeys(showId));
+
+final _allEpisodesProvider = StreamProvider<List<Episode>>(
+    (ref) => ref.watch(databaseProvider).watchAllEpisodes());
+
+final _allWatchedProvider = StreamProvider<List<WatchedEpisode>>(
+    (ref) => ref.watch(databaseProvider).watchAllWatched());
+
+/// Fil de la page Séries (historique · à voir · délaissées), recomposé dès
+/// qu'une série, un épisode caché ou une coche change.
+final seriesFeedProvider = Provider<AsyncValue<SeriesFeed>>((ref) {
+  final shows = ref.watch(showsProvider);
+  final episodes = ref.watch(_allEpisodesProvider);
+  final watched = ref.watch(_allWatchedProvider);
+
+  return shows.whenData((showList) {
+    final feed = buildSeriesFeed(
+      shows: showList,
+      episodes: episodes.value ?? const [],
+      watched: watched.value ?? const [],
+      now: DateTime.now(),
+    );
+    return feed;
+  });
+});

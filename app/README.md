@@ -19,9 +19,16 @@ flutter run
 - **État** : Riverpod (`lib/providers.dart`)
 - **Base de données** : drift (SQLite) — schéma dans `lib/db/database.dart`
   - `shows` : séries suivies (id TMDB, affiche, nb d'épisodes, durée…)
+  - `episodes` : cache TMDB (titre, image, date de diffusion) pour le fil
+    « à voir » (schéma v2)
   - `watched_episodes` : un enregistrement par épisode vu (équivalent des clés
     `S3E7` de la version web)
   - `movies` : films, `watched_at` null = watchlist
+- **Fil Séries** (`lib/series/`) : à la TV Time — cartes d'épisode « prochain
+  à voir » (calcul du next-up + « +N » restants dans `feed.dart`, pur et
+  testé), sections Historique / À voir / Pas regardé depuis un moment. Le
+  cache d'épisodes se remplit via `sync.dart` (TMDB) et à l'ouverture d'une
+  série ; repli par estimation sans réseau.
 - **Écrans** : `lib/screens/` — onglets Séries, Films, Explorer, Profil.
   Nav bar « liquid glass » flottante (`lib/widgets/liquid_glass_nav_bar.dart`,
   Scaffold en `extendBody`). L'import n'est plus un onglet : il vit dans une

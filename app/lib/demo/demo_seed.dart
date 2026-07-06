@@ -11,10 +11,10 @@ Future<void> maybeSeedDemo(AppDatabase db) async {
   if (Uri.base.queryParameters['demo'] != '1') return;
   if ((await db.allShows()).isNotEmpty) return;
 
-  // (id TMDB réel, nom, total, saisons, durée, statut, épisodes vus)
+  // (id TMDB, nom, total, saisons, durée, statut, épisodes vus)
   const shows = [
     (1396, 'Breaking Bad', 62, 5, 47, 'Ended', 62),
-    (70523, 'Dark', 26, 3, 53, 'Ended', 17),
+    (70523, 'Dark', 26, 3, 53, 'Returning Series', 17),
     (2316, 'The Office', 201, 9, 24, 'Ended', 134),
     (66732, 'Stranger Things', 42, 5, 51, 'Returning Series', 33),
     (95396, 'Severance', 19, 2, 50, 'Returning Series', 9),
@@ -23,7 +23,6 @@ Future<void> maybeSeedDemo(AppDatabase db) async {
     (76331, 'Succession', 39, 4, 60, 'Ended', 12),
   ];
 
-  // (id TMDB réel, titre, durée, vu ?)
   const movies = [
     (27205, 'Inception', 148, true),
     (157336, 'Interstellar', 169, true),
@@ -34,8 +33,16 @@ Future<void> maybeSeedDemo(AppDatabase db) async {
     (129, 'Le Voyage de Chihiro', 125, false),
   ];
 
+  final now = DateTime.now();
+
   await db.transaction(() async {
-    for (final (id, name, total, seasons, runtime, status, seen) in shows) {
+    for (var i = 0; i < shows.length; i++) {
+      final (id, name, total, seasons, runtime, status, seen) = shows[i];
+      final perSeason = (total / seasons).ceil();
+      // Activité décalée : les premières séries sont récentes, les dernières
+      // « pas regardées depuis un moment ».
+      final activity = now.subtract(Duration(days: i * 4, hours: 3));
+
       await db.upsertShow(ShowsCompanion.insert(
         id: Value(id),
         name: name,
@@ -44,19 +51,33 @@ Future<void> maybeSeedDemo(AppDatabase db) async {
         runtime: Value(runtime),
         status: Value(status),
       ));
-      final perSeason = (total / seasons).ceil();
-      for (var i = 0; i < seen; i++) {
-        await db.setEpisodeWatched(
-            id, i ~/ perSeason + 1, i % perSeason + 1,
-            at: DateTime(2026, 1 + i % 6, 1 + i % 27));
+
+      final eps = <EpisodesCompanion>[];
+      for (var idx = 0; idx < total; idx++) {
+        final season = idx ~/ perSeason + 1;
+        final ep = idx % perSeason + 1;
+        eps.add(EpisodesCompanion.insert(
+          showId: id,
+          season: season,
+          episode: ep,
+          name: Value('Épisode $ep'),
+          airDate: Value(now.subtract(Duration(days: total - idx + 30))),
+        ));
+        if (idx < seen) {
+          await db.setEpisodeWatched(id, season, ep,
+              at: activity.subtract(Duration(hours: (seen - 1 - idx) * 6)));
+        }
       }
+      await db.upsertEpisodes(eps);
+      await db.markShowSynced(id, now);
     }
+
     for (final (id, title, runtime, seen) in movies) {
       await db.upsertMovie(MoviesCompanion.insert(
         id: Value(id),
         title: title,
         runtime: Value(runtime),
-        watchedAt: Value(seen ? DateTime(2026, 3, 14) : null),
+        watchedAt: Value(seen ? now.subtract(const Duration(days: 20)) : null),
       ));
     }
   });

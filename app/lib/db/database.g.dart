@@ -90,6 +90,18 @@ class $ShowsTable extends Shows with TableInfo<$ShowsTable, Show> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _episodesSyncedAtMeta = const VerificationMeta(
+    'episodesSyncedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> episodesSyncedAt =
+      GeneratedColumn<DateTime>(
+        'episodes_synced_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -100,6 +112,7 @@ class $ShowsTable extends Shows with TableInfo<$ShowsTable, Show> {
     runtime,
     status,
     addedAt,
+    episodesSyncedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -166,6 +179,15 @@ class $ShowsTable extends Shows with TableInfo<$ShowsTable, Show> {
         addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
       );
     }
+    if (data.containsKey('episodes_synced_at')) {
+      context.handle(
+        _episodesSyncedAtMeta,
+        episodesSyncedAt.isAcceptableOrUnknown(
+          data['episodes_synced_at']!,
+          _episodesSyncedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -207,6 +229,10 @@ class $ShowsTable extends Shows with TableInfo<$ShowsTable, Show> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}added_at'],
       )!,
+      episodesSyncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}episodes_synced_at'],
+      ),
     );
   }
 
@@ -225,6 +251,7 @@ class Show extends DataClass implements Insertable<Show> {
   final int runtime;
   final String? status;
   final DateTime addedAt;
+  final DateTime? episodesSyncedAt;
   const Show({
     required this.id,
     required this.name,
@@ -234,6 +261,7 @@ class Show extends DataClass implements Insertable<Show> {
     required this.runtime,
     this.status,
     required this.addedAt,
+    this.episodesSyncedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -254,6 +282,9 @@ class Show extends DataClass implements Insertable<Show> {
       map['status'] = Variable<String>(status);
     }
     map['added_at'] = Variable<DateTime>(addedAt);
+    if (!nullToAbsent || episodesSyncedAt != null) {
+      map['episodes_synced_at'] = Variable<DateTime>(episodesSyncedAt);
+    }
     return map;
   }
 
@@ -275,6 +306,9 @@ class Show extends DataClass implements Insertable<Show> {
           ? const Value.absent()
           : Value(status),
       addedAt: Value(addedAt),
+      episodesSyncedAt: episodesSyncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(episodesSyncedAt),
     );
   }
 
@@ -292,6 +326,9 @@ class Show extends DataClass implements Insertable<Show> {
       runtime: serializer.fromJson<int>(json['runtime']),
       status: serializer.fromJson<String?>(json['status']),
       addedAt: serializer.fromJson<DateTime>(json['addedAt']),
+      episodesSyncedAt: serializer.fromJson<DateTime?>(
+        json['episodesSyncedAt'],
+      ),
     );
   }
   @override
@@ -306,6 +343,7 @@ class Show extends DataClass implements Insertable<Show> {
       'runtime': serializer.toJson<int>(runtime),
       'status': serializer.toJson<String?>(status),
       'addedAt': serializer.toJson<DateTime>(addedAt),
+      'episodesSyncedAt': serializer.toJson<DateTime?>(episodesSyncedAt),
     };
   }
 
@@ -318,6 +356,7 @@ class Show extends DataClass implements Insertable<Show> {
     int? runtime,
     Value<String?> status = const Value.absent(),
     DateTime? addedAt,
+    Value<DateTime?> episodesSyncedAt = const Value.absent(),
   }) => Show(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -329,6 +368,9 @@ class Show extends DataClass implements Insertable<Show> {
     runtime: runtime ?? this.runtime,
     status: status.present ? status.value : this.status,
     addedAt: addedAt ?? this.addedAt,
+    episodesSyncedAt: episodesSyncedAt.present
+        ? episodesSyncedAt.value
+        : this.episodesSyncedAt,
   );
   Show copyWithCompanion(ShowsCompanion data) {
     return Show(
@@ -344,6 +386,9 @@ class Show extends DataClass implements Insertable<Show> {
       runtime: data.runtime.present ? data.runtime.value : this.runtime,
       status: data.status.present ? data.status.value : this.status,
       addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+      episodesSyncedAt: data.episodesSyncedAt.present
+          ? data.episodesSyncedAt.value
+          : this.episodesSyncedAt,
     );
   }
 
@@ -357,7 +402,8 @@ class Show extends DataClass implements Insertable<Show> {
           ..write('seasonCount: $seasonCount, ')
           ..write('runtime: $runtime, ')
           ..write('status: $status, ')
-          ..write('addedAt: $addedAt')
+          ..write('addedAt: $addedAt, ')
+          ..write('episodesSyncedAt: $episodesSyncedAt')
           ..write(')'))
         .toString();
   }
@@ -372,6 +418,7 @@ class Show extends DataClass implements Insertable<Show> {
     runtime,
     status,
     addedAt,
+    episodesSyncedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -384,7 +431,8 @@ class Show extends DataClass implements Insertable<Show> {
           other.seasonCount == this.seasonCount &&
           other.runtime == this.runtime &&
           other.status == this.status &&
-          other.addedAt == this.addedAt);
+          other.addedAt == this.addedAt &&
+          other.episodesSyncedAt == this.episodesSyncedAt);
 }
 
 class ShowsCompanion extends UpdateCompanion<Show> {
@@ -396,6 +444,7 @@ class ShowsCompanion extends UpdateCompanion<Show> {
   final Value<int> runtime;
   final Value<String?> status;
   final Value<DateTime> addedAt;
+  final Value<DateTime?> episodesSyncedAt;
   const ShowsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -405,6 +454,7 @@ class ShowsCompanion extends UpdateCompanion<Show> {
     this.runtime = const Value.absent(),
     this.status = const Value.absent(),
     this.addedAt = const Value.absent(),
+    this.episodesSyncedAt = const Value.absent(),
   });
   ShowsCompanion.insert({
     this.id = const Value.absent(),
@@ -415,6 +465,7 @@ class ShowsCompanion extends UpdateCompanion<Show> {
     this.runtime = const Value.absent(),
     this.status = const Value.absent(),
     this.addedAt = const Value.absent(),
+    this.episodesSyncedAt = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Show> custom({
     Expression<int>? id,
@@ -425,6 +476,7 @@ class ShowsCompanion extends UpdateCompanion<Show> {
     Expression<int>? runtime,
     Expression<String>? status,
     Expression<DateTime>? addedAt,
+    Expression<DateTime>? episodesSyncedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -435,6 +487,7 @@ class ShowsCompanion extends UpdateCompanion<Show> {
       if (runtime != null) 'runtime': runtime,
       if (status != null) 'status': status,
       if (addedAt != null) 'added_at': addedAt,
+      if (episodesSyncedAt != null) 'episodes_synced_at': episodesSyncedAt,
     });
   }
 
@@ -447,6 +500,7 @@ class ShowsCompanion extends UpdateCompanion<Show> {
     Value<int>? runtime,
     Value<String?>? status,
     Value<DateTime>? addedAt,
+    Value<DateTime?>? episodesSyncedAt,
   }) {
     return ShowsCompanion(
       id: id ?? this.id,
@@ -457,6 +511,7 @@ class ShowsCompanion extends UpdateCompanion<Show> {
       runtime: runtime ?? this.runtime,
       status: status ?? this.status,
       addedAt: addedAt ?? this.addedAt,
+      episodesSyncedAt: episodesSyncedAt ?? this.episodesSyncedAt,
     );
   }
 
@@ -487,6 +542,9 @@ class ShowsCompanion extends UpdateCompanion<Show> {
     if (addedAt.present) {
       map['added_at'] = Variable<DateTime>(addedAt.value);
     }
+    if (episodesSyncedAt.present) {
+      map['episodes_synced_at'] = Variable<DateTime>(episodesSyncedAt.value);
+    }
     return map;
   }
 
@@ -500,7 +558,418 @@ class ShowsCompanion extends UpdateCompanion<Show> {
           ..write('seasonCount: $seasonCount, ')
           ..write('runtime: $runtime, ')
           ..write('status: $status, ')
-          ..write('addedAt: $addedAt')
+          ..write('addedAt: $addedAt, ')
+          ..write('episodesSyncedAt: $episodesSyncedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $EpisodesTable extends Episodes with TableInfo<$EpisodesTable, Episode> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EpisodesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _showIdMeta = const VerificationMeta('showId');
+  @override
+  late final GeneratedColumn<int> showId = GeneratedColumn<int>(
+    'show_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shows (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _seasonMeta = const VerificationMeta('season');
+  @override
+  late final GeneratedColumn<int> season = GeneratedColumn<int>(
+    'season',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _episodeMeta = const VerificationMeta(
+    'episode',
+  );
+  @override
+  late final GeneratedColumn<int> episode = GeneratedColumn<int>(
+    'episode',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stillMeta = const VerificationMeta('still');
+  @override
+  late final GeneratedColumn<String> still = GeneratedColumn<String>(
+    'still',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _airDateMeta = const VerificationMeta(
+    'airDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> airDate = GeneratedColumn<DateTime>(
+    'air_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    showId,
+    season,
+    episode,
+    name,
+    still,
+    airDate,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'episodes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Episode> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('show_id')) {
+      context.handle(
+        _showIdMeta,
+        showId.isAcceptableOrUnknown(data['show_id']!, _showIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_showIdMeta);
+    }
+    if (data.containsKey('season')) {
+      context.handle(
+        _seasonMeta,
+        season.isAcceptableOrUnknown(data['season']!, _seasonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_seasonMeta);
+    }
+    if (data.containsKey('episode')) {
+      context.handle(
+        _episodeMeta,
+        episode.isAcceptableOrUnknown(data['episode']!, _episodeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_episodeMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('still')) {
+      context.handle(
+        _stillMeta,
+        still.isAcceptableOrUnknown(data['still']!, _stillMeta),
+      );
+    }
+    if (data.containsKey('air_date')) {
+      context.handle(
+        _airDateMeta,
+        airDate.isAcceptableOrUnknown(data['air_date']!, _airDateMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {showId, season, episode};
+  @override
+  Episode map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Episode(
+      showId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}show_id'],
+      )!,
+      season: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}season'],
+      )!,
+      episode: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}episode'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      ),
+      still: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}still'],
+      ),
+      airDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}air_date'],
+      ),
+    );
+  }
+
+  @override
+  $EpisodesTable createAlias(String alias) {
+    return $EpisodesTable(attachedDatabase, alias);
+  }
+}
+
+class Episode extends DataClass implements Insertable<Episode> {
+  final int showId;
+  final int season;
+  final int episode;
+  final String? name;
+  final String? still;
+  final DateTime? airDate;
+  const Episode({
+    required this.showId,
+    required this.season,
+    required this.episode,
+    this.name,
+    this.still,
+    this.airDate,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['show_id'] = Variable<int>(showId);
+    map['season'] = Variable<int>(season);
+    map['episode'] = Variable<int>(episode);
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
+    if (!nullToAbsent || still != null) {
+      map['still'] = Variable<String>(still);
+    }
+    if (!nullToAbsent || airDate != null) {
+      map['air_date'] = Variable<DateTime>(airDate);
+    }
+    return map;
+  }
+
+  EpisodesCompanion toCompanion(bool nullToAbsent) {
+    return EpisodesCompanion(
+      showId: Value(showId),
+      season: Value(season),
+      episode: Value(episode),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+      still: still == null && nullToAbsent
+          ? const Value.absent()
+          : Value(still),
+      airDate: airDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(airDate),
+    );
+  }
+
+  factory Episode.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Episode(
+      showId: serializer.fromJson<int>(json['showId']),
+      season: serializer.fromJson<int>(json['season']),
+      episode: serializer.fromJson<int>(json['episode']),
+      name: serializer.fromJson<String?>(json['name']),
+      still: serializer.fromJson<String?>(json['still']),
+      airDate: serializer.fromJson<DateTime?>(json['airDate']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'showId': serializer.toJson<int>(showId),
+      'season': serializer.toJson<int>(season),
+      'episode': serializer.toJson<int>(episode),
+      'name': serializer.toJson<String?>(name),
+      'still': serializer.toJson<String?>(still),
+      'airDate': serializer.toJson<DateTime?>(airDate),
+    };
+  }
+
+  Episode copyWith({
+    int? showId,
+    int? season,
+    int? episode,
+    Value<String?> name = const Value.absent(),
+    Value<String?> still = const Value.absent(),
+    Value<DateTime?> airDate = const Value.absent(),
+  }) => Episode(
+    showId: showId ?? this.showId,
+    season: season ?? this.season,
+    episode: episode ?? this.episode,
+    name: name.present ? name.value : this.name,
+    still: still.present ? still.value : this.still,
+    airDate: airDate.present ? airDate.value : this.airDate,
+  );
+  Episode copyWithCompanion(EpisodesCompanion data) {
+    return Episode(
+      showId: data.showId.present ? data.showId.value : this.showId,
+      season: data.season.present ? data.season.value : this.season,
+      episode: data.episode.present ? data.episode.value : this.episode,
+      name: data.name.present ? data.name.value : this.name,
+      still: data.still.present ? data.still.value : this.still,
+      airDate: data.airDate.present ? data.airDate.value : this.airDate,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Episode(')
+          ..write('showId: $showId, ')
+          ..write('season: $season, ')
+          ..write('episode: $episode, ')
+          ..write('name: $name, ')
+          ..write('still: $still, ')
+          ..write('airDate: $airDate')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(showId, season, episode, name, still, airDate);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Episode &&
+          other.showId == this.showId &&
+          other.season == this.season &&
+          other.episode == this.episode &&
+          other.name == this.name &&
+          other.still == this.still &&
+          other.airDate == this.airDate);
+}
+
+class EpisodesCompanion extends UpdateCompanion<Episode> {
+  final Value<int> showId;
+  final Value<int> season;
+  final Value<int> episode;
+  final Value<String?> name;
+  final Value<String?> still;
+  final Value<DateTime?> airDate;
+  final Value<int> rowid;
+  const EpisodesCompanion({
+    this.showId = const Value.absent(),
+    this.season = const Value.absent(),
+    this.episode = const Value.absent(),
+    this.name = const Value.absent(),
+    this.still = const Value.absent(),
+    this.airDate = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  EpisodesCompanion.insert({
+    required int showId,
+    required int season,
+    required int episode,
+    this.name = const Value.absent(),
+    this.still = const Value.absent(),
+    this.airDate = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : showId = Value(showId),
+       season = Value(season),
+       episode = Value(episode);
+  static Insertable<Episode> custom({
+    Expression<int>? showId,
+    Expression<int>? season,
+    Expression<int>? episode,
+    Expression<String>? name,
+    Expression<String>? still,
+    Expression<DateTime>? airDate,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (showId != null) 'show_id': showId,
+      if (season != null) 'season': season,
+      if (episode != null) 'episode': episode,
+      if (name != null) 'name': name,
+      if (still != null) 'still': still,
+      if (airDate != null) 'air_date': airDate,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  EpisodesCompanion copyWith({
+    Value<int>? showId,
+    Value<int>? season,
+    Value<int>? episode,
+    Value<String?>? name,
+    Value<String?>? still,
+    Value<DateTime?>? airDate,
+    Value<int>? rowid,
+  }) {
+    return EpisodesCompanion(
+      showId: showId ?? this.showId,
+      season: season ?? this.season,
+      episode: episode ?? this.episode,
+      name: name ?? this.name,
+      still: still ?? this.still,
+      airDate: airDate ?? this.airDate,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (showId.present) {
+      map['show_id'] = Variable<int>(showId.value);
+    }
+    if (season.present) {
+      map['season'] = Variable<int>(season.value);
+    }
+    if (episode.present) {
+      map['episode'] = Variable<int>(episode.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (still.present) {
+      map['still'] = Variable<String>(still.value);
+    }
+    if (airDate.present) {
+      map['air_date'] = Variable<DateTime>(airDate.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EpisodesCompanion(')
+          ..write('showId: $showId, ')
+          ..write('season: $season, ')
+          ..write('episode: $episode, ')
+          ..write('name: $name, ')
+          ..write('still: $still, ')
+          ..write('airDate: $airDate, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -1211,6 +1680,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ShowsTable shows = $ShowsTable(this);
+  late final $EpisodesTable episodes = $EpisodesTable(this);
   late final $WatchedEpisodesTable watchedEpisodes = $WatchedEpisodesTable(
     this,
   );
@@ -1221,11 +1691,19 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     shows,
+    episodes,
     watchedEpisodes,
     movies,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'shows',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('episodes', kind: UpdateKind.delete)],
+    ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
         'shows',
@@ -1246,6 +1724,7 @@ typedef $$ShowsTableCreateCompanionBuilder =
       Value<int> runtime,
       Value<String?> status,
       Value<DateTime> addedAt,
+      Value<DateTime?> episodesSyncedAt,
     });
 typedef $$ShowsTableUpdateCompanionBuilder =
     ShowsCompanion Function({
@@ -1257,11 +1736,31 @@ typedef $$ShowsTableUpdateCompanionBuilder =
       Value<int> runtime,
       Value<String?> status,
       Value<DateTime> addedAt,
+      Value<DateTime?> episodesSyncedAt,
     });
 
 final class $$ShowsTableReferences
     extends BaseReferences<_$AppDatabase, $ShowsTable, Show> {
   $$ShowsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$EpisodesTable, List<Episode>> _episodesRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.episodes,
+    aliasName: 'shows__id__episodes__show_id',
+  );
+
+  $$EpisodesTableProcessedTableManager get episodesRefs {
+    final manager = $$EpisodesTableTableManager(
+      $_db,
+      $_db.episodes,
+    ).filter((f) => f.showId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_episodesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 
   static MultiTypedResultKey<$WatchedEpisodesTable, List<WatchedEpisode>>
   _watchedEpisodesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
@@ -1331,6 +1830,36 @@ class $$ShowsTableFilterComposer extends Composer<_$AppDatabase, $ShowsTable> {
     column: $table.addedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<DateTime> get episodesSyncedAt => $composableBuilder(
+    column: $table.episodesSyncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> episodesRefs(
+    Expression<bool> Function($$EpisodesTableFilterComposer f) f,
+  ) {
+    final $$EpisodesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.episodes,
+      getReferencedColumn: (t) => t.showId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EpisodesTableFilterComposer(
+            $db: $db,
+            $table: $db.episodes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 
   Expression<bool> watchedEpisodesRefs(
     Expression<bool> Function($$WatchedEpisodesTableFilterComposer f) f,
@@ -1406,6 +1935,11 @@ class $$ShowsTableOrderingComposer
     column: $table.addedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get episodesSyncedAt => $composableBuilder(
+    column: $table.episodesSyncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ShowsTableAnnotationComposer
@@ -1444,6 +1978,36 @@ class $$ShowsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get addedAt =>
       $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get episodesSyncedAt => $composableBuilder(
+    column: $table.episodesSyncedAt,
+    builder: (column) => column,
+  );
+
+  Expression<T> episodesRefs<T extends Object>(
+    Expression<T> Function($$EpisodesTableAnnotationComposer a) f,
+  ) {
+    final $$EpisodesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.episodes,
+      getReferencedColumn: (t) => t.showId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EpisodesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.episodes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 
   Expression<T> watchedEpisodesRefs<T extends Object>(
     Expression<T> Function($$WatchedEpisodesTableAnnotationComposer a) f,
@@ -1484,7 +2048,7 @@ class $$ShowsTableTableManager
           $$ShowsTableUpdateCompanionBuilder,
           (Show, $$ShowsTableReferences),
           Show,
-          PrefetchHooks Function({bool watchedEpisodesRefs})
+          PrefetchHooks Function({bool episodesRefs, bool watchedEpisodesRefs})
         > {
   $$ShowsTableTableManager(_$AppDatabase db, $ShowsTable table)
     : super(
@@ -1507,6 +2071,7 @@ class $$ShowsTableTableManager
                 Value<int> runtime = const Value.absent(),
                 Value<String?> status = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
+                Value<DateTime?> episodesSyncedAt = const Value.absent(),
               }) => ShowsCompanion(
                 id: id,
                 name: name,
@@ -1516,6 +2081,7 @@ class $$ShowsTableTableManager
                 runtime: runtime,
                 status: status,
                 addedAt: addedAt,
+                episodesSyncedAt: episodesSyncedAt,
               ),
           createCompanionCallback:
               ({
@@ -1527,6 +2093,7 @@ class $$ShowsTableTableManager
                 Value<int> runtime = const Value.absent(),
                 Value<String?> status = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
+                Value<DateTime?> episodesSyncedAt = const Value.absent(),
               }) => ShowsCompanion.insert(
                 id: id,
                 name: name,
@@ -1536,6 +2103,7 @@ class $$ShowsTableTableManager
                 runtime: runtime,
                 status: status,
                 addedAt: addedAt,
+                episodesSyncedAt: episodesSyncedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -1543,37 +2111,59 @@ class $$ShowsTableTableManager
                     (e.readTable(table), $$ShowsTableReferences(db, table, e)),
               )
               .toList(),
-          prefetchHooksCallback: ({watchedEpisodesRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (watchedEpisodesRefs) db.watchedEpisodes,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (watchedEpisodesRefs)
-                    await $_getPrefetchedData<
-                      Show,
-                      $ShowsTable,
-                      WatchedEpisode
-                    >(
-                      currentTable: table,
-                      referencedTable: $$ShowsTableReferences
-                          ._watchedEpisodesRefsTable(db),
-                      managerFromTypedResult: (p0) => $$ShowsTableReferences(
-                        db,
-                        table,
-                        p0,
-                      ).watchedEpisodesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.showId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({episodesRefs = false, watchedEpisodesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (episodesRefs) db.episodes,
+                    if (watchedEpisodesRefs) db.watchedEpisodes,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (episodesRefs)
+                        await $_getPrefetchedData<Show, $ShowsTable, Episode>(
+                          currentTable: table,
+                          referencedTable: $$ShowsTableReferences
+                              ._episodesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShowsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).episodesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.showId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (watchedEpisodesRefs)
+                        await $_getPrefetchedData<
+                          Show,
+                          $ShowsTable,
+                          WatchedEpisode
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShowsTableReferences
+                              ._watchedEpisodesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShowsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).watchedEpisodesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.showId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -1590,7 +2180,343 @@ typedef $$ShowsTableProcessedTableManager =
       $$ShowsTableUpdateCompanionBuilder,
       (Show, $$ShowsTableReferences),
       Show,
-      PrefetchHooks Function({bool watchedEpisodesRefs})
+      PrefetchHooks Function({bool episodesRefs, bool watchedEpisodesRefs})
+    >;
+typedef $$EpisodesTableCreateCompanionBuilder =
+    EpisodesCompanion Function({
+      required int showId,
+      required int season,
+      required int episode,
+      Value<String?> name,
+      Value<String?> still,
+      Value<DateTime?> airDate,
+      Value<int> rowid,
+    });
+typedef $$EpisodesTableUpdateCompanionBuilder =
+    EpisodesCompanion Function({
+      Value<int> showId,
+      Value<int> season,
+      Value<int> episode,
+      Value<String?> name,
+      Value<String?> still,
+      Value<DateTime?> airDate,
+      Value<int> rowid,
+    });
+
+final class $$EpisodesTableReferences
+    extends BaseReferences<_$AppDatabase, $EpisodesTable, Episode> {
+  $$EpisodesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ShowsTable _showIdTable(_$AppDatabase db) =>
+      db.shows.createAlias('episodes__show_id__shows__id');
+
+  $$ShowsTableProcessedTableManager get showId {
+    final $_column = $_itemColumn<int>('show_id')!;
+
+    final manager = $$ShowsTableTableManager(
+      $_db,
+      $_db.shows,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_showIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$EpisodesTableFilterComposer
+    extends Composer<_$AppDatabase, $EpisodesTable> {
+  $$EpisodesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get season => $composableBuilder(
+    column: $table.season,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get episode => $composableBuilder(
+    column: $table.episode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get still => $composableBuilder(
+    column: $table.still,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get airDate => $composableBuilder(
+    column: $table.airDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShowsTableFilterComposer get showId {
+    final $$ShowsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.showId,
+      referencedTable: $db.shows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShowsTableFilterComposer(
+            $db: $db,
+            $table: $db.shows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EpisodesTableOrderingComposer
+    extends Composer<_$AppDatabase, $EpisodesTable> {
+  $$EpisodesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get season => $composableBuilder(
+    column: $table.season,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get episode => $composableBuilder(
+    column: $table.episode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get still => $composableBuilder(
+    column: $table.still,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get airDate => $composableBuilder(
+    column: $table.airDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShowsTableOrderingComposer get showId {
+    final $$ShowsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.showId,
+      referencedTable: $db.shows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShowsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EpisodesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EpisodesTable> {
+  $$EpisodesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get season =>
+      $composableBuilder(column: $table.season, builder: (column) => column);
+
+  GeneratedColumn<int> get episode =>
+      $composableBuilder(column: $table.episode, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get still =>
+      $composableBuilder(column: $table.still, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get airDate =>
+      $composableBuilder(column: $table.airDate, builder: (column) => column);
+
+  $$ShowsTableAnnotationComposer get showId {
+    final $$ShowsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.showId,
+      referencedTable: $db.shows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShowsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EpisodesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EpisodesTable,
+          Episode,
+          $$EpisodesTableFilterComposer,
+          $$EpisodesTableOrderingComposer,
+          $$EpisodesTableAnnotationComposer,
+          $$EpisodesTableCreateCompanionBuilder,
+          $$EpisodesTableUpdateCompanionBuilder,
+          (Episode, $$EpisodesTableReferences),
+          Episode,
+          PrefetchHooks Function({bool showId})
+        > {
+  $$EpisodesTableTableManager(_$AppDatabase db, $EpisodesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EpisodesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EpisodesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EpisodesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> showId = const Value.absent(),
+                Value<int> season = const Value.absent(),
+                Value<int> episode = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<String?> still = const Value.absent(),
+                Value<DateTime?> airDate = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EpisodesCompanion(
+                showId: showId,
+                season: season,
+                episode: episode,
+                name: name,
+                still: still,
+                airDate: airDate,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int showId,
+                required int season,
+                required int episode,
+                Value<String?> name = const Value.absent(),
+                Value<String?> still = const Value.absent(),
+                Value<DateTime?> airDate = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EpisodesCompanion.insert(
+                showId: showId,
+                season: season,
+                episode: episode,
+                name: name,
+                still: still,
+                airDate: airDate,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$EpisodesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({showId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (showId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.showId,
+                                referencedTable: $$EpisodesTableReferences
+                                    ._showIdTable(db),
+                                referencedColumn: $$EpisodesTableReferences
+                                    ._showIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$EpisodesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EpisodesTable,
+      Episode,
+      $$EpisodesTableFilterComposer,
+      $$EpisodesTableOrderingComposer,
+      $$EpisodesTableAnnotationComposer,
+      $$EpisodesTableCreateCompanionBuilder,
+      $$EpisodesTableUpdateCompanionBuilder,
+      (Episode, $$EpisodesTableReferences),
+      Episode,
+      PrefetchHooks Function({bool showId})
     >;
 typedef $$WatchedEpisodesTableCreateCompanionBuilder =
     WatchedEpisodesCompanion Function({
@@ -2112,6 +3038,8 @@ class $AppDatabaseManager {
   $AppDatabaseManager(this._db);
   $$ShowsTableTableManager get shows =>
       $$ShowsTableTableManager(_db, _db.shows);
+  $$EpisodesTableTableManager get episodes =>
+      $$EpisodesTableTableManager(_db, _db.episodes);
   $$WatchedEpisodesTableTableManager get watchedEpisodes =>
       $$WatchedEpisodesTableTableManager(_db, _db.watchedEpisodes);
   $$MoviesTableTableManager get movies =>
