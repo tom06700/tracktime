@@ -15,6 +15,7 @@ class EpisodeCard extends StatelessWidget {
     this.remaining,
     this.badge,
     this.onTap,
+    this.onShowTap,
     this.onMarkWatched,
     this.history = false,
     this.upcomingInDays,
@@ -31,6 +32,9 @@ class EpisodeCard extends StatelessWidget {
   final int? remaining; // « +N »
   final String? badge; // ex. "PLUS RÉCENT"
   final VoidCallback? onTap;
+
+  /// Tap sur la pastille du nom de série (ouvre la série, pas l'épisode).
+  final VoidCallback? onShowTap;
   final VoidCallback? onMarkWatched;
   final bool history;
 
@@ -56,7 +60,7 @@ class EpisodeCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _ShowPill(name: showName),
+                      _ShowPill(name: showName, onTap: onShowTap),
                       const SizedBox(height: 6),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -171,35 +175,39 @@ class _Still extends StatelessWidget {
 }
 
 class _ShowPill extends StatelessWidget {
-  const _ShowPill({required this.name});
+  const _ShowPill({required this.name, this.onTap});
 
   final String name;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: Text(
-              name.toUpperCase(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.4),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                name.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4),
+              ),
             ),
-          ),
-          const SizedBox(width: 2),
-          const Icon(Icons.chevron_right, size: 15, color: TtColors.dim),
-        ],
+            const SizedBox(width: 2),
+            const Icon(Icons.chevron_right, size: 15, color: TtColors.dim),
+          ],
+        ),
       ),
     );
   }

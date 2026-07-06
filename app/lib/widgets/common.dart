@@ -11,6 +11,14 @@ String tmdbImageUrl(String path, {String size = 'w154'}) =>
 double bottomNavInset(BuildContext context) =>
     MediaQuery.paddingOf(context).bottom + 92;
 
+const _frMonths = [
+  'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
+  'août', 'septembre', 'octobre', 'novembre', 'décembre'
+];
+
+/// "12 juillet 2026".
+String frenchDate(DateTime d) => '${d.day} ${_frMonths[d.month - 1]} ${d.year}';
+
 /// "3 j 4 h", "2 h 05", "42 min" — même format que la version web.
 String fmtTime(int min) {
   final d = min ~/ 1440, h = (min % 1440) ~/ 60, m = min % 60;

@@ -9,6 +9,7 @@ import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/episode_card.dart';
+import 'episode_detail_screen.dart';
 import 'show_detail_screen.dart';
 
 class ShowsScreen extends ConsumerStatefulWidget {
@@ -32,6 +33,19 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
   void _openShow(int id, String name) {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => ShowDetailScreen(showId: id, title: name),
+    ));
+  }
+
+  void _openEpisode(int showId, String showName, int season, int episode,
+      String? poster) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => EpisodeDetailScreen(
+        showId: showId,
+        showName: showName,
+        season: season,
+        episode: episode,
+        posterPath: poster,
+      ),
     ));
   }
 
@@ -102,7 +116,9 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
               posterPath: h.show.poster,
               seed: h.show.name,
               episodeTitle: h.episodeName,
-              onTap: () => _openShow(h.show.id, h.show.name),
+              onTap: () => _openEpisode(
+                  h.show.id, h.show.name, h.season, h.episode, h.show.poster),
+              onShowTap: () => _openShow(h.show.id, h.show.name),
             );
 
         // La partie basse (À voir + délaissées), affichée à partir du haut.
@@ -182,7 +198,9 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
               seed: u.show.name,
               episodeTitle: u.name ?? _formatDate(u.airDate),
               upcomingInDays: u.daysFrom(now),
-              onTap: () => _openShow(u.show.id, u.show.name),
+              onTap: () => _openEpisode(
+                  u.show.id, u.show.name, u.season, u.episode, u.show.poster),
+              onShowTap: () => _openShow(u.show.id, u.show.name),
             );
           },
         );
@@ -208,7 +226,9 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
       episodeTitle: n.episodeName,
       remaining: n.remaining,
       badge: badge,
-      onTap: () => _openShow(n.show.id, n.show.name),
+      onTap: () => _openEpisode(
+          n.show.id, n.show.name, n.season, n.episode, n.show.poster),
+      onShowTap: () => _openShow(n.show.id, n.show.name),
       onMarkWatched: () => _markWatched(n),
     );
   }

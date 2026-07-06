@@ -68,4 +68,8 @@ class TmdbClient {
 
   Future<Map<String, dynamic>> season(int tvId, int seasonNumber) =>
       _get('/tv/$tvId/season/$seasonNumber');
+
+  Future<Map<String, dynamic>> episode(
+          int tvId, int seasonNumber, int episodeNumber) =>
+      _get('/tv/$tvId/season/$seasonNumber/episode/$episodeNumber');
 }
