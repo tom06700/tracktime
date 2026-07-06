@@ -48,3 +48,15 @@ final seriesFeedProvider = Provider<AsyncValue<SeriesFeed>>((ref) {
     return feed;
   });
 });
+
+/// Épisodes à venir (prochain de chaque série suivie, du plus proche au plus
+/// loin), pour l'onglet « À venir ».
+final upcomingProvider = Provider<AsyncValue<List<UpcomingEpisode>>>((ref) {
+  final shows = ref.watch(showsProvider);
+  final episodes = ref.watch(_allEpisodesProvider);
+  return shows.whenData((showList) => buildUpcoming(
+        shows: showList,
+        episodes: episodes.value ?? const [],
+        now: DateTime.now(),
+      ));
+});

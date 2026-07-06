@@ -158,6 +158,55 @@ void main() {
     expect(n.precise, isFalse);
   });
 
+  group('buildUpcoming', () {
+    test('prochain épisode futur par série, trié du plus proche au plus loin',
+        () {
+      final a = _show(1, 'A');
+      final b = _show(2, 'B');
+      final list = buildUpcoming(
+        shows: [_swp(a, 0), _swp(b, 0)],
+        episodes: [
+          _ep(1, 2, 1, air: now.add(const Duration(days: 10))),
+          _ep(1, 2, 2, air: now.add(const Duration(days: 17))),
+          _ep(2, 1, 5, air: now.add(const Duration(days: 3))),
+        ],
+        now: now,
+      );
+      expect(list.map((u) => u.show.name), ['B', 'A']); // B dans 3 j avant A
+      expect(list.first.episode, 5);
+      expect(list.first.daysFrom(now), 3);
+      // Pour A, on garde le plus proche (E1 à 10 j), pas E2 à 17 j.
+      expect(list[1].episode, 1);
+      expect(list[1].daysFrom(now), 10);
+    });
+
+    test('exclut les épisodes déjà diffusés', () {
+      final a = _show(1, 'A');
+      final list = buildUpcoming(
+        shows: [_swp(a, 1)],
+        episodes: [
+          _ep(1, 1, 1, air: now.subtract(const Duration(days: 2))),
+          _ep(1, 1, 2, air: now.add(const Duration(days: 5))),
+        ],
+        now: now,
+      );
+      expect(list, hasLength(1));
+      expect(list.single.episode, 2);
+    });
+
+    test('daysFrom en jours calendaires', () {
+      final a = _show(1, 'A');
+      final list = buildUpcoming(
+        shows: [_swp(a, 0)],
+        episodes: [
+          _ep(1, 1, 1, air: DateTime(2026, 7, 7, 2)), // lendemain, 2h du matin
+        ],
+        now: DateTime(2026, 7, 6, 23), // veille, 23h
+      );
+      expect(list.single.daysFrom(DateTime(2026, 7, 6, 23)), 1);
+    });
+  });
+
   test('historique limité et trié par date décroissante', () {
     final shows = [for (var i = 1; i <= 3; i++) _show(i, 'S$i', total: 2)];
     final feed = buildSeriesFeed(

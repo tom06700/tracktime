@@ -6,6 +6,7 @@ import '../providers.dart';
 import '../series/feed.dart';
 import '../series/sync.dart';
 import '../settings/prefs.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/episode_card.dart';
 import 'show_detail_screen.dart';
@@ -46,6 +47,36 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          const TabBar(
+            labelColor: TtColors.amber,
+            unselectedLabelColor: TtColors.dim,
+            indicatorColor: TtColors.amber,
+            indicatorSize: TabBarIndicatorSize.label,
+            labelStyle: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1),
+            tabs: [
+              Tab(text: 'À VOIR'),
+              Tab(text: 'À VENIR'),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildToWatch(context),
+                _buildUpcoming(context),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToWatch(BuildContext context) {
     final feedAsync = ref.watch(seriesFeedProvider);
     return feedAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -119,6 +150,49 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
       },
     );
   }
+
+  Widget _buildUpcoming(BuildContext context) {
+    final upcomingAsync = ref.watch(upcomingProvider);
+    return upcomingAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => EmptyState(icon: Icons.error_outline, message: '$e'),
+      data: (list) {
+        if (list.isEmpty) {
+          return const EmptyState(
+            icon: Icons.event_outlined,
+            message:
+                'Aucun épisode à venir connu.\nAjoute des séries en cours de diffusion — leurs prochaines dates apparaîtront ici.',
+          );
+        }
+        final now = DateTime.now();
+        return ListView.builder(
+          padding: EdgeInsets.only(top: 8, bottom: bottomNavInset(context)),
+          itemCount: list.length,
+          itemBuilder: (_, i) {
+            final u = list[i];
+            return EpisodeCard(
+              showName: u.show.name,
+              code: u.code,
+              stillPath: u.still,
+              posterPath: u.show.poster,
+              seed: u.show.name,
+              episodeTitle: u.name ?? _formatDate(u.airDate),
+              upcomingInDays: u.daysFrom(now),
+              onTap: () => _openShow(u.show.id, u.show.name),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  static const _months = [
+    'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.',
+    'août', 'sept.', 'oct.', 'nov.', 'déc.'
+  ];
+
+  static String _formatDate(DateTime d) =>
+      '${d.day} ${_months[d.month - 1]} ${d.year}';
 
   Widget _card(NextUp n, {String? badge}) {
     return EpisodeCard(

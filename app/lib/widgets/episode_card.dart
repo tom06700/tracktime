@@ -17,6 +17,7 @@ class EpisodeCard extends StatelessWidget {
     this.onTap,
     this.onMarkWatched,
     this.history = false,
+    this.upcomingInDays,
   });
 
   final String showName;
@@ -32,6 +33,10 @@ class EpisodeCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onMarkWatched;
   final bool history;
+
+  /// Si défini : carte « à venir » — affiche un compteur de jours à droite au
+  /// lieu du bouton coche (pas d'action « vu »).
+  final int? upcomingInDays;
 
   @override
   Widget build(BuildContext context) {
@@ -98,10 +103,9 @@ class EpisodeCard extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.only(right: 12, left: 4),
-                child: _CheckButton(
-                  history: history,
-                  onTap: onMarkWatched,
-                ),
+                child: upcomingInDays != null
+                    ? _DaysChip(days: upcomingInDays!)
+                    : _CheckButton(history: history, onTap: onMarkWatched),
               ),
             ],
           ),
@@ -221,6 +225,70 @@ class _Badge extends StatelessWidget {
             fontWeight: FontWeight.w800,
             letterSpacing: 0.5,
             color: Color(0xFF131313)),
+      ),
+    );
+  }
+}
+
+class _DaysChip extends StatelessWidget {
+  const _DaysChip({required this.days});
+
+  final int days;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = days <= 0
+        ? const _ChipWord("AUJOURD'HUI")
+        : days == 1
+            ? const _ChipWord('DEMAIN')
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('$days',
+                      style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                          color: TtColors.amber)),
+                  const Text('JOURS',
+                      style: TextStyle(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                          color: TtColors.dim)),
+                ],
+              );
+    return Container(
+      width: 56,
+      height: 46,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: TtColors.amber.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: TtColors.amber.withValues(alpha: 0.28)),
+      ),
+      child: content,
+    );
+  }
+}
+
+class _ChipWord extends StatelessWidget {
+  const _ChipWord(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+            fontSize: 9.5,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.3,
+            color: TtColors.amber),
       ),
     );
   }

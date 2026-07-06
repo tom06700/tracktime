@@ -68,6 +68,18 @@ Future<void> maybeSeedDemo(AppDatabase db) async {
               at: activity.subtract(Duration(hours: (seen - 1 - idx) * 6)));
         }
       }
+      // Séries en cours de diffusion : un prochain épisode daté dans le futur
+      // (offsets distincts pour peupler l'onglet « À venir »).
+      if (status == 'Returning Series') {
+        final offset = [3, 10, 17, 30][i % 4];
+        eps.add(EpisodesCompanion.insert(
+          showId: id,
+          season: seasons + 1,
+          episode: 1,
+          name: const Value('Premier de la nouvelle saison'),
+          airDate: Value(now.add(Duration(days: offset))),
+        ));
+      }
       await db.upsertEpisodes(eps);
       await db.markShowSynced(id, now);
     }

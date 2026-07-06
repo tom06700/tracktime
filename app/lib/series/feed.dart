@@ -73,6 +73,65 @@ int _compareEpisodes(Episode a, Episode b) {
   return s != 0 ? s : a.episode.compareTo(b.episode);
 }
 
+/// Prochain épisode à sortir d'une série (onglet « À venir »).
+class UpcomingEpisode {
+  const UpcomingEpisode({
+    required this.show,
+    required this.season,
+    required this.episode,
+    required this.airDate,
+    this.name,
+    this.still,
+  });
+
+  final Show show;
+  final int season;
+  final int episode;
+  final DateTime airDate;
+  final String? name;
+  final String? still;
+
+  String get code =>
+      'S${season.toString().padLeft(2, '0')} | E${episode.toString().padLeft(2, '0')}';
+
+  /// Nombre de jours (calendaires) avant diffusion.
+  int daysFrom(DateTime now) {
+    final a = DateTime(airDate.year, airDate.month, airDate.day);
+    final n = DateTime(now.year, now.month, now.day);
+    return a.difference(n).inDays;
+  }
+}
+
+/// Pour chaque série suivie, le prochain épisode à diffuser (le plus proche),
+/// trié du plus proche au plus loin. Pur et déterministe.
+List<UpcomingEpisode> buildUpcoming({
+  required List<ShowWithProgress> shows,
+  required List<Episode> episodes,
+  required DateTime now,
+}) {
+  final showById = {for (final s in shows) s.show.id: s.show};
+  final soonest = <int, Episode>{};
+  for (final e in episodes) {
+    final air = e.airDate;
+    if (air == null || !air.isAfter(now)) continue; // futurs seulement
+    if (!showById.containsKey(e.showId)) continue;
+    final cur = soonest[e.showId];
+    if (cur == null || air.isBefore(cur.airDate!)) soonest[e.showId] = e;
+  }
+  final list = [
+    for (final e in soonest.values)
+      UpcomingEpisode(
+        show: showById[e.showId]!,
+        season: e.season,
+        episode: e.episode,
+        airDate: e.airDate!,
+        name: e.name,
+        still: e.still,
+      ),
+  ]..sort((a, b) => a.airDate.compareTo(b.airDate));
+  return list;
+}
+
 /// Construit le fil à partir de l'état local (séries, épisodes cachés, coches).
 /// Pur et déterministe — `now` est injecté pour la testabilité.
 SeriesFeed buildSeriesFeed({
