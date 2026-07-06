@@ -16,3 +16,7 @@ final moviesProvider = StreamProvider<List<Movie>>(
 
 final statsProvider = StreamProvider<WatchStats>(
     (ref) => ref.watch(databaseProvider).watchStats());
+
+/// Ensemble réactif des clés "SxEy" vues, pour l'écran de détail d'une série.
+final watchedKeysProvider = StreamProvider.family<Set<String>, int>(
+    (ref, showId) => ref.watch(databaseProvider).watchWatchedKeys(showId));

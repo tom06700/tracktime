@@ -5,6 +5,7 @@ import '../db/database.dart';
 import '../providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import 'show_detail_screen.dart';
 
 class ShowsScreen extends ConsumerWidget {
   const ShowsScreen({super.key});
@@ -54,9 +55,10 @@ class _ShowCard extends StatelessWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          // Étape 3 : écran de détail (saisons + épisodes TMDB).
-        },
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) =>
+              ShowDetailScreen(showId: show.id, title: show.name),
+        )),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'screens/import_screen.dart';
 import 'screens/movies_screen.dart';
+import 'screens/search_screen.dart';
 import 'screens/shows_screen.dart';
 import 'screens/stats_screen.dart';
 import 'settings/settings_screen.dart';
@@ -55,9 +56,8 @@ class _HomeShellState extends State<HomeShell> {
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: 'Recherche',
-            onPressed: () {
-              // Étape 3 : recherche TMDB.
-            },
+            onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SearchScreen())),
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),

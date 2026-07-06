@@ -160,6 +160,28 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<WatchedEpisode>> watchEpisodesOf(int showId) =>
       (select(watchedEpisodes)..where((e) => e.showId.equals(showId))).watch();
 
+  /// Diffuse l'ensemble des clés "SxEy" vues pour une série, pratique pour
+  /// l'écran de détail (rendu réactif des coches).
+  Stream<Set<String>> watchWatchedKeys(int showId) =>
+      watchEpisodesOf(showId).map((eps) =>
+          {for (final e in eps) 'S${e.season}E${e.episode}'});
+
+  /// Coche/décoche toute une saison d'un coup à partir des numéros d'épisodes.
+  Future<void> setSeasonWatched(
+      int showId, int season, List<int> episodeNumbers, bool watched) {
+    return transaction(() async {
+      if (watched) {
+        for (final ep in episodeNumbers) {
+          await setEpisodeWatched(showId, season, ep);
+        }
+      } else {
+        await (delete(watchedEpisodes)
+              ..where((e) => e.showId.equals(showId) & e.season.equals(season)))
+            .go();
+      }
+    });
+  }
+
   // ---- Films ----
 
   Stream<List<Movie>> watchMovies() =>
