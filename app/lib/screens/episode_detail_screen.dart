@@ -131,20 +131,26 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
   @override
   Widget build(BuildContext context) {
     final height = MediaQuery.sizeOf(context).height;
+    // Les dots restent en place et s'effacent pendant qu'on glisse la carte.
+    final dotsOpacity = (1 - _dragOffset / 70).clamp(0.0, 1.0);
     return Align(
       alignment: Alignment.bottomCenter,
-      child: Transform.translate(
-        offset: Offset(0, _dragOffset),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Dots dans l'espace vide au-dessus de la carte → indique le swipe.
-            if (_controller != null && _episodes.length > 1)
-              Padding(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Dots dans l'espace vide au-dessus de la carte → indique le swipe.
+          if (_controller != null && _episodes.length > 1)
+            Opacity(
+              opacity: dotsOpacity,
+              child: Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: _DotsIndicator(count: _episodes.length, index: _current),
               ),
-            ClipRRect(
+            ),
+          // Seule la carte suit le doigt.
+          Transform.translate(
+            offset: Offset(0, _dragOffset),
+            child: ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
             // Material : fournit le style de texte (sinon soulignés jaunes) et
             // la surface de la carte.
@@ -180,9 +186,9 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
               ),
             ),
           ),
+          ),
         ],
         ),
-      ),
     );
   }
 
