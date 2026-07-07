@@ -220,6 +220,36 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<WatchedEpisode>> watchEpisodesOf(int showId) =>
       (select(watchedEpisodes)..where((e) => e.showId.equals(showId))).watch();
 
+  /// L'épisode vu (avec sa date), ou null s'il ne l'est pas.
+  Stream<WatchedEpisode?> watchWatchedEpisode(
+          int showId, int season, int episode) =>
+      (select(watchedEpisodes)
+            ..where((e) =>
+                e.showId.equals(showId) &
+                e.season.equals(season) &
+                e.episode.equals(episode)))
+          .watchSingleOrNull();
+
+  /// Marque comme vu tout épisode (en cache) jusqu'à (season, episode) inclus
+  /// — « rattraper jusqu'ici ». S'appuie sur la table episodes (remplie par la
+  /// synchro / la page série).
+  Future<void> markWatchedUpTo(int showId, int season, int episode) async {
+    final eps =
+        await (select(episodes)..where((e) => e.showId.equals(showId))).get();
+    final toMark = eps.where((e) =>
+        e.season < season || (e.season == season && e.episode <= episode));
+    await batch((b) {
+      for (final e in toMark) {
+        b.insert(
+          watchedEpisodes,
+          WatchedEpisodesCompanion.insert(
+              showId: showId, season: e.season, episode: e.episode),
+          mode: InsertMode.insertOrIgnore,
+        );
+      }
+    });
+  }
+
   /// Diffuse l'ensemble des clés "SxEy" vues pour une série, pratique pour
   /// l'écran de détail (rendu réactif des coches).
   Stream<Set<String>> watchWatchedKeys(int showId) =>

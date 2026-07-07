@@ -25,6 +25,14 @@ final statsProvider = StreamProvider<WatchStats>(
 final watchedKeysProvider = StreamProvider.family<Set<String>, int>(
     (ref, showId) => ref.watch(databaseProvider).watchWatchedKeys(showId));
 
+typedef EpisodeRef = ({int showId, int season, int episode});
+
+/// L'épisode vu (avec sa date), pour la page détail d'épisode.
+final watchedEpisodeProvider =
+    StreamProvider.family<WatchedEpisode?, EpisodeRef>((ref, k) => ref
+        .watch(databaseProvider)
+        .watchWatchedEpisode(k.showId, k.season, k.episode));
+
 final _allEpisodesProvider = StreamProvider<List<Episode>>(
     (ref) => ref.watch(databaseProvider).watchAllEpisodes());
 
