@@ -27,14 +27,17 @@ Future<void> maybeSeedDemo(AppDatabase db) async {
     (76331, 'Succession', 39, 4, 60, 'Ended', 12, 'Drame'),
   ];
 
+  // (id, titre, durée, vu, genres, sortie J±, ajouté il y a J)
   const movies = [
-    (27205, 'Inception', 148, true, 'Action|Science-Fiction|Aventure'),
-    (157336, 'Interstellar', 169, true, 'Science-Fiction|Drame|Aventure'),
-    (496243, 'Parasite', 132, true, 'Thriller|Comédie|Drame'),
-    (438631, 'Dune', 155, false, 'Science-Fiction|Aventure'),
-    (872585, 'Oppenheimer', 180, false, 'Drame|Histoire'),
-    (244786, 'Whiplash', 106, true, 'Drame|Musique'),
-    (129, 'Le Voyage de Chihiro', 125, false, 'Animation|Familial|Fantastique'),
+    (27205, 'Inception', 148, true, 'Action|Science-Fiction|Aventure', -5000, 0),
+    (157336, 'Interstellar', 169, true, 'Science-Fiction|Drame|Aventure',
+        -4200, 0),
+    (496243, 'Parasite', 132, true, 'Thriller|Comédie|Drame', -2400, 0),
+    (438631, 'Dune', 155, false, 'Science-Fiction|Aventure', 45, 0),
+    (872585, 'Oppenheimer', 180, false, 'Drame|Histoire', -300, 60),
+    (244786, 'Whiplash', 106, true, 'Drame|Musique', -4000, 0),
+    (129, 'Le Voyage de Chihiro', 125, false, 'Animation|Familial|Fantastique',
+        -8000, 0),
   ];
 
   final now = DateTime.now();
@@ -90,13 +93,16 @@ Future<void> maybeSeedDemo(AppDatabase db) async {
       await db.markShowSynced(id, now);
     }
 
-    for (final (id, title, runtime, seen, genres) in movies) {
+    for (final (id, title, runtime, seen, genres, relDays, addedAgo)
+        in movies) {
       await db.upsertMovie(MoviesCompanion.insert(
         id: Value(id),
         title: title,
         runtime: Value(runtime),
         watchedAt: Value(seen ? now.subtract(const Duration(days: 20)) : null),
+        addedAt: Value(now.subtract(Duration(days: addedAgo))),
         genres: Value(genres),
+        releaseDate: Value(now.add(Duration(days: relDays))),
       ));
     }
   });

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'db/database.dart';
 import 'demo/demo_seed.dart';
+import 'movies/feed.dart';
 import 'profile/profile.dart';
 import 'profile/universe.dart';
 import 'series/feed.dart';
@@ -67,6 +68,26 @@ final upcomingProvider = Provider<AsyncValue<List<UpcomingEpisode>>>((ref) {
   return shows.whenData((showList) => buildUpcoming(
         shows: showList,
         episodes: episodes.value ?? const [],
+        now: DateTime.now(),
+      ));
+});
+
+/// Fil de la page Films (historique · à voir · oubliés), recomposé dès
+/// qu'un film ou son état change.
+final movieFeedProvider = Provider<AsyncValue<MovieFeed>>((ref) {
+  final movies = ref.watch(moviesProvider);
+  return movies.whenData((list) => buildMovieFeed(
+        movies: list,
+        now: DateTime.now(),
+      ));
+});
+
+/// Films à venir (watchlist pas encore sortie, du plus proche au plus loin),
+/// pour l'onglet « À venir ».
+final upcomingMoviesProvider = Provider<AsyncValue<List<UpcomingMovie>>>((ref) {
+  final movies = ref.watch(moviesProvider);
+  return movies.whenData((list) => buildUpcomingMovies(
+        movies: list,
         now: DateTime.now(),
       ));
 });

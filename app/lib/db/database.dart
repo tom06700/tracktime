@@ -61,6 +61,8 @@ class Movies extends Table {
   DateTimeColumn get addedAt => dateTime().withDefault(currentDateAndTime)();
   // Genres TMDB séparés par « | » (null = pas encore récupérés).
   TextColumn get genres => text().nullable()();
+  // Date de sortie TMDB (null = pas encore récupérée) — onglet « À venir ».
+  DateTimeColumn get releaseDate => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -112,7 +114,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -125,6 +127,9 @@ class AppDatabase extends _$AppDatabase {
           if (from < 3) {
             await m.addColumn(shows, shows.genres);
             await m.addColumn(movies, movies.genres);
+          }
+          if (from < 4) {
+            await m.addColumn(movies, movies.releaseDate);
           }
         },
       );
@@ -177,6 +182,10 @@ class AppDatabase extends _$AppDatabase {
   Future<void> setMovieGenres(int id, String genres) =>
       (update(movies)..where((m) => m.id.equals(id)))
           .write(MoviesCompanion(genres: Value(genres)));
+
+  Future<void> setMovieReleaseDate(int id, DateTime date) =>
+      (update(movies)..where((m) => m.id.equals(id)))
+          .write(MoviesCompanion(releaseDate: Value(date)));
 
   // ---- Épisodes (cache TMDB) ----
 

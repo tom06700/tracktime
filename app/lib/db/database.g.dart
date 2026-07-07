@@ -1410,6 +1410,17 @@ class $MoviesTable extends Movies with TableInfo<$MoviesTable, Movie> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _releaseDateMeta = const VerificationMeta(
+    'releaseDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> releaseDate = GeneratedColumn<DateTime>(
+    'release_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1419,6 +1430,7 @@ class $MoviesTable extends Movies with TableInfo<$MoviesTable, Movie> {
     watchedAt,
     addedAt,
     genres,
+    releaseDate,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1473,6 +1485,15 @@ class $MoviesTable extends Movies with TableInfo<$MoviesTable, Movie> {
         genres.isAcceptableOrUnknown(data['genres']!, _genresMeta),
       );
     }
+    if (data.containsKey('release_date')) {
+      context.handle(
+        _releaseDateMeta,
+        releaseDate.isAcceptableOrUnknown(
+          data['release_date']!,
+          _releaseDateMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1510,6 +1531,10 @@ class $MoviesTable extends Movies with TableInfo<$MoviesTable, Movie> {
         DriftSqlType.string,
         data['${effectivePrefix}genres'],
       ),
+      releaseDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}release_date'],
+      ),
     );
   }
 
@@ -1527,6 +1552,7 @@ class Movie extends DataClass implements Insertable<Movie> {
   final DateTime? watchedAt;
   final DateTime addedAt;
   final String? genres;
+  final DateTime? releaseDate;
   const Movie({
     required this.id,
     required this.title,
@@ -1535,6 +1561,7 @@ class Movie extends DataClass implements Insertable<Movie> {
     this.watchedAt,
     required this.addedAt,
     this.genres,
+    this.releaseDate,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1551,6 +1578,9 @@ class Movie extends DataClass implements Insertable<Movie> {
     map['added_at'] = Variable<DateTime>(addedAt);
     if (!nullToAbsent || genres != null) {
       map['genres'] = Variable<String>(genres);
+    }
+    if (!nullToAbsent || releaseDate != null) {
+      map['release_date'] = Variable<DateTime>(releaseDate);
     }
     return map;
   }
@@ -1570,6 +1600,9 @@ class Movie extends DataClass implements Insertable<Movie> {
       genres: genres == null && nullToAbsent
           ? const Value.absent()
           : Value(genres),
+      releaseDate: releaseDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(releaseDate),
     );
   }
 
@@ -1586,6 +1619,7 @@ class Movie extends DataClass implements Insertable<Movie> {
       watchedAt: serializer.fromJson<DateTime?>(json['watchedAt']),
       addedAt: serializer.fromJson<DateTime>(json['addedAt']),
       genres: serializer.fromJson<String?>(json['genres']),
+      releaseDate: serializer.fromJson<DateTime?>(json['releaseDate']),
     );
   }
   @override
@@ -1599,6 +1633,7 @@ class Movie extends DataClass implements Insertable<Movie> {
       'watchedAt': serializer.toJson<DateTime?>(watchedAt),
       'addedAt': serializer.toJson<DateTime>(addedAt),
       'genres': serializer.toJson<String?>(genres),
+      'releaseDate': serializer.toJson<DateTime?>(releaseDate),
     };
   }
 
@@ -1610,6 +1645,7 @@ class Movie extends DataClass implements Insertable<Movie> {
     Value<DateTime?> watchedAt = const Value.absent(),
     DateTime? addedAt,
     Value<String?> genres = const Value.absent(),
+    Value<DateTime?> releaseDate = const Value.absent(),
   }) => Movie(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -1618,6 +1654,7 @@ class Movie extends DataClass implements Insertable<Movie> {
     watchedAt: watchedAt.present ? watchedAt.value : this.watchedAt,
     addedAt: addedAt ?? this.addedAt,
     genres: genres.present ? genres.value : this.genres,
+    releaseDate: releaseDate.present ? releaseDate.value : this.releaseDate,
   );
   Movie copyWithCompanion(MoviesCompanion data) {
     return Movie(
@@ -1628,6 +1665,9 @@ class Movie extends DataClass implements Insertable<Movie> {
       watchedAt: data.watchedAt.present ? data.watchedAt.value : this.watchedAt,
       addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
       genres: data.genres.present ? data.genres.value : this.genres,
+      releaseDate: data.releaseDate.present
+          ? data.releaseDate.value
+          : this.releaseDate,
     );
   }
 
@@ -1640,14 +1680,23 @@ class Movie extends DataClass implements Insertable<Movie> {
           ..write('runtime: $runtime, ')
           ..write('watchedAt: $watchedAt, ')
           ..write('addedAt: $addedAt, ')
-          ..write('genres: $genres')
+          ..write('genres: $genres, ')
+          ..write('releaseDate: $releaseDate')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, title, poster, runtime, watchedAt, addedAt, genres);
+  int get hashCode => Object.hash(
+    id,
+    title,
+    poster,
+    runtime,
+    watchedAt,
+    addedAt,
+    genres,
+    releaseDate,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1658,7 +1707,8 @@ class Movie extends DataClass implements Insertable<Movie> {
           other.runtime == this.runtime &&
           other.watchedAt == this.watchedAt &&
           other.addedAt == this.addedAt &&
-          other.genres == this.genres);
+          other.genres == this.genres &&
+          other.releaseDate == this.releaseDate);
 }
 
 class MoviesCompanion extends UpdateCompanion<Movie> {
@@ -1669,6 +1719,7 @@ class MoviesCompanion extends UpdateCompanion<Movie> {
   final Value<DateTime?> watchedAt;
   final Value<DateTime> addedAt;
   final Value<String?> genres;
+  final Value<DateTime?> releaseDate;
   const MoviesCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -1677,6 +1728,7 @@ class MoviesCompanion extends UpdateCompanion<Movie> {
     this.watchedAt = const Value.absent(),
     this.addedAt = const Value.absent(),
     this.genres = const Value.absent(),
+    this.releaseDate = const Value.absent(),
   });
   MoviesCompanion.insert({
     this.id = const Value.absent(),
@@ -1686,6 +1738,7 @@ class MoviesCompanion extends UpdateCompanion<Movie> {
     this.watchedAt = const Value.absent(),
     this.addedAt = const Value.absent(),
     this.genres = const Value.absent(),
+    this.releaseDate = const Value.absent(),
   }) : title = Value(title);
   static Insertable<Movie> custom({
     Expression<int>? id,
@@ -1695,6 +1748,7 @@ class MoviesCompanion extends UpdateCompanion<Movie> {
     Expression<DateTime>? watchedAt,
     Expression<DateTime>? addedAt,
     Expression<String>? genres,
+    Expression<DateTime>? releaseDate,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1704,6 +1758,7 @@ class MoviesCompanion extends UpdateCompanion<Movie> {
       if (watchedAt != null) 'watched_at': watchedAt,
       if (addedAt != null) 'added_at': addedAt,
       if (genres != null) 'genres': genres,
+      if (releaseDate != null) 'release_date': releaseDate,
     });
   }
 
@@ -1715,6 +1770,7 @@ class MoviesCompanion extends UpdateCompanion<Movie> {
     Value<DateTime?>? watchedAt,
     Value<DateTime>? addedAt,
     Value<String?>? genres,
+    Value<DateTime?>? releaseDate,
   }) {
     return MoviesCompanion(
       id: id ?? this.id,
@@ -1724,6 +1780,7 @@ class MoviesCompanion extends UpdateCompanion<Movie> {
       watchedAt: watchedAt ?? this.watchedAt,
       addedAt: addedAt ?? this.addedAt,
       genres: genres ?? this.genres,
+      releaseDate: releaseDate ?? this.releaseDate,
     );
   }
 
@@ -1751,6 +1808,9 @@ class MoviesCompanion extends UpdateCompanion<Movie> {
     if (genres.present) {
       map['genres'] = Variable<String>(genres.value);
     }
+    if (releaseDate.present) {
+      map['release_date'] = Variable<DateTime>(releaseDate.value);
+    }
     return map;
   }
 
@@ -1763,7 +1823,8 @@ class MoviesCompanion extends UpdateCompanion<Movie> {
           ..write('runtime: $runtime, ')
           ..write('watchedAt: $watchedAt, ')
           ..write('addedAt: $addedAt, ')
-          ..write('genres: $genres')
+          ..write('genres: $genres, ')
+          ..write('releaseDate: $releaseDate')
           ..write(')'))
         .toString();
   }
@@ -2946,6 +3007,7 @@ typedef $$MoviesTableCreateCompanionBuilder =
       Value<DateTime?> watchedAt,
       Value<DateTime> addedAt,
       Value<String?> genres,
+      Value<DateTime?> releaseDate,
     });
 typedef $$MoviesTableUpdateCompanionBuilder =
     MoviesCompanion Function({
@@ -2956,6 +3018,7 @@ typedef $$MoviesTableUpdateCompanionBuilder =
       Value<DateTime?> watchedAt,
       Value<DateTime> addedAt,
       Value<String?> genres,
+      Value<DateTime?> releaseDate,
     });
 
 class $$MoviesTableFilterComposer
@@ -2999,6 +3062,11 @@ class $$MoviesTableFilterComposer
 
   ColumnFilters<String> get genres => $composableBuilder(
     column: $table.genres,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get releaseDate => $composableBuilder(
+    column: $table.releaseDate,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3046,6 +3114,11 @@ class $$MoviesTableOrderingComposer
     column: $table.genres,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get releaseDate => $composableBuilder(
+    column: $table.releaseDate,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$MoviesTableAnnotationComposer
@@ -3077,6 +3150,11 @@ class $$MoviesTableAnnotationComposer
 
   GeneratedColumn<String> get genres =>
       $composableBuilder(column: $table.genres, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get releaseDate => $composableBuilder(
+    column: $table.releaseDate,
+    builder: (column) => column,
+  );
 }
 
 class $$MoviesTableTableManager
@@ -3114,6 +3192,7 @@ class $$MoviesTableTableManager
                 Value<DateTime?> watchedAt = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
                 Value<String?> genres = const Value.absent(),
+                Value<DateTime?> releaseDate = const Value.absent(),
               }) => MoviesCompanion(
                 id: id,
                 title: title,
@@ -3122,6 +3201,7 @@ class $$MoviesTableTableManager
                 watchedAt: watchedAt,
                 addedAt: addedAt,
                 genres: genres,
+                releaseDate: releaseDate,
               ),
           createCompanionCallback:
               ({
@@ -3132,6 +3212,7 @@ class $$MoviesTableTableManager
                 Value<DateTime?> watchedAt = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
                 Value<String?> genres = const Value.absent(),
+                Value<DateTime?> releaseDate = const Value.absent(),
               }) => MoviesCompanion.insert(
                 id: id,
                 title: title,
@@ -3140,6 +3221,7 @@ class $$MoviesTableTableManager
                 watchedAt: watchedAt,
                 addedAt: addedAt,
                 genres: genres,
+                releaseDate: releaseDate,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

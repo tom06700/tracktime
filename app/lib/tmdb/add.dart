@@ -13,6 +13,13 @@ String? genresOf(Map<String, dynamic> details) {
   return list.isEmpty ? null : list.join('|');
 }
 
+/// Date de sortie TMDB (« release_date » au format AAAA-MM-JJ), ou null.
+DateTime? releaseDateOf(Map<String, dynamic> details) {
+  final raw = details['release_date'];
+  if (raw is! String || raw.isEmpty) return null;
+  return DateTime.tryParse(raw);
+}
+
 /// Ajoute une série depuis TMDB si absente. Renvoie son nom.
 Future<String> addShowFromTmdb(AppDatabase db, TmdbClient tmdb, int id) async {
   final existing = await db.showById(id);
@@ -46,6 +53,7 @@ Future<String> addMovieFromTmdb(AppDatabase db, TmdbClient tmdb, int id) async {
     runtime: Value((d['runtime'] as num?)?.toInt() ?? 110),
     watchedAt: const Value(null),
     genres: Value(genresOf(d)),
+    releaseDate: Value(releaseDateOf(d)),
   ));
   return title;
 }
