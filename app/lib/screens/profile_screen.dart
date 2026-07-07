@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -78,18 +79,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     final palette = universe?.palette ?? const [Color(0xFF6C4CE0)];
     final seed = universe?.seed ?? 7;
 
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: CinemaBackground(
-            seed: seed,
-            palette: palette,
-            drive: _drive,
-            scroll: _scrollCtrl,
+    final safeTop = MediaQuery.paddingOf(context).top;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: CinemaBackground(
+              seed: seed,
+              palette: palette,
+              drive: _drive,
+              scroll: _scrollCtrl,
+            ),
           ),
-        ),
-        Positioned.fill(child: _content(context, universe)),
-      ],
+          Positioned.fill(child: _content(context, universe)),
+          // Réglages : bouton flottant discret dans la safe area.
+          Positioned(
+            top: safeTop + 6,
+            right: 8,
+            child: _GlassIconButton(
+              icon: Icons.settings_outlined,
+              tooltip: 'Réglages',
+              onTap: () => context.push('/settings'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -112,9 +130,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ),
         );
 
-    // La barre étant transparente et le corps passant dessous (cf. shell),
-    // on décale le contenu sous elle. Le décor cinéma, lui, remonte au haut.
-    final topInset = MediaQuery.paddingOf(context).top + kToolbarHeight + 4;
+    // Pas d'AppBar sur le Profil : le décor remplit tout, le contenu démarre
+    // juste sous la safe area (en laissant la place au bouton Réglages).
+    final topInset = MediaQuery.paddingOf(context).top + 44;
     return ListView(
       controller: _scrollCtrl,
       padding: EdgeInsets.fromLTRB(0, topInset, 0, bottomNavInset(context)),
@@ -253,6 +271,44 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Export impossible : $e')));
     }
+  }
+}
+
+/// Petit bouton rond « verre » flottant (Réglages), lisible sur le décor.
+class _GlassIconButton extends StatelessWidget {
+  const _GlassIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.black.withValues(alpha: 0.28),
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+            ),
+            child: Icon(icon,
+                size: 21, color: Colors.white.withValues(alpha: 0.85)),
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -40,26 +40,29 @@ class _HomeShellState extends State<HomeShell> {
       ExplorerScreen(),
       ProfileScreen(),
     ];
-    // Sur le Profil, la barre devient transparente et le décor « cinéma »
-    // remonte jusqu'en haut (le projecteur est au plafond de la salle).
+    // Le Profil est une page immersive plein écran (le décor « cinéma »
+    // occupe jusqu'à la safe area) : pas de barre — elle porterait un titre
+    // qui chevaucherait le contenu au défilement. Elle a son propre bouton
+    // Réglages flottant. Les autres onglets gardent la barre « TrackTime ».
     final immersive = _tab == 3;
     return Scaffold(
       extendBody: true,
-      extendBodyBehindAppBar: immersive,
-      appBar: AppBar(
-        backgroundColor: immersive ? Colors.transparent : TtColors.bg,
-        title: const Text.rich(TextSpan(children: [
-          TextSpan(text: 'Track'),
-          TextSpan(text: 'Time', style: TextStyle(color: TtColors.amber)),
-        ])),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Réglages',
-            onPressed: () => context.push('/settings'),
-          ),
-        ],
-      ),
+      appBar: immersive
+          ? null
+          : AppBar(
+              title: const Text.rich(TextSpan(children: [
+                TextSpan(text: 'Track'),
+                TextSpan(
+                    text: 'Time', style: TextStyle(color: TtColors.amber)),
+              ])),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: 'Réglages',
+                  onPressed: () => context.push('/settings'),
+                ),
+              ],
+            ),
       // TickerMode : gèle les animations des onglets cachés (ex. le fond
       // vivant du Profil), l'IndexedStack gardant leur état.
       body: IndexedStack(
