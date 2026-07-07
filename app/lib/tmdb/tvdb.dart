@@ -99,7 +99,7 @@ class TvdbClient {
         .toList();
   }
 
-  /// Détails étendus d'une série (saisons, épisodes, artworks).
+  /// Détails étendus d'une série (saisons, genres, artworks, network…).
   Future<Map<String, dynamic>> seriesExtended(int id) async {
     final j = await _get('/series/$id/extended');
     return (j['data'] as Map<String, dynamic>?) ?? const {};
@@ -109,6 +109,91 @@ class TvdbClient {
   Future<Map<String, dynamic>> movieExtended(int id) async {
     final j = await _get('/movies/$id/extended');
     return (j['data'] as Map<String, dynamic>?) ?? const {};
+  }
+
+  final Map<int, List<Map<String, dynamic>>> _episodesCache = {};
+
+  /// Épisodes officiels d'une série, normalisés et paginés puis mis en cache
+  /// (le client est un singleton). Champs : season, episode, name, overview,
+  /// image (URL complète), aired, runtime.
+  Future<List<Map<String, dynamic>>> seriesEpisodes(int id) async {
+    final cached = _episodesCache[id];
+    if (cached != null) return cached;
+    final out = <Map<String, dynamic>>[];
+    for (var page = 0; page < 30; page++) {
+      final j = await _get('/series/$id/episodes/official', {'page': '$page'});
+      final data = j['data'];
+      final eps = (data is Map ? data['episodes'] : null) as List?;
+      if (eps == null || eps.isEmpty) break;
+      for (final e in eps.whereType<Map<String, dynamic>>()) {
+        final season = (e['seasonNumber'] as num?)?.toInt();
+        final number = (e['number'] as num?)?.toInt();
+        if (season == null || number == null) continue;
+        out.add({
+          'season': season,
+          'episode': number,
+          'name': e['name'] as String?,
+          'overview': e['overview'] as String?,
+          'image': e['image'] as String?,
+          'aired': e['aired'] as String?,
+          'runtime': (e['runtime'] as num?)?.toInt(),
+        });
+      }
+      if (eps.length < 100) break; // dernière page
+    }
+    _episodesCache[id] = out;
+    return out;
+  }
+
+  /// Traduction (nom + résumé) d'une série dans [lang] (ex. « fra »).
+  /// Renvoie {} si absente.
+  Future<Map<String, dynamic>> seriesTranslation(int id, String lang) =>
+      _translation('series', id, lang);
+
+  Future<Map<String, dynamic>> movieTranslation(int id, String lang) =>
+      _translation('movies', id, lang);
+
+  Future<Map<String, dynamic>> _translation(
+      String kind, int id, String lang) async {
+    try {
+      final j = await _get('/$kind/$id/translations/$lang');
+      return (j['data'] as Map<String, dynamic>?) ?? const {};
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  // ---- Extracteurs sur les réponses TheTVDB ----
+
+  /// Genres joints par « | » (ex. "Drama|Crime").
+  static String? genresOf(Map<String, dynamic> d) {
+    final list = ((d['genres'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((g) => '${g['name'] ?? ''}')
+        .where((n) => n.isNotEmpty)
+        .toList();
+    return list.isEmpty ? null : list.join('|');
+  }
+
+  /// Affiche (URL complète) d'une série ou d'un film.
+  static String? posterOf(Map<String, dynamic> d) {
+    final img = d['image'];
+    return (img is String && img.isNotEmpty) ? img : null;
+  }
+
+  /// Statut lisible ("Ended", "Continuing"…).
+  static String? statusOf(Map<String, dynamic> d) {
+    final s = d['status'];
+    if (s is Map && s['name'] is String) return s['name'] as String;
+    return null;
+  }
+
+  /// Date de sortie d'un film (first_release.date), ou null.
+  static DateTime? releaseDateOf(Map<String, dynamic> movie) {
+    final fr = movie['first_release'];
+    final date = fr is Map ? fr['date'] : null;
+    if (date is String && date.isNotEmpty) return DateTime.tryParse(date);
+    return null;
   }
 
   /// Vérifie que la clé est valide (login + une recherche). Renvoie le nombre

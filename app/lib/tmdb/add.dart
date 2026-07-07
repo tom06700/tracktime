@@ -1,59 +1,60 @@
 import 'package:drift/drift.dart';
 
 import '../db/database.dart';
-import 'tmdb.dart';
+import 'tvdb.dart';
 
-/// Noms de genres TMDB joints par « | » (ex. "Drame|Science-Fiction").
-String? genresOf(Map<String, dynamic> details) {
-  final list = ((details['genres'] as List?) ?? const [])
-      .whereType<Map>()
-      .map((g) => '${g['name'] ?? ''}')
-      .where((n) => n.isNotEmpty)
-      .toList();
-  return list.isEmpty ? null : list.join('|');
+String? _pick(Object? a, Object? b) {
+  if (a is String && a.trim().isNotEmpty) return a;
+  if (b is String && b.trim().isNotEmpty) return b;
+  return null;
 }
 
-/// Date de sortie TMDB (« release_date » au format AAAA-MM-JJ), ou null.
-DateTime? releaseDateOf(Map<String, dynamic> details) {
-  final raw = details['release_date'];
-  if (raw is! String || raw.isEmpty) return null;
-  return DateTime.tryParse(raw);
+/// Nombre de saisons « officielles » (> 0) d'une série TheTVDB étendue.
+int? _officialSeasonCount(Map<String, dynamic> d) {
+  final nums = <int>{};
+  for (final s in ((d['seasons'] as List?) ?? const []).whereType<Map>()) {
+    if ((s['type'] as Map?)?['type'] == 'official') {
+      final n = (s['number'] as num?)?.toInt();
+      if (n != null && n > 0) nums.add(n);
+    }
+  }
+  return nums.isEmpty ? null : nums.length;
 }
 
-/// Ajoute une série depuis TMDB si absente. Renvoie son nom.
-Future<String> addShowFromTmdb(AppDatabase db, TmdbClient tmdb, int id) async {
+/// Ajoute une série depuis TheTVDB si absente. Renvoie son nom (FR si dispo).
+Future<String> addShowFromTvdb(AppDatabase db, TvdbClient tvdb, int id) async {
   final existing = await db.showById(id);
   if (existing != null) return existing.name;
-  final d = await tmdb.tvDetails(id);
-  final name = '${d['name'] ?? ''}';
+  final d = await tvdb.seriesExtended(id);
+  final fr = await tvdb.seriesTranslation(id, 'fra');
+  final name = _pick(fr['name'], d['name']) ?? '';
   await db.upsertShow(ShowsCompanion.insert(
     id: Value(id),
     name: name,
-    poster: Value(d['poster_path'] as String?),
-    totalEpisodes: Value((d['number_of_episodes'] as num?)?.toInt()),
-    seasonCount: Value((d['number_of_seasons'] as num?)?.toInt()),
-    runtime: Value(
-        ((d['episode_run_time'] as List?)?.firstOrNull as num?)?.toInt() ?? 42),
-    status: Value(d['status'] as String?),
-    genres: Value(genresOf(d)),
+    poster: Value(TvdbClient.posterOf(d)),
+    seasonCount: Value(_officialSeasonCount(d)),
+    runtime: Value((d['averageRuntime'] as num?)?.toInt() ?? 42),
+    status: Value(TvdbClient.statusOf(d)),
+    genres: Value(TvdbClient.genresOf(d)),
   ));
   return name;
 }
 
-/// Ajoute un film depuis TMDB si absent (dans la watchlist). Renvoie son titre.
-Future<String> addMovieFromTmdb(AppDatabase db, TmdbClient tmdb, int id) async {
+/// Ajoute un film depuis TheTVDB si absent (dans la watchlist). Renvoie son titre.
+Future<String> addMovieFromTvdb(AppDatabase db, TvdbClient tvdb, int id) async {
   final existing = await db.movieById(id);
   if (existing != null) return existing.title;
-  final d = await tmdb.movieDetails(id);
-  final title = '${d['title'] ?? ''}';
+  final d = await tvdb.movieExtended(id);
+  final fr = await tvdb.movieTranslation(id, 'fra');
+  final title = _pick(fr['name'], d['name']) ?? '';
   await db.upsertMovie(MoviesCompanion.insert(
     id: Value(id),
     title: title,
-    poster: Value(d['poster_path'] as String?),
+    poster: Value(TvdbClient.posterOf(d)),
     runtime: Value((d['runtime'] as num?)?.toInt() ?? 110),
     watchedAt: const Value(null),
-    genres: Value(genresOf(d)),
-    releaseDate: Value(releaseDateOf(d)),
+    genres: Value(TvdbClient.genresOf(d)),
+    releaseDate: Value(TvdbClient.releaseDateOf(d)),
   ));
   return title;
 }

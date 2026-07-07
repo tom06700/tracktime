@@ -66,11 +66,6 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       switch (parseFile(_parsed, text)) {
         case WebBackupFile(:final data):
           final r = await importWebBackup(db, data);
-          if (r.tmdbKey != null &&
-              (ref.read(tmdbKeyProvider).value ?? '').isEmpty) {
-            await ref.read(tmdbKeyProvider.notifier).save(r.tmdbKey!);
-            _log.add('🔑 Clé API TMDB récupérée du backup');
-          }
           _log.add(
               '✅ ${f.name} : sauvegarde restaurée (${r.shows} séries, ${r.movies} films)');
         case EntriesAdded(:final count):
@@ -83,9 +78,9 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   }
 
   Future<void> _runImport() async {
-    final key = ref.read(tmdbKeyProvider).value ?? '';
+    final key = ref.read(tvdbKeyProvider).value ?? '';
     if (key.isEmpty) {
-      _toast('Ajoute d’abord ta clé TMDB dans ⚙️ Réglages');
+      _toast('Ajoute d’abord ta clé TheTVDB dans ⚙️ Réglages');
       if (mounted) context.push('/settings');
       return;
     }
@@ -95,7 +90,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     });
     final summary = await runTvTimeImport(
       ref.read(databaseProvider),
-      ref.read(tmdbClientProvider),
+      ref.read(tvdbClientProvider),
       _parsed,
       onProgress: (pct, line) {
         if (!mounted) return;

@@ -113,7 +113,7 @@ class _Poster extends StatelessWidget {
     );
     final child = (path != null && path!.isNotEmpty)
         ? Image.network(
-            tmdbImageUrl(path!, size: 'w185'),
+            imageUrl(path!, size: 'w185'),
             width: w,
             height: double.infinity,
             fit: BoxFit.cover,

@@ -179,6 +179,14 @@ class AppDatabase extends _$AppDatabase {
       (update(shows)..where((s) => s.id.equals(id)))
           .write(ShowsCompanion(genres: Value(genres)));
 
+  /// Met à jour les compteurs d'une série après synchro des épisodes.
+  Future<void> updateShowCounts(int id,
+          {required int total, required int seasons}) =>
+      (update(shows)..where((s) => s.id.equals(id))).write(ShowsCompanion(
+        totalEpisodes: Value(total),
+        seasonCount: Value(seasons),
+      ));
+
   Future<void> setMovieGenres(int id, String genres) =>
       (update(movies)..where((m) => m.id.equals(id)))
           .write(MoviesCompanion(genres: Value(genres)));

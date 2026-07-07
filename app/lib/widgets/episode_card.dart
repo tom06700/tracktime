@@ -151,9 +151,9 @@ class _Still extends StatelessWidget {
     // La vignette d'épisode (paysage) ne sert que si aucune affiche.
     final Widget child;
     if (posterPath != null && posterPath!.isNotEmpty) {
-      child = imageOr('https://image.tmdb.org/t/p/w185$posterPath', placeholder);
+      child = imageOr(posterPath!, placeholder);
     } else if (path != null && path!.isNotEmpty) {
-      child = imageOr('https://image.tmdb.org/t/p/w300$path', placeholder);
+      child = imageOr(path!, placeholder);
     } else {
       child = placeholder;
     }

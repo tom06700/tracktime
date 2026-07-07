@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-String tmdbImageUrl(String path, {String size = 'w154'}) =>
-    'https://image.tmdb.org/t/p/$size$path';
+/// URL d'affiche/vignette. TheTVDB fournit déjà des URLs complètes : on les
+/// renvoie telles quelles. (Le paramètre [size] est conservé pour compat mais
+/// ignoré ; les valeurs héritées non-http échoueront → placeholder.)
+String imageUrl(String path, {String size = 'w154'}) => path;
 
 /// Marge basse à réserver dans les vues défilantes pour que le dernier
 /// élément puisse remonter au-dessus de la nav bar flottante (le contenu
@@ -130,7 +132,7 @@ class PosterBox extends StatelessWidget {
     return ClipRRect(
       borderRadius: radius,
       child: Image.network(
-        tmdbImageUrl(path),
+        imageUrl(path),
         width: w,
         height: h,
         fit: BoxFit.cover,

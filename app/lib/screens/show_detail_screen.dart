@@ -3,14 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../db/database.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
-import '../tmdb/add.dart';
-import '../tmdb/tmdb.dart';
 import '../theme.dart';
+import '../tmdb/tvdb.dart';
 import '../widgets/common.dart';
 import '../widgets/glass.dart';
 
@@ -26,86 +24,100 @@ class ShowDetailScreen extends ConsumerStatefulWidget {
 
 class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
   Map<String, dynamic>? _details;
-  Map<String, dynamic>? _providersFr; // {link, flatrate:[...]}
-  List<Map<String, dynamic>> _similar = const [];
+  String _name = '';
+  String _overview = '';
+  String? _backdrop;
   List<int> _seasonNumbers = const [];
   String? _error;
 
-  // Cache épisodes par saison (numéros + titres), pour l'onglet Épisodes.
   final Map<int, List<int>> _episodesBySeason = {};
   final Map<int, Map<int, String>> _episodeNames = {};
 
   @override
   void initState() {
     super.initState();
+    _name = widget.title;
     _load();
   }
 
   Future<void> _load() async {
-    final tmdb = ref.read(tmdbClientProvider);
+    final tvdb = ref.read(tvdbClientProvider);
     final db = ref.read(databaseProvider);
     try {
-      final d = await tmdb.tvDetails(widget.showId);
-      final seasons = ((d['seasons'] as List?) ?? const [])
-          .whereType<Map<String, dynamic>>()
-          .map((s) => (s['season_number'] as num?)?.toInt() ?? 0)
-          .where((n) => n > 0)
-          .toList();
+      final d = await tvdb.seriesExtended(widget.showId);
+      final fr = await tvdb.seriesTranslation(widget.showId, 'fra');
+      final name = _firstNonEmpty(
+          [fr['name'], d['name'], widget.title]) ?? widget.title;
+      final overview =
+          _firstNonEmpty([fr['overview'], d['overview']]) ?? '';
 
-      // Rafraîchit les métadonnées seulement si la série est déjà suivie
-      // (ne pas polluer la bibliothèque en consultant une série similaire).
-      if (await db.showById(widget.showId) != null) {
-        await _upsertFromDetails(d);
+      // Épisodes (toutes saisons > 0), groupés puis mis en cache DB.
+      final eps = await tvdb.seriesEpisodes(widget.showId);
+      final bySeason = <int, List<int>>{};
+      final names = <int, Map<int, String>>{};
+      final rows = <EpisodesCompanion>[];
+      for (final e in eps) {
+        final s = e['season'] as int;
+        if (s < 1) continue;
+        final n = e['episode'] as int;
+        (bySeason[s] ??= []).add(n);
+        (names[s] ??= {})[n] = '${e['name'] ?? 'Épisode $n'}';
+        rows.add(EpisodesCompanion.insert(
+          showId: widget.showId,
+          season: s,
+          episode: n,
+          name: Value(e['name'] as String?),
+          still: Value(e['image'] as String?),
+          airDate: Value(
+              DateTime.tryParse('${e['aired'] ?? ''}')),
+        ));
+      }
+      for (final l in bySeason.values) {
+        l.sort();
+      }
+      final seasons = bySeason.keys.toList()..sort();
+
+      final followed = await db.showById(widget.showId) != null;
+      if (rows.isNotEmpty) await db.upsertEpisodes(rows);
+      if (followed) {
+        await _upsertFromDetails(d, name);
+        if (bySeason.isNotEmpty) {
+          final total =
+              bySeason.values.fold<int>(0, (s, l) => s + l.length);
+          await db.updateShowCounts(widget.showId,
+              total: total, seasons: seasons.last);
+        }
       }
 
       if (!mounted) return;
       setState(() {
         _details = d;
+        _name = name;
+        _overview = overview;
+        _backdrop = _backdropOf(d);
+        _episodesBySeason
+          ..clear()
+          ..addAll(bySeason);
+        _episodeNames
+          ..clear()
+          ..addAll(names);
         _seasonNumbers = seasons;
       });
-
-      // Best-effort : plateformes + similaires (n'échouent pas la page).
-      _loadProviders(tmdb);
-      _loadSimilar(tmdb);
-    } on TmdbException catch (e) {
+    } on TvdbException catch (e) {
       if (!mounted) return;
       setState(() => _error = '$e');
     }
   }
 
-  Future<void> _loadProviders(TmdbClient tmdb) async {
-    try {
-      final j = await tmdb.watchProviders(widget.showId);
-      final fr = (j['results'] as Map?)?['FR'];
-      if (mounted && fr is Map) {
-        setState(() => _providersFr = fr.cast<String, dynamic>());
-      }
-    } on TmdbException {
-      /* ignoré */
-    }
-  }
-
-  Future<void> _loadSimilar(TmdbClient tmdb) async {
-    try {
-      final list = await tmdb.similarTv(widget.showId);
-      if (mounted) setState(() => _similar = list);
-    } on TmdbException {
-      /* ignoré */
-    }
-  }
-
-  Future<void> _upsertFromDetails(Map<String, dynamic> d) {
+  Future<void> _upsertFromDetails(Map<String, dynamic> d, String name) {
     return ref.read(databaseProvider).upsertShow(ShowsCompanion(
           id: Value(widget.showId),
-          name: Value('${d['name'] ?? widget.title}'),
-          poster: Value(d['poster_path'] as String?),
-          totalEpisodes: Value((d['number_of_episodes'] as num?)?.toInt()),
-          seasonCount: Value((d['number_of_seasons'] as num?)?.toInt()),
-          runtime: Value(
-              ((d['episode_run_time'] as List?)?.firstOrNull as num?)?.toInt() ??
-                  42),
-          status: Value(d['status'] as String?),
-          genres: Value(genresOf(d)),
+          name: Value(name),
+          poster: Value(TvdbClient.posterOf(d)),
+          seasonCount: Value(_seasonNumbers.isEmpty ? null : _seasonNumbers.last),
+          runtime: Value((d['averageRuntime'] as num?)?.toInt() ?? 42),
+          status: Value(TvdbClient.statusOf(d)),
+          genres: Value(TvdbClient.genresOf(d)),
         ));
   }
 
@@ -115,39 +127,12 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
   Future<void> _ensureFollowed() async {
     final db = ref.read(databaseProvider);
     if (await db.showById(widget.showId) == null && _details != null) {
-      await _upsertFromDetails(_details!);
+      await _upsertFromDetails(_details!, _name);
     }
   }
 
-  Future<List<int>> _loadSeason(int season) async {
-    final cached = _episodesBySeason[season];
-    if (cached != null) return cached;
-    final j = await ref.read(tmdbClientProvider).season(widget.showId, season);
-    final eps = ((j['episodes'] as List?) ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .toList();
-    final numbers = <int>[];
-    final names = <int, String>{};
-    final rows = <EpisodesCompanion>[];
-    for (final e in eps) {
-      final n = (e['episode_number'] as num?)?.toInt();
-      if (n == null) continue;
-      numbers.add(n);
-      names[n] = '${e['name'] ?? 'Épisode $n'}';
-      rows.add(EpisodesCompanion.insert(
-        showId: widget.showId,
-        season: season,
-        episode: n,
-        name: Value(e['name'] as String?),
-        still: Value(e['still_path'] as String?),
-        airDate: Value(DateTime.tryParse('${e['air_date'] ?? ''}')),
-      ));
-    }
-    if (rows.isNotEmpty) await ref.read(databaseProvider).upsertEpisodes(rows);
-    _episodesBySeason[season] = numbers;
-    _episodeNames[season] = names;
-    return numbers;
-  }
+  Future<List<int>> _loadSeason(int season) async =>
+      _episodesBySeason[season] ?? const [];
 
   Future<void> _toggleEpisode(int season, int episode, bool watched) async {
     HapticFeedback.selectionClick();
@@ -170,7 +155,7 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Retirer « ${widget.title} » ?'),
+        title: Text('Retirer « $_name » ?'),
         content: const Text('La série et sa progression seront supprimées.'),
         actions: [
           TextButton(
@@ -212,32 +197,37 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
           ? EmptyState(icon: Icons.error_outline, message: _error!)
           : _details == null
               ? const Center(child: CircularProgressIndicator())
-              : _buildContent(_details!, followed),
+              : _buildContent(followed),
     );
   }
 
-  Widget _buildContent(Map<String, dynamic> d, bool followed) {
+  Widget _buildContent(bool followed) {
     return DefaultTabController(
       length: 2,
       child: Column(
         children: [
-          _Header(details: d, title: widget.title),
+          _Header(
+            name: _name,
+            backdrop: _backdrop,
+            episodeCount: _totalEpisodes(),
+            network: _networkOf(_details!),
+          ),
           const TabBar(
             labelColor: TtColors.amber,
             unselectedLabelColor: TtColors.dim,
             indicatorColor: TtColors.amber,
             indicatorSize: TabBarIndicatorSize.label,
-            labelStyle:
-                TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1),
+            labelStyle: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1),
             tabs: [Tab(text: 'À PROPOS'), Tab(text: 'ÉPISODES')],
           ),
           Expanded(
             child: TabBarView(
               children: [
                 _AboutTab(
-                  details: d,
-                  providersFr: _providersFr,
-                  similar: _similar,
+                  overview: _overview,
+                  genres: _genresOf(_details!),
+                  year: _yearOf(_details!),
                   followed: followed,
                   onFollow: _ensureFollowed,
                 ),
@@ -256,28 +246,71 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
       ),
     );
   }
+
+  int? _totalEpisodes() {
+    if (_episodesBySeason.isEmpty) return null;
+    return _episodesBySeason.values.fold<int>(0, (s, l) => s + l.length);
+  }
+
+  static List<String> _genresOf(Map<String, dynamic> d) =>
+      ((d['genres'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((g) => '${g['name'] ?? ''}')
+          .where((n) => n.isNotEmpty)
+          .toList();
+
+  static String _yearOf(Map<String, dynamic> d) {
+    final y = d['year'];
+    if (y is String && y.isNotEmpty) return y;
+    final first = '${d['firstAired'] ?? ''}';
+    return first.length >= 4 ? first.substring(0, 4) : '';
+  }
+
+  static String _networkOf(Map<String, dynamic> d) {
+    final latest = d['latestNetwork'];
+    if (latest is Map && latest['name'] is String) return latest['name'];
+    final orig = d['originalNetwork'];
+    if (orig is Map && orig['name'] is String) return orig['name'];
+    return '';
+  }
+
+  static String? _backdropOf(Map<String, dynamic> d) {
+    // Artwork de type « background » (3) si dispo, sinon l'affiche.
+    for (final a in ((d['artworks'] as List?) ?? const []).whereType<Map>()) {
+      if ((a['type'] as num?)?.toInt() == 3 && a['image'] is String) {
+        return a['image'] as String;
+      }
+    }
+    return TvdbClient.posterOf(d);
+  }
+
+  static String? _firstNonEmpty(List<Object?> vals) {
+    for (final v in vals) {
+      if (v is String && v.trim().isNotEmpty) return v;
+    }
+    return null;
+  }
 }
 
 // ------------------------------------------------------------------ Header
 
 class _Header extends StatelessWidget {
-  const _Header({required this.details, required this.title});
+  const _Header({
+    required this.name,
+    required this.backdrop,
+    required this.episodeCount,
+    required this.network,
+  });
 
-  final Map<String, dynamic> details;
-  final String title;
+  final String name;
+  final String? backdrop;
+  final int? episodeCount;
+  final String network;
 
   @override
   Widget build(BuildContext context) {
-    final backdrop = details['backdrop_path'] as String? ??
-        details['poster_path'] as String?;
-    final name = '${details['name'] ?? title}';
-    final epCount = (details['number_of_episodes'] as num?)?.toInt();
-    final networks = (details['networks'] as List?) ?? const [];
-    final network =
-        networks.isNotEmpty ? '${(networks.first as Map)['name'] ?? ''}' : '';
-
     final meta = [
-      if (epCount != null) '$epCount épisodes',
+      if (episodeCount != null) '$episodeCount épisodes',
       if (network.isNotEmpty) network,
     ].join(' · ');
 
@@ -288,12 +321,12 @@ class _Header extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           if (backdrop != null)
-            Image.network('https://image.tmdb.org/t/p/w780$backdrop',
+            Image.network(backdrop!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => const ColoredBox(color: TtColors.surface))
+                errorBuilder: (_, _, _) =>
+                    const ColoredBox(color: TtColors.surface))
           else
             const ColoredBox(color: TtColors.surface),
-          // Dégradé pour lisibilité du texte.
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -343,33 +376,21 @@ class _Header extends StatelessWidget {
 
 class _AboutTab extends StatelessWidget {
   const _AboutTab({
-    required this.details,
-    required this.providersFr,
-    required this.similar,
+    required this.overview,
+    required this.genres,
+    required this.year,
     required this.followed,
     required this.onFollow,
   });
 
-  final Map<String, dynamic> details;
-  final Map<String, dynamic>? providersFr;
-  final List<Map<String, dynamic>> similar;
+  final String overview;
+  final List<String> genres;
+  final String year;
   final bool followed;
   final Future<void> Function() onFollow;
 
   @override
   Widget build(BuildContext context) {
-    final overview = '${details['overview'] ?? ''}';
-    final genres = ((details['genres'] as List?) ?? const [])
-        .map((g) => '${(g as Map)['name']}')
-        .toList();
-    final year =
-        '${details['first_air_date'] ?? ''}'.padRight(4).substring(0, 4).trim();
-    final vote = (details['vote_average'] as num?)?.toDouble() ?? 0;
-    final flatrate = ((providersFr?['flatrate'] as List?) ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .toList();
-    final link = providersFr?['link'] as String?;
-
     return ListView(
       padding: EdgeInsets.fromLTRB(16, 16, 16, bottomNavInset(context)),
       children: [
@@ -384,25 +405,6 @@ class _AboutTab extends StatelessWidget {
           ),
           const SizedBox(height: 18),
         ],
-        _SectionTitle('Où regarder'),
-        const SizedBox(height: 8),
-        if (flatrate.isEmpty)
-          const Text('Non disponible en streaming (abonnement) en France.',
-              style: TextStyle(fontSize: 13.5, color: TtColors.dim))
-        else
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              for (final p in flatrate)
-                _ProviderChip(
-                  name: '${p['provider_name'] ?? ''}',
-                  logoPath: p['logo_path'] as String?,
-                  onTap: link == null ? null : () => _open(link),
-                ),
-            ],
-          ),
-        const SizedBox(height: 22),
         _SectionTitle('Infos'),
         const SizedBox(height: 8),
         Wrap(
@@ -411,13 +413,9 @@ class _AboutTab extends StatelessWidget {
           children: [
             if (year.isNotEmpty)
               _MetaItem(icon: Icons.event_outlined, text: year),
-            if (vote > 0)
-              _MetaItem(
-                  icon: Icons.star_rounded,
-                  text: vote.toStringAsFixed(1),
-                  iconColor: TtColors.amber),
             if (genres.isNotEmpty)
-              _MetaItem(icon: Icons.local_offer_outlined, text: genres.join(', ')),
+              _MetaItem(
+                  icon: Icons.local_offer_outlined, text: genres.join(', ')),
           ],
         ),
         const SizedBox(height: 12),
@@ -428,29 +426,8 @@ class _AboutTab extends StatelessWidget {
               height: 1.6,
               color: overview.isEmpty ? TtColors.dim : TtColors.text),
         ),
-        if (similar.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          _SectionTitle('Séries similaires'),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 190,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: similar.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (_, i) => _SimilarCard(similar[i]),
-            ),
-          ),
-        ],
       ],
     );
-  }
-
-  Future<void> _open(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri != null) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
   }
 }
 
@@ -468,105 +445,21 @@ class _SectionTitle extends StatelessWidget {
       );
 }
 
-class _ProviderChip extends StatelessWidget {
-  const _ProviderChip({required this.name, required this.logoPath, this.onTap});
-
-  final String name;
-  final String? logoPath;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: TtColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (logoPath != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Image.network('https://image.tmdb.org/t/p/w92$logoPath',
-                    width: 26, height: 26, fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const SizedBox(width: 26, height: 26)),
-              ),
-            const SizedBox(width: 8),
-            Text(name,
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600)),
-            const SizedBox(width: 2),
-            const Icon(Icons.open_in_new, size: 13, color: TtColors.dim),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _MetaItem extends StatelessWidget {
-  const _MetaItem({required this.icon, required this.text, this.iconColor});
+  const _MetaItem({required this.icon, required this.text});
   final IconData icon;
   final String text;
-  final Color? iconColor;
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: iconColor ?? TtColors.dim),
+        Icon(icon, size: 16, color: TtColors.dim),
         const SizedBox(width: 5),
         Flexible(
             child: Text(text,
                 style: const TextStyle(fontSize: 13, color: TtColors.text))),
       ],
-    );
-  }
-}
-
-class _SimilarCard extends StatelessWidget {
-  const _SimilarCard(this.show);
-  final Map<String, dynamic> show;
-
-  @override
-  Widget build(BuildContext context) {
-    final id = (show['id'] as num).toInt();
-    final name = '${show['name'] ?? ''}';
-    final poster = show['poster_path'] as String?;
-    return GestureDetector(
-      onTap: () => context.push('/show/$id', extra: name),
-      child: SizedBox(
-        width: 108,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: poster == null
-                  ? Container(
-                      width: 108,
-                      height: 150,
-                      color: TtColors.surfaceHi,
-                      child: const Icon(Icons.tv, color: TtColors.dim))
-                  : Image.network('https://image.tmdb.org/t/p/w185$poster',
-                      width: 108, height: 150, fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                          width: 108, height: 150, color: TtColors.surfaceHi)),
-            ),
-            const SizedBox(height: 6),
-            Text(name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 12.5, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -705,7 +598,6 @@ class _SeasonCardState extends State<_SeasonCard> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Bouton « valider toute la saison ».
                   _SeasonCheck(
                     allWatched: allWatched,
                     enabled: eps != null,

@@ -5,12 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
 import '../settings/prefs.dart';
-import '../tmdb/add.dart';
-import '../tmdb/tmdb.dart';
 import '../theme.dart';
+import '../tmdb/add.dart';
+import '../tmdb/tvdb.dart';
 import '../widgets/common.dart';
 
-/// Onglet Explorer : champ de recherche TMDB + résultats (séries et films).
+/// Onglet Explorer : recherche TheTVDB (séries et films) + résultats.
 /// Conçu comme corps d'onglet (pas de Scaffold ni d'AppBar propre).
 class ExplorerScreen extends ConsumerStatefulWidget {
   const ExplorerScreen({super.key});
@@ -57,17 +57,17 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
       _error = null;
     });
     try {
-      final tmdb = ref.read(tmdbClientProvider);
-      final results = await tmdb.searchMulti(q);
+      final tvdb = ref.read(tvdbClientProvider);
+      final results = await tvdb.search(q);
       if (!mounted || q != _lastQuery) return;
       setState(() {
-        _results = results
-            .where((r) =>
-                r['media_type'] == 'tv' || r['media_type'] == 'movie')
-            .toList();
+        _results = results.where((r) {
+          final t = '${r['type'] ?? r['primary_type'] ?? ''}';
+          return t == 'series' || t == 'movie';
+        }).toList();
         _loading = false;
       });
-    } on TmdbException catch (e) {
+    } on TvdbException catch (e) {
       if (!mounted || q != _lastQuery) return;
       setState(() {
         _error = '$e';
@@ -153,17 +153,18 @@ class _ResultCardState extends ConsumerState<_ResultCard> {
   @override
   Widget build(BuildContext context) {
     final r = widget.result;
-    final isTv = r['media_type'] == 'tv';
-    final id = (r['id'] as num).toInt();
-    final name = '${r['name'] ?? r['title'] ?? ''}';
-    final date = '${r['first_air_date'] ?? r['release_date'] ?? ''}';
-    final year = date.length >= 4 ? date.substring(0, 4) : '';
+    final isTv = '${r['type'] ?? r['primary_type'] ?? ''}' == 'series';
+    final id = TvdbClient.tvdbId(r);
+    final name = '${r['name'] ?? ''}';
+    final year = '${r['year'] ?? ''}';
+    final poster = r['image_url'] as String?;
 
     final shows = ref.watch(showsProvider).value ?? const [];
     final movies = ref.watch(moviesProvider).value ?? const [];
-    final already = isTv
-        ? shows.any((s) => s.show.id == id)
-        : movies.any((m) => m.id == id);
+    final already = id != null &&
+        (isTv
+            ? shows.any((s) => s.show.id == id)
+            : movies.any((m) => m.id == id));
 
     return Card(
       child: Padding(
@@ -171,9 +172,10 @@ class _ResultCardState extends ConsumerState<_ResultCard> {
         child: Row(
           children: [
             PosterBox(
-              posterPath: r['poster_path'] as String?,
+              posterPath: poster,
               fallbackIcon: isTv ? Icons.tv : Icons.movie_outlined,
               small: true,
+              label: name,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -194,7 +196,9 @@ class _ResultCardState extends ConsumerState<_ResultCard> {
               ),
             ),
             const SizedBox(width: 8),
-            if (already)
+            if (id == null)
+              const SizedBox.shrink()
+            else if (already)
               const Icon(Icons.check_circle, color: TtColors.teal)
             else if (_busy)
               const SizedBox(
@@ -215,18 +219,18 @@ class _ResultCardState extends ConsumerState<_ResultCard> {
   Future<void> _add(int id, bool isTv, String name) async {
     setState(() => _busy = true);
     final db = ref.read(databaseProvider);
-    final tmdb = ref.read(tmdbClientProvider);
+    final tvdb = ref.read(tvdbClientProvider);
     try {
       if (isTv) {
-        await addShowFromTmdb(db, tmdb, id);
+        await addShowFromTvdb(db, tvdb, id);
       } else {
-        await addMovieFromTmdb(db, tmdb, id);
+        await addMovieFromTvdb(db, tvdb, id);
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('« $name » ajouté${isTv ? 'e' : ''} ✓')),
       );
-    } on TmdbException catch (e) {
+    } on TvdbException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('$e')));

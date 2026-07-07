@@ -250,7 +250,7 @@ class _FilmFrame extends StatelessWidget {
             children: [
               if (poster != null)
                 Image.network(
-                  tmdbImageUrl(poster!),
+                  imageUrl(poster!),
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => colorBox,
                 )
@@ -539,7 +539,7 @@ class _MarqueePoster extends StatelessWidget {
               children: [
                 if (path != null && path.isNotEmpty)
                   Image.network(
-                    tmdbImageUrl(path, size: 'w500'),
+                    imageUrl(path, size: 'w500'),
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) =>
                         _posterFallback(show.name, iconSize: 34),
@@ -659,7 +659,7 @@ class SeriesPosterTile extends StatelessWidget {
             children: [
               if (path != null && path.isNotEmpty)
                 Image.network(
-                  tmdbImageUrl(path, size: 'w342'),
+                  imageUrl(path, size: 'w342'),
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => _posterFallback(show.name),
                 )

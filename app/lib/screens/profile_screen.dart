@@ -67,9 +67,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Rattrape les genres manquants dès que la clé TMDB est chargée (les
+    // Rattrape les genres manquants dès que la clé TheTVDB est chargée (les
     // séries ajoutées avant la colonne `genres`, ou importées, n'en ont pas).
-    final key = ref.watch(tmdbKeyProvider).value;
+    final key = ref.watch(tvdbKeyProvider).value;
     if (!_backfillStarted && key != null && key.isNotEmpty) {
       _backfillStarted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _backfill());
@@ -241,9 +241,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           padding: EdgeInsets.fromLTRB(22, 18, 22, 8),
           child: Text(
             'TrackTime — 100 % local, aucun compte, aucune donnée envoyée '
-            'ailleurs que TMDB (métadonnées).\n\n'
-            'Ce produit utilise l\'API TMDB mais n\'est ni approuvé ni '
-            'certifié par TMDB.',
+            'ailleurs que TheTVDB (métadonnées).\n\n'
+            'Metadata provided by TheTVDB.com — TrackTime n\'est ni approuvé '
+            'ni certifié par TheTVDB.',
             style: TextStyle(fontSize: 12, color: TtColors.dim, height: 1.6),
           ),
         ),
@@ -255,7 +255,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     try {
       await backfillGenres(
         ref.read(databaseProvider),
-        ref.read(tmdbClientProvider),
+        ref.read(tvdbClientProvider),
         throttle: () => Future.delayed(const Duration(milliseconds: 120)),
       );
     } catch (_) {
@@ -266,7 +266,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   Future<void> _export(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final key = ref.read(tmdbKeyProvider).value ?? '';
+      final key = ref.read(tvdbKeyProvider).value ?? '';
       await exportBackup(ref.read(databaseProvider), tmdbKey: key);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Export impossible : $e')));

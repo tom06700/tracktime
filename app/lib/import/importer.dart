@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../db/database.dart';
-import '../tmdb/tmdb.dart';
+import '../tmdb/tvdb.dart';
 import 'parser.dart';
 
 DateTime _dateOrNow(String? iso) =>
@@ -77,11 +77,11 @@ class ImportSummary {
   int failed = 0;
 }
 
-/// Importe des entrées TV Time parsées en les faisant correspondre sur TMDB.
-/// [onProgress] est appelé après chaque élément (pct 0..1, ligne de log ou null).
+/// Importe des entrées TV Time parsées en les faisant correspondre sur
+/// TheTVDB (matching par titre). [onProgress] est appelé après chaque élément.
 Future<ImportSummary> runTvTimeImport(
   AppDatabase db,
-  TmdbClient tmdb,
+  TvdbClient tvdb,
   ParsedData parsed, {
   required void Function(double pct, String? logLine) onProgress,
   Future<void> Function()? throttle,
@@ -106,25 +106,21 @@ Future<ImportSummary> runTvTimeImport(
 
   for (final name in showNames) {
     try {
-      final results = await tmdb.searchTv(name);
-      if (results.isEmpty) {
+      final results = await tvdb.search(name, type: 'series');
+      final id = results.isEmpty ? null : TvdbClient.tvdbId(results.first);
+      if (id == null) {
         summary.failed++;
-        step('❓ Série introuvable sur TMDB : $name');
+        step('❓ Série introuvable sur TheTVDB : $name');
       } else {
-        final id = (results.first['id'] as num).toInt();
         if (await db.showById(id) == null) {
-          final d = await tmdb.tvDetails(id);
+          final d = await tvdb.seriesExtended(id);
           await db.upsertShow(ShowsCompanion.insert(
             id: Value(id),
             name: '${d['name'] ?? name}',
-            poster: Value(d['poster_path'] as String?),
-            totalEpisodes: Value((d['number_of_episodes'] as num?)?.toInt()),
-            seasonCount: Value((d['number_of_seasons'] as num?)?.toInt()),
-            runtime: Value(
-                ((d['episode_run_time'] as List?)?.firstOrNull as num?)
-                        ?.toInt() ??
-                    42),
-            status: Value(d['status'] as String?),
+            poster: Value(TvdbClient.posterOf(d)),
+            runtime: Value((d['averageRuntime'] as num?)?.toInt() ?? 42),
+            status: Value(TvdbClient.statusOf(d)),
+            genres: Value(TvdbClient.genresOf(d)),
           ));
         }
         for (final ep in parsed.byShow[name]!) {
@@ -134,7 +130,7 @@ Future<ImportSummary> runTvTimeImport(
         summary.matched++;
         step(null);
       }
-    } on TmdbException catch (e) {
+    } on TvdbException catch (e) {
       summary.failed++;
       step('⚠️ $name : $e');
     }
@@ -143,25 +139,25 @@ Future<ImportSummary> runTvTimeImport(
 
   for (final m in movieList) {
     try {
-      final results = await tmdb.searchMovie(m.title);
-      if (results.isEmpty) {
+      final results = await tvdb.search(m.title, type: 'movie');
+      final id = results.isEmpty ? null : TvdbClient.tvdbId(results.first);
+      if (id == null) {
         summary.failed++;
-        step('❓ Film introuvable sur TMDB : ${m.title}');
+        step('❓ Film introuvable sur TheTVDB : ${m.title}');
       } else {
-        final r = results.first;
-        final id = (r['id'] as num).toInt();
         if (await db.movieById(id) == null) {
+          final r = results.first;
           await db.upsertMovie(MoviesCompanion.insert(
             id: Value(id),
-            title: '${r['title'] ?? m.title}',
-            poster: Value(r['poster_path'] as String?),
+            title: '${r['name'] ?? m.title}',
+            poster: Value(r['image_url'] as String?),
             watchedAt: Value(m.watched ? _dateOrNow(m.date) : null),
           ));
         }
         summary.matched++;
         step(null);
       }
-    } on TmdbException catch (e) {
+    } on TvdbException catch (e) {
       summary.failed++;
       step('⚠️ ${m.title} : $e');
     }

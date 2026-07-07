@@ -7,8 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../db/database.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
-import '../tmdb/tmdb.dart';
 import '../theme.dart';
+import '../tmdb/tvdb.dart';
 import '../widgets/common.dart';
 import '../widgets/glass.dart';
 
@@ -91,31 +91,29 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
   Future<void> _loadSeason() async {
     var numbers = <int>[widget.initialEpisode];
     try {
-      final j =
-          await ref.read(tmdbClientProvider).season(widget.showId, widget.season);
-      final eps = ((j['episodes'] as List?) ?? const [])
-          .whereType<Map<String, dynamic>>()
-          .toList();
+      final all =
+          await ref.read(tvdbClientProvider).seriesEpisodes(widget.showId);
+      final eps =
+          all.where((e) => (e['season'] as int) == widget.season).toList();
       final rows = <EpisodesCompanion>[];
       final nums = <int>[];
       for (final e in eps) {
-        final n = (e['episode_number'] as num?)?.toInt();
-        if (n == null) continue;
+        final n = e['episode'] as int;
         nums.add(n);
         rows.add(EpisodesCompanion.insert(
           showId: widget.showId,
           season: widget.season,
           episode: n,
           name: Value(e['name'] as String?),
-          still: Value(e['still_path'] as String?),
-          airDate: Value(DateTime.tryParse('${e['air_date'] ?? ''}')),
+          still: Value(e['image'] as String?),
+          airDate: Value(DateTime.tryParse('${e['aired'] ?? ''}')),
         ));
       }
       if (rows.isNotEmpty) {
         await ref.read(databaseProvider).upsertEpisodes(rows);
       }
       if (nums.isNotEmpty) numbers = (nums..sort());
-    } on TmdbException {
+    } on TvdbException {
       /* on garde l'épisode seul */
     }
     if (!mounted) return;
@@ -276,11 +274,25 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
 
   Future<void> _load() async {
     try {
-      final d = await ref
-          .read(tmdbClientProvider)
-          .episode(widget.showId, widget.season, widget.episode);
+      final all =
+          await ref.read(tvdbClientProvider).seriesEpisodes(widget.showId);
+      final e = all.firstWhere(
+        (x) =>
+            (x['season'] as int) == widget.season &&
+            (x['episode'] as int) == widget.episode,
+        orElse: () => const {},
+      );
+      // Normalise vers les clés attendues par le rendu (vote/cast absents
+      // chez TheTVDB → sections masquées naturellement).
+      final d = <String, dynamic>{
+        'name': e['name'],
+        'overview': e['overview'],
+        'runtime': e['runtime'],
+        'air_date': e['aired'],
+        'still_path': e['image'],
+      };
       if (mounted) setState(() => _data = d);
-    } on TmdbException catch (e) {
+    } on TvdbException catch (e) {
       if (mounted) setState(() => _error = '$e');
     }
   }
@@ -535,7 +547,7 @@ class _Hero extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           if (stillPath != null && stillPath!.isNotEmpty)
-            Image.network('https://image.tmdb.org/t/p/w780$stillPath',
+            Image.network(stillPath!,
                 fit: BoxFit.cover, errorBuilder: (_, _, _) => placeholder)
           else
             placeholder,
@@ -602,7 +614,7 @@ class _Hero extends StatelessWidget {
                           child: const Icon(Icons.tv,
                               color: TtColors.dim, size: 18))
                       : Image.network(
-                          'https://image.tmdb.org/t/p/w185$posterPath',
+                          posterPath!,
                           width: 42,
                           height: 62,
                           fit: BoxFit.cover,
@@ -739,9 +751,7 @@ class _GuestStar extends StatelessWidget {
           CircleAvatar(
             radius: 32,
             backgroundColor: TtColors.surfaceHi,
-            backgroundImage: profile != null
-                ? NetworkImage('https://image.tmdb.org/t/p/w185$profile')
-                : null,
+            backgroundImage: profile != null ? NetworkImage(profile) : null,
             child: profile == null
                 ? const Icon(Icons.person, color: TtColors.dim)
                 : null,

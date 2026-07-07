@@ -7,7 +7,7 @@ import 'package:http/testing.dart';
 import 'package:tracktime/db/database.dart';
 import 'package:tracktime/import/importer.dart';
 import 'package:tracktime/import/parser.dart';
-import 'package:tracktime/tmdb/tmdb.dart';
+import 'package:tracktime/tmdb/tvdb.dart';
 
 void main() {
   late AppDatabase db;
@@ -76,38 +76,48 @@ void main() {
     expect((await db.movieById(1))!.watchedAt, isNotNull);
   });
 
-  test('runTvTimeImport fait correspondre via TMDB', () async {
+  test('runTvTimeImport fait correspondre via TheTVDB', () async {
+    http.Response ok(Object? data) => http.Response(
+        json.encode({'status': 'success', 'data': data}), 200,
+        headers: {'content-type': 'application/json'});
+
     final client = MockClient((request) async {
       final path = request.url.path;
-      Map<String, Object?> body;
-      if (path == '/3/search/tv') {
-        body = request.url.queryParameters['query'] == 'Dark'
-            ? {
-                'results': [
-                  {'id': 70523, 'name': 'Dark'},
-                ],
-              }
-            : {'results': <Object>[]};
-      } else if (path == '/3/tv/70523') {
-        body = {
-          'name': 'Dark',
-          'poster_path': '/dark.jpg',
-          'number_of_episodes': 26,
-          'number_of_seasons': 3,
-          'episode_run_time': [53],
-          'status': 'Ended',
-        };
-      } else if (path == '/3/search/movie') {
-        body = {
-          'results': [
-            {'id': 496243, 'title': 'Parasite', 'poster_path': '/pa.jpg'},
-          ],
-        };
-      } else {
-        return http.Response('not found', 404);
+      if (request.method == 'POST' && path == '/v4/login') {
+        return ok({'token': 'tok'});
       }
-      return http.Response(json.encode(body), 200,
-          headers: {'content-type': 'application/json'});
+      if (path == '/v4/search') {
+        final q = request.url.queryParameters['query'];
+        final type = request.url.queryParameters['type'];
+        if (type == 'series' && q == 'Dark') {
+          return ok([
+            {'tvdb_id': '70523', 'name': 'Dark', 'type': 'series'}
+          ]);
+        }
+        if (type == 'movie' && (q == 'Parasite' || q == 'parasite')) {
+          return ok([
+            {
+              'tvdb_id': '496243',
+              'name': 'Parasite',
+              'image_url': 'https://x/pa.jpg',
+              'type': 'movie'
+            }
+          ]);
+        }
+        return ok([]);
+      }
+      if (path == '/v4/series/70523/extended') {
+        return ok({
+          'name': 'Dark',
+          'averageRuntime': 53,
+          'image': 'https://x/dark.jpg',
+          'status': {'name': 'Ended'},
+          'genres': [
+            {'name': 'Science Fiction'}
+          ],
+        });
+      }
+      return http.Response('not found', 404);
     });
 
     final parsed = ParsedData();
@@ -123,7 +133,7 @@ Série Inconnue,1,1,
     final logs = <String>[];
     final summary = await runTvTimeImport(
       db,
-      TmdbClient('test-key', client: client),
+      TvdbClient('test-key', client: client),
       parsed,
       onProgress: (pct, line) {
         if (line != null) logs.add(line);
@@ -145,7 +155,7 @@ Série Inconnue,1,1,
     parseCsvInto(parsed, 'show,season,episode\nDark,1,1\n');
     final summary = await runTvTimeImport(
       db,
-      TmdbClient(''),
+      TvdbClient(''),
       parsed,
       onProgress: (_, _) {},
     );

@@ -240,7 +240,7 @@ class _PickerPoster extends StatelessWidget {
       child: path == null || path.isEmpty
           ? fallback
           : Image.network(
-              tmdbImageUrl(path, size: 'w342'),
+              imageUrl(path, size: 'w342'),
               width: _w,
               height: _h,
               fit: BoxFit.cover,

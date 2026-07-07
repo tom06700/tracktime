@@ -38,7 +38,7 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
     // Rattrape genres + dates de sortie (pour peupler « À venir »).
     await backfillMovieMeta(
       ref.read(databaseProvider),
-      ref.read(tmdbClientProvider),
+      ref.read(tvdbClientProvider),
       throttle: () => Future.delayed(const Duration(milliseconds: 120)),
     );
   }
@@ -72,7 +72,7 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
   Widget build(BuildContext context) {
     // Lance le rattrapage TMDB dès que la clé API est réellement chargée
     // (SharedPreferences est asynchrone), pour peupler l'onglet « À venir ».
-    final key = ref.watch(tmdbKeyProvider).value;
+    final key = ref.watch(tvdbKeyProvider).value;
     if (!_syncStarted && key != null && key.isNotEmpty) {
       _syncStarted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
