@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme.dart';
+import '../tmdb/tvdb.dart';
 import '../widgets/glass.dart';
 import 'prefs.dart';
 
@@ -15,12 +16,39 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _keyController = TextEditingController();
+  final _tvdbController = TextEditingController();
   bool _initialized = false;
+  bool _tvdbInitialized = false;
+  bool _tvdbTesting = false;
 
   @override
   void dispose() {
     _keyController.dispose();
+    _tvdbController.dispose();
     super.dispose();
+  }
+
+  Future<void> _testTvdb() async {
+    final key = _tvdbController.text.trim();
+    final messenger = ScaffoldMessenger.of(context);
+    if (key.isEmpty) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Colle d\'abord ta clé TheTVDB.')));
+      return;
+    }
+    await ref.read(tvdbKeyProvider.notifier).save(key);
+    setState(() => _tvdbTesting = true);
+    try {
+      final r = await TvdbClient(key).ping();
+      messenger.showSnackBar(SnackBar(
+        content: Text('TheTVDB connecté ✓ — ${r.count} résultats '
+            '(ex. « ${r.sample} »)'),
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Échec TheTVDB : $e')));
+    } finally {
+      if (mounted) setState(() => _tvdbTesting = false);
+    }
   }
 
   @override
@@ -29,6 +57,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (!_initialized && keyValue != null) {
       _keyController.text = keyValue;
       _initialized = true;
+    }
+    final tvdbValue = ref.watch(tvdbKeyProvider).value;
+    if (!_tvdbInitialized && tvdbValue != null) {
+      _tvdbController.text = tvdbValue;
+      _tvdbInitialized = true;
     }
 
     return Scaffold(
@@ -83,6 +116,65 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       },
                       child: const Text('Enregistrer'),
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // ── Clé TheTVDB ──
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Clé API TheTVDB',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Source de métadonnées alternative (séries et films). '
+                    'Clé projet v4 depuis thetvdb.com → Dashboard → API.',
+                    style: TextStyle(
+                        fontSize: 13, color: TtColors.dim, height: 1.6),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _tvdbController,
+                    autocorrect: false,
+                    decoration: const InputDecoration(
+                      hintText: 'Colle ta clé projet TheTVDB…',
+                      filled: true,
+                      fillColor: TtColors.surfaceHi,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(14)),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      ProminentGlassButton(
+                        onPressed: () async {
+                          await ref
+                              .read(tvdbKeyProvider.notifier)
+                              .save(_tvdbController.text);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Clé enregistrée ✓')));
+                          }
+                        },
+                        child: const Text('Enregistrer'),
+                      ),
+                      const SizedBox(width: 10),
+                      GlassButton(
+                        onPressed: _tvdbTesting ? null : _testTvdb,
+                        child: Text(
+                            _tvdbTesting ? 'Test…' : 'Tester la connexion'),
+                      ),
+                    ],
                   ),
                 ],
               ),
