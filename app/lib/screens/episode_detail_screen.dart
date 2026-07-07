@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../db/database.dart';
 import '../providers.dart';
@@ -158,59 +157,34 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
               color: TtColors.bg,
               child: SizedBox(
                 height: height * 0.9,
-                child: Column(
-                  children: [
-                    _handle(),
-                    Expanded(
-                      child: _controller == null
-                          ? const Center(child: CircularProgressIndicator())
-                          : PageView.builder(
-                              controller: _controller,
-                              onPageChanged: (i) {
-                                HapticFeedback.selectionClick();
-                                setState(() => _current = i);
-                              },
-                              itemCount: _episodes.length,
-                              itemBuilder: (_, i) => _EpisodePage(
-                                showId: widget.showId,
-                                showName: widget.showName,
-                                season: widget.season,
-                                episode: _episodes[i],
-                                posterPath: widget.posterPath,
-                                position: '${i + 1} sur ${_episodes.length}',
-                              ),
-                            ),
-                    ),
-                  ],
-                ),
+                // L'image démarre tout en haut (coins arrondis), pas de bande.
+                child: _controller == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : PageView.builder(
+                        controller: _controller,
+                        onPageChanged: (i) {
+                          HapticFeedback.selectionClick();
+                          setState(() => _current = i);
+                        },
+                        itemCount: _episodes.length,
+                        itemBuilder: (_, i) => _EpisodePage(
+                          showId: widget.showId,
+                          showName: widget.showName,
+                          season: widget.season,
+                          episode: _episodes[i],
+                          posterPath: widget.posterPath,
+                          position: '${i + 1} sur ${_episodes.length}',
+                          onDragStart: _onDragStart,
+                          onDragUpdate: _onDragUpdate,
+                          onDragEnd: _onDragEnd,
+                        ),
+                      ),
               ),
             ),
           ),
           ),
         ],
         ),
-    );
-  }
-
-  /// Poignée : glisser vers le bas ferme la feuille (la feuille suit le doigt).
-  Widget _handle() {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onVerticalDragStart: _onDragStart,
-      onVerticalDragUpdate: _onDragUpdate,
-      onVerticalDragEnd: _onDragEnd,
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.only(top: 10, bottom: 8),
-        child: Container(
-          width: 40,
-          height: 4,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.28),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -266,6 +240,9 @@ class _EpisodePage extends ConsumerStatefulWidget {
     required this.season,
     required this.episode,
     required this.position,
+    required this.onDragStart,
+    required this.onDragUpdate,
+    required this.onDragEnd,
     this.posterPath,
   });
 
@@ -275,6 +252,9 @@ class _EpisodePage extends ConsumerStatefulWidget {
   final int episode;
   final String position;
   final String? posterPath;
+  final GestureDragStartCallback onDragStart;
+  final GestureDragUpdateCallback onDragUpdate;
+  final GestureDragEndCallback onDragEnd;
 
   @override
   ConsumerState<_EpisodePage> createState() => _EpisodePageState();
@@ -326,13 +306,8 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
     }
   }
 
-  Future<void> _share() async {
-    final title = '${_data?['name'] ?? ''}';
-    final code = 'S${widget.season}E${widget.episode}';
-    await SharePlus.instance.share(ShareParams(
-      text: '${widget.showName} — $code'
-          '${title.isNotEmpty ? ' · $title' : ''}',
-    ));
+  void _openSeries() {
+    context.push('/show/${widget.showId}', extra: widget.showName);
   }
 
   @override
@@ -371,22 +346,32 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
     final director = _crewName(crew, 'Director');
     final writer = _crewName(crew, 'Writer') ?? _crewDept(crew, 'Writing');
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 28),
+    return Column(
       children: [
-        _Hero(
-          stillPath: still,
-          seed: widget.showName,
-          season: widget.season,
-          episode: widget.episode,
-          title: title,
-          onShare: _share,
+        // Hero fixe = zone de glissement pour fermer (depuis toute l'image),
+        // le contenu défile en dessous.
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onVerticalDragStart: widget.onDragStart,
+          onVerticalDragUpdate: widget.onDragUpdate,
+          onVerticalDragEnd: widget.onDragEnd,
+          child: _Hero(
+            stillPath: still,
+            seed: widget.showName,
+            season: widget.season,
+            episode: widget.episode,
+            title: title,
+            posterPath: widget.posterPath,
+            onSeriesTap: _openSeries,
+          ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
             children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               if (vote > 0) ...[
                 Row(
                   children: [
@@ -484,6 +469,8 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
               ],
             ],
           ),
+            ],
+          ),
         ),
       ],
     );
@@ -513,7 +500,8 @@ class _Hero extends StatelessWidget {
     required this.season,
     required this.episode,
     required this.title,
-    required this.onShare,
+    required this.onSeriesTap,
+    this.posterPath,
   });
 
   final String? stillPath;
@@ -521,7 +509,8 @@ class _Hero extends StatelessWidget {
   final int season;
   final int episode;
   final String title;
-  final VoidCallback onShare;
+  final String? posterPath;
+  final VoidCallback onSeriesTap;
 
   @override
   Widget build(BuildContext context) {
@@ -540,7 +529,7 @@ class _Hero extends StatelessWidget {
       ),
     );
     return SizedBox(
-      height: 224,
+      height: 232,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
@@ -556,23 +545,70 @@ class _Hero extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0x00000000),
+                  Color(0x59000000),
                   Color(0x00000000),
                   Color(0xE6000000)
                 ],
-                stops: [0, 0.4, 1],
+                stops: [0, 0.35, 1],
               ),
             ),
           ),
+          // Poignée directement sur l'image.
           Positioned(
-            top: 8,
-            right: 8,
-            child: Material(
-              color: Colors.black.withValues(alpha: 0.35),
-              shape: const CircleBorder(),
-              child: IconButton(
-                icon: const Icon(Icons.ios_share, color: Colors.white, size: 20),
-                onPressed: onShare,
+            top: 10,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.75),
+                  borderRadius: BorderRadius.circular(2),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 4),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Mini-carte de la série (remplace le partage) → accès à la série.
+          Positioned(
+            top: 26,
+            right: 14,
+            child: GestureDetector(
+              onTap: onSeriesTap,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(9),
+                  border:
+                      Border.all(color: Colors.white.withValues(alpha: 0.85)),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.45),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3)),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: (posterPath == null || posterPath!.isEmpty)
+                      ? Container(
+                          width: 42,
+                          height: 62,
+                          color: TtColors.surfaceHi,
+                          child: const Icon(Icons.tv,
+                              color: TtColors.dim, size: 18))
+                      : Image.network(
+                          'https://image.tmdb.org/t/p/w185$posterPath',
+                          width: 42,
+                          height: 62,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                              width: 42, height: 62, color: TtColors.surfaceHi)),
+                ),
               ),
             ),
           ),
