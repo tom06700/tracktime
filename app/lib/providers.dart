@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'db/database.dart';
 import 'demo/demo_seed.dart';
+import 'profile/profile.dart';
+import 'profile/universe.dart';
 import 'series/feed.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -66,5 +68,33 @@ final upcomingProvider = Provider<AsyncValue<List<UpcomingEpisode>>>((ref) {
         shows: showList,
         episodes: episodes.value ?? const [],
         now: DateTime.now(),
+      ));
+});
+
+/// « Univers » du profil : palette de genres, activité, badges et records,
+/// recomposé dès qu'une série, un film ou une coche change.
+final universeProvider = Provider<AsyncValue<Universe>>((ref) {
+  final shows = ref.watch(showsProvider);
+  final movies = ref.watch(moviesProvider);
+  final watched = ref.watch(_allWatchedProvider);
+  final stats = ref.watch(statsProvider);
+  final profile = ref.watch(profileProvider);
+
+  return shows.whenData((showList) => buildUniverse(
+        shows: showList,
+        watched: watched.value ?? const [],
+        movies: movies.value ?? const [],
+        profileName: profile.value?.displayName ?? 'Cinéphile',
+        now: DateTime.now(),
+        stats: stats.value ??
+            const WatchStats(
+              episodeCount: 0,
+              tvMinutes: 0,
+              moviesSeen: 0,
+              movieMinutes: 0,
+              showCount: 0,
+              doneShowCount: 0,
+              watchlistCount: 0,
+            ),
       ));
 });

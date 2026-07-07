@@ -11,33 +11,38 @@ Future<void> maybeSeedDemo(AppDatabase db) async {
   if (Uri.base.queryParameters['demo'] != '1') return;
   if ((await db.allShows()).isNotEmpty) return;
 
-  // (id TMDB, nom, total, saisons, durée, statut, épisodes vus)
+  // (id TMDB, nom, total, saisons, durée, statut, épisodes vus, genres)
   const shows = [
-    (1396, 'Breaking Bad', 62, 5, 47, 'Ended', 62),
-    (70523, 'Dark', 26, 3, 53, 'Returning Series', 17),
-    (2316, 'The Office', 201, 9, 24, 'Ended', 134),
-    (66732, 'Stranger Things', 42, 5, 51, 'Returning Series', 33),
-    (95396, 'Severance', 19, 2, 50, 'Returning Series', 9),
-    (136315, 'The Bear', 28, 3, 30, 'Returning Series', 28),
-    (94605, 'Arcane', 18, 2, 41, 'Ended', 18),
-    (76331, 'Succession', 39, 4, 60, 'Ended', 12),
+    (1396, 'Breaking Bad', 62, 5, 47, 'Ended', 62, 'Drame|Crime'),
+    (70523, 'Dark', 26, 3, 53, 'Returning Series', 17,
+        'Science-Fiction|Mystère|Drame'),
+    (2316, 'The Office', 201, 9, 24, 'Ended', 134, 'Comédie'),
+    (66732, 'Stranger Things', 42, 5, 51, 'Returning Series', 33,
+        'Science-Fiction|Horreur|Drame'),
+    (95396, 'Severance', 19, 2, 50, 'Returning Series', 9,
+        'Science-Fiction|Thriller|Drame'),
+    (136315, 'The Bear', 28, 3, 30, 'Returning Series', 28, 'Comédie|Drame'),
+    (94605, 'Arcane', 18, 2, 41, 'Ended', 18,
+        'Animation|Science-Fiction|Aventure'),
+    (76331, 'Succession', 39, 4, 60, 'Ended', 12, 'Drame'),
   ];
 
   const movies = [
-    (27205, 'Inception', 148, true),
-    (157336, 'Interstellar', 169, true),
-    (496243, 'Parasite', 132, true),
-    (438631, 'Dune', 155, false),
-    (872585, 'Oppenheimer', 180, false),
-    (244786, 'Whiplash', 106, true),
-    (129, 'Le Voyage de Chihiro', 125, false),
+    (27205, 'Inception', 148, true, 'Action|Science-Fiction|Aventure'),
+    (157336, 'Interstellar', 169, true, 'Science-Fiction|Drame|Aventure'),
+    (496243, 'Parasite', 132, true, 'Thriller|Comédie|Drame'),
+    (438631, 'Dune', 155, false, 'Science-Fiction|Aventure'),
+    (872585, 'Oppenheimer', 180, false, 'Drame|Histoire'),
+    (244786, 'Whiplash', 106, true, 'Drame|Musique'),
+    (129, 'Le Voyage de Chihiro', 125, false, 'Animation|Familial|Fantastique'),
   ];
 
   final now = DateTime.now();
 
   await db.transaction(() async {
     for (var i = 0; i < shows.length; i++) {
-      final (id, name, total, seasons, runtime, status, seen) = shows[i];
+      final (id, name, total, seasons, runtime, status, seen, genres) =
+          shows[i];
       final perSeason = (total / seasons).ceil();
       // Activité décalée : les premières séries sont récentes, les dernières
       // « pas regardées depuis un moment ».
@@ -50,6 +55,7 @@ Future<void> maybeSeedDemo(AppDatabase db) async {
         seasonCount: Value(seasons),
         runtime: Value(runtime),
         status: Value(status),
+        genres: Value(genres),
       ));
 
       final eps = <EpisodesCompanion>[];
@@ -84,12 +90,13 @@ Future<void> maybeSeedDemo(AppDatabase db) async {
       await db.markShowSynced(id, now);
     }
 
-    for (final (id, title, runtime, seen) in movies) {
+    for (final (id, title, runtime, seen, genres) in movies) {
       await db.upsertMovie(MoviesCompanion.insert(
         id: Value(id),
         title: title,
         runtime: Value(runtime),
         watchedAt: Value(seen ? now.subtract(const Duration(days: 20)) : null),
+        genres: Value(genres),
       ));
     }
   });

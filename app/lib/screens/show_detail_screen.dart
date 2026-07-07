@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../db/database.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
+import '../tmdb/add.dart';
 import '../tmdb/tmdb.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -104,6 +105,7 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
               ((d['episode_run_time'] as List?)?.firstOrNull as num?)?.toInt() ??
                   42),
           status: Value(d['status'] as String?),
+          genres: Value(genresOf(d)),
         ));
   }
 

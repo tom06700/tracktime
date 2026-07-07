@@ -3,152 +3,262 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../backup/backup.dart';
+import '../db/database.dart';
+import '../profile/genre_sync.dart';
+import '../profile/nebula.dart';
 import '../profile/profile.dart';
+import '../profile/sections.dart';
+import '../profile/universe.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/stats_summary.dart';
 
-class ProfileScreen extends ConsumerWidget {
+/// Page Profil « Univers » : une frise verticale génétivement unique par
+/// profil (nébuleuse teintée par les genres regardés) parcourue de haut en
+/// bas — identité, spectre de genres, constellation de séries, activité,
+/// records, badges et liste de lecture.
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
+  @override
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   static const _months = [
     'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
     'août', 'septembre', 'octobre', 'novembre', 'décembre'
   ];
 
+  bool _backfillStarted = false;
+
+  static String memberSince(DateTime since) =>
+      'Membre depuis ${_months[since.month - 1]} ${since.year}';
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    // Rattrape les genres manquants dès que la clé TMDB est chargée (les
+    // séries ajoutées avant la colonne `genres`, ou importées, n'en ont pas).
+    final key = ref.watch(tmdbKeyProvider).value;
+    if (!_backfillStarted && key != null && key.isNotEmpty) {
+      _backfillStarted = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _backfill());
+    }
+
+    final universe = ref.watch(universeProvider).value;
+    final palette = universe?.palette ?? const [Color(0xFF6C4CE0)];
+    final seed = universe?.seed ?? 7;
+
+    return Stack(
+      children: [
+        Positioned.fill(child: NebulaBackground(seed: seed, palette: palette)),
+        Positioned.fill(child: _content(context, universe)),
+      ],
+    );
+  }
+
+  Widget _content(BuildContext context, Universe? universe) {
     final profileAsync = ref.watch(profileProvider);
     final statsAsync = ref.watch(statsProvider);
+    final showsAsync = ref.watch(showsProvider);
+    final moviesAsync = ref.watch(moviesProvider);
+    final shows = showsAsync.value ?? const [];
+    final movies = moviesAsync.value ?? const [];
 
     return ListView(
       padding: EdgeInsets.fromLTRB(0, 8, 0, bottomNavInset(context)),
       children: [
+        // ── Identité cosmique ──
         profileAsync.when(
-          loading: () => const SizedBox(
-              height: 120, child: Center(child: CircularProgressIndicator())),
-          error: (e, _) =>
-              EmptyState(icon: Icons.error_outline, message: '$e'),
-          data: (profile) => _IdentityCard(profile: profile),
-        ),
-        const SectionLabel('Mes chiffres'),
-        statsAsync.when(
-          loading: () => const SizedBox(
-              height: 200, child: Center(child: CircularProgressIndicator())),
-          error: (e, _) =>
-              EmptyState(icon: Icons.error_outline, message: '$e'),
-          data: (stats) => StatsSummary(stats: stats),
-        ),
-        const SectionLabel('Mes données'),
-        Card(
-          child: Column(
-            children: [
-              _ActionTile(
-                icon: Icons.ios_share,
-                title: 'Exporter mes données',
-                subtitle: 'Sauvegarde JSON (compatible avec l\'import)',
-                onTap: () => _export(context, ref),
-              ),
-              const _TileDivider(),
-              _ActionTile(
-                icon: Icons.download_outlined,
-                title: 'Importer / restaurer',
-                subtitle: 'Backup TrackTime ou export TV Time',
-                onTap: () => context.push('/import'),
-              ),
-              const _TileDivider(),
-              _ActionTile(
-                icon: Icons.key_outlined,
-                title: 'Clé API TMDB',
-                subtitle: 'Réglages de connexion à TMDB',
-                onTap: () => context.push('/settings'),
-              ),
-            ],
+          loading: () => const SizedBox(height: 200),
+          error: (e, _) => EmptyState(icon: Icons.error_outline, message: '$e'),
+          data: (profile) => _UniverseHeader(
+            profile: profile,
+            tagline: universe == null ? '…' : universeTagline(universe),
+            palette: universe?.palette ?? const [Color(0xFF6C4CE0)],
+            memberSince: memberSince(profile.since),
           ),
         ),
+
+        // ── Chiffres clés ──
+        statsAsync.when(
+          loading: () => const SizedBox(height: 120),
+          error: (_, _) => const SizedBox.shrink(),
+          data: (stats) => _HeroStats(stats: stats),
+        ),
+
+        // ── Spectre de genres ──
+        const UniverseSectionTitle('Spectre de genres',
+            subtitle: 'La palette de ton univers, pondérée par le temps passé.'),
+        if (universe != null) GenreSpectrum(universe: universe),
+
+        // ── Constellation de séries ──
+        const UniverseSectionTitle('Constellation',
+            subtitle: 'Tes séries et leur progression.'),
+        SeriesConstellation(shows: shows),
+
+        // ── Activité ──
+        const UniverseSectionTitle('Ton année en épisodes',
+            subtitle: 'Chaque cellule, un jour de visionnage.'),
+        if (universe != null)
+          ActivityHeatmap(
+            activityByDay: universe.activityByDay,
+            accent: universe.palette.first,
+            now: DateTime.now(),
+          ),
+
+        // ── Records ──
+        if (universe != null && universe.records.isNotEmpty) ...[
+          const UniverseSectionTitle('Records'),
+          RecordsBand(records: universe.records),
+        ],
+
+        // ── Badges ──
+        const UniverseSectionTitle('Trophées',
+            subtitle: 'Débloque-les en explorant ton univers.'),
+        if (universe != null) BadgeWall(badges: universe.badges),
+
+        // ── Liste de lecture ──
+        const UniverseSectionTitle('Liste de lecture',
+            subtitle: 'À voir prochainement.'),
+        WatchlistStrip(movies: movies, shows: shows),
+
+        // ── Données & réglages ──
+        const UniverseSectionTitle('Mes données'),
+        _DataCard(onExport: () => _export(context)),
+
         const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: EdgeInsets.fromLTRB(22, 18, 22, 8),
           child: Text(
             'TrackTime — 100 % local, aucun compte, aucune donnée envoyée '
             'ailleurs que TMDB (métadonnées).\n\n'
             'Ce produit utilise l\'API TMDB mais n\'est ni approuvé ni '
             'certifié par TMDB.',
-            style: TextStyle(fontSize: 12.5, color: TtColors.dim, height: 1.6),
+            style: TextStyle(fontSize: 12, color: TtColors.dim, height: 1.6),
           ),
         ),
       ],
     );
   }
 
-  Future<void> _export(BuildContext context, WidgetRef ref) async {
+  Future<void> _backfill() async {
+    try {
+      await backfillGenres(
+        ref.read(databaseProvider),
+        ref.read(tmdbClientProvider),
+        throttle: () => Future.delayed(const Duration(milliseconds: 120)),
+      );
+    } catch (_) {
+      // Silencieux : l'univers se construit avec les genres déjà connus.
+    }
+  }
+
+  Future<void> _export(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final key = ref.read(tmdbKeyProvider).value ?? '';
       await exportBackup(ref.read(databaseProvider), tmdbKey: key);
     } catch (e) {
-      messenger.showSnackBar(
-          SnackBar(content: Text('Export impossible : $e')));
+      messenger.showSnackBar(SnackBar(content: Text('Export impossible : $e')));
     }
   }
-
-  static String memberSince(DateTime since) =>
-      'Membre depuis ${_months[since.month - 1]} ${since.year}';
 }
 
-class _IdentityCard extends ConsumerWidget {
-  const _IdentityCard({required this.profile});
+// ─────────────────────────── Identité cosmique ─────────────────────────────
+
+class _UniverseHeader extends ConsumerWidget {
+  const _UniverseHeader({
+    required this.profile,
+    required this.tagline,
+    required this.palette,
+    required this.memberSince,
+  });
 
   final Profile profile;
+  final String tagline;
+  final List<Color> palette;
+  final String memberSince;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            GestureDetector(
-              onTap: () => _pickEmoji(context, ref),
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: TtColors.surfaceHi,
-                  shape: BoxShape.circle,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+      child: Column(
+        children: [
+          // Avatar dans un anneau lumineux teinté par la palette.
+          GestureDetector(
+            onTap: () => _pickEmoji(context, ref),
+            child: Container(
+              width: 108,
+              height: 108,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: SweepGradient(
+                  colors: [
+                    ...palette,
+                    palette.first,
+                  ],
                 ),
-                alignment: Alignment.center,
-                child: Text(profile.emoji,
-                    style: const TextStyle(fontSize: 32)),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    profile.displayName,
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    ProfileScreen.memberSince(profile.since),
-                    style:
-                        const TextStyle(fontSize: 12.5, color: TtColors.dim),
+                boxShadow: [
+                  BoxShadow(
+                    color: palette.first.withValues(alpha: 0.5),
+                    blurRadius: 28,
+                    spreadRadius: -4,
                   ),
                 ],
               ),
+              padding: const EdgeInsets.all(3),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0C0F16),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(profile.emoji, style: const TextStyle(fontSize: 48)),
+              ),
             ),
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, color: TtColors.dim),
-              tooltip: 'Modifier le nom',
-              onPressed: () => _editName(context, ref, profile.name),
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: () => _editName(context, ref, profile.name),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  profile.displayName,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                    shadows: [Shadow(color: Color(0xAA000000), blurRadius: 12)],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(Icons.edit_outlined,
+                    size: 16, color: Colors.white.withValues(alpha: 0.5)),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            tagline,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              fontStyle: FontStyle.italic,
+              color: Colors.white.withValues(alpha: 0.78),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            memberSince,
+            style: TextStyle(
+                fontSize: 12, color: Colors.white.withValues(alpha: 0.45)),
+          ),
+        ],
       ),
     );
   }
@@ -228,6 +338,135 @@ class _IdentityCard extends ConsumerWidget {
   }
 }
 
+// ─────────────────────────────── Chiffres ──────────────────────────────────
+
+class _HeroStats extends StatelessWidget {
+  const _HeroStats({required this.stats});
+
+  final WatchStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+      child: Column(
+        children: [
+          Text(
+            fmtTime(stats.totalMinutes),
+            style: TextStyle(
+              fontSize: 46,
+              fontWeight: FontWeight.w900,
+              color: TtColors.amber,
+              letterSpacing: -1.5,
+              shadows: [
+                Shadow(
+                    color: TtColors.amber.withValues(alpha: 0.4),
+                    blurRadius: 24),
+              ],
+            ),
+          ),
+          Text(
+            'DE VOYAGE À TRAVERS TON UNIVERS',
+            style: TextStyle(
+              fontSize: 10.5,
+              letterSpacing: 2,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withValues(alpha: 0.5),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              _MiniStat(
+                  value: '${stats.episodeCount}', label: 'épisodes'),
+              _MiniStat(value: '${stats.moviesSeen}', label: 'films'),
+              _MiniStat(
+                  value: '${stats.showCount}', label: 'séries'),
+              _MiniStat(
+                  value: '${stats.doneShowCount}', label: 'terminées'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  const _MiniStat({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+                fontSize: 11.5, color: Colors.white.withValues(alpha: 0.55)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────── Données ──────────────────────────────────
+
+class _DataCard extends StatelessWidget {
+  const _DataCard({required this.onExport});
+
+  final VoidCallback onExport;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        children: [
+          _ActionTile(
+            icon: Icons.ios_share,
+            title: 'Exporter mes données',
+            subtitle: 'Sauvegarde JSON (compatible avec l\'import)',
+            onTap: onExport,
+          ),
+          const _TileDivider(),
+          _ActionTile(
+            icon: Icons.download_outlined,
+            title: 'Importer / restaurer',
+            subtitle: 'Backup TrackTime ou export TV Time',
+            onTap: () => context.push('/import'),
+          ),
+          const _TileDivider(),
+          _ActionTile(
+            icon: Icons.key_outlined,
+            title: 'Clé API TMDB',
+            subtitle: 'Réglages de connexion à TMDB',
+            onTap: () => context.push('/settings'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ActionTile extends StatelessWidget {
   const _ActionTile({
     required this.icon,
@@ -246,10 +485,13 @@ class _ActionTile extends StatelessWidget {
     return ListTile(
       leading: Icon(icon, color: TtColors.amber),
       title: Text(title,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          style: const TextStyle(
+              fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
       subtitle: Text(subtitle,
-          style: const TextStyle(fontSize: 12.5, color: TtColors.dim)),
-      trailing: const Icon(Icons.chevron_right, color: TtColors.dim),
+          style: TextStyle(
+              fontSize: 12.5, color: Colors.white.withValues(alpha: 0.55))),
+      trailing: Icon(Icons.chevron_right,
+          color: Colors.white.withValues(alpha: 0.4)),
       onTap: onTap,
     );
   }
@@ -259,6 +501,6 @@ class _TileDivider extends StatelessWidget {
   const _TileDivider();
 
   @override
-  Widget build(BuildContext context) =>
-      const Divider(height: 1, indent: 56, color: TtColors.surfaceHi);
+  Widget build(BuildContext context) => Divider(
+      height: 1, indent: 56, color: Colors.white.withValues(alpha: 0.08));
 }

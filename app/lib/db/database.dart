@@ -15,6 +15,8 @@ class Shows extends Table {
   DateTimeColumn get addedAt => dateTime().withDefault(currentDateAndTime)();
   // Dernière synchro des épisodes TMDB (null = jamais).
   DateTimeColumn get episodesSyncedAt => dateTime().nullable()();
+  // Genres TMDB séparés par « | » (null = pas encore récupérés).
+  TextColumn get genres => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -57,6 +59,8 @@ class Movies extends Table {
   IntColumn get runtime => integer().withDefault(const Constant(110))();
   DateTimeColumn get watchedAt => dateTime().nullable()();
   DateTimeColumn get addedAt => dateTime().withDefault(currentDateAndTime)();
+  // Genres TMDB séparés par « | » (null = pas encore récupérés).
+  TextColumn get genres => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -108,7 +112,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -117,6 +121,10 @@ class AppDatabase extends _$AppDatabase {
           if (from < 2) {
             await m.createTable(episodes);
             await m.addColumn(shows, shows.episodesSyncedAt);
+          }
+          if (from < 3) {
+            await m.addColumn(shows, shows.genres);
+            await m.addColumn(movies, movies.genres);
           }
         },
       );
@@ -159,6 +167,16 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<WatchedEpisode>> allWatchedEpisodes() =>
       select(watchedEpisodes).get();
+
+  Stream<List<Show>> watchAllShows() => select(shows).watch();
+
+  Future<void> setShowGenres(int id, String genres) =>
+      (update(shows)..where((s) => s.id.equals(id)))
+          .write(ShowsCompanion(genres: Value(genres)));
+
+  Future<void> setMovieGenres(int id, String genres) =>
+      (update(movies)..where((m) => m.id.equals(id)))
+          .write(MoviesCompanion(genres: Value(genres)));
 
   // ---- Épisodes (cache TMDB) ----
 

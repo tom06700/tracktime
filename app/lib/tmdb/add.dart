@@ -3,6 +3,16 @@ import 'package:drift/drift.dart';
 import '../db/database.dart';
 import 'tmdb.dart';
 
+/// Noms de genres TMDB joints par « | » (ex. "Drame|Science-Fiction").
+String? genresOf(Map<String, dynamic> details) {
+  final list = ((details['genres'] as List?) ?? const [])
+      .whereType<Map>()
+      .map((g) => '${g['name'] ?? ''}')
+      .where((n) => n.isNotEmpty)
+      .toList();
+  return list.isEmpty ? null : list.join('|');
+}
+
 /// Ajoute une série depuis TMDB si absente. Renvoie son nom.
 Future<String> addShowFromTmdb(AppDatabase db, TmdbClient tmdb, int id) async {
   final existing = await db.showById(id);
@@ -18,6 +28,7 @@ Future<String> addShowFromTmdb(AppDatabase db, TmdbClient tmdb, int id) async {
     runtime: Value(
         ((d['episode_run_time'] as List?)?.firstOrNull as num?)?.toInt() ?? 42),
     status: Value(d['status'] as String?),
+    genres: Value(genresOf(d)),
   ));
   return name;
 }
@@ -34,6 +45,7 @@ Future<String> addMovieFromTmdb(AppDatabase db, TmdbClient tmdb, int id) async {
     poster: Value(d['poster_path'] as String?),
     runtime: Value((d['runtime'] as num?)?.toInt() ?? 110),
     watchedAt: const Value(null),
+    genres: Value(genresOf(d)),
   ));
   return title;
 }
