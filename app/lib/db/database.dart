@@ -114,7 +114,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -130,6 +130,15 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 4) {
             await m.addColumn(movies, movies.releaseDate);
+          }
+          if (from < 5) {
+            // Passage à TheTVDB : les données existantes utilisent des
+            // identifiants TMDB, incompatibles (404 côté TheTVDB). On repart
+            // proprement — l'utilisateur ré-ajoute / ré-importe.
+            await delete(watchedEpisodes).go();
+            await delete(episodes).go();
+            await delete(shows).go();
+            await delete(movies).go();
           }
         },
       );
