@@ -112,9 +112,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ),
         );
 
+    // La barre étant transparente et le corps passant dessous (cf. shell),
+    // on décale le contenu sous elle. Le décor cinéma, lui, remonte au haut.
+    final topInset = MediaQuery.paddingOf(context).top + kToolbarHeight + 4;
     return ListView(
       controller: _scrollCtrl,
-      padding: EdgeInsets.fromLTRB(0, 8, 0, bottomNavInset(context)),
+      padding: EdgeInsets.fromLTRB(0, topInset, 0, bottomNavInset(context)),
       children: [
         // ── Identité cosmique ──
         sec(0, [

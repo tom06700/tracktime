@@ -40,9 +40,14 @@ class _HomeShellState extends State<HomeShell> {
       ExplorerScreen(),
       ProfileScreen(),
     ];
+    // Sur le Profil, la barre devient transparente et le décor « cinéma »
+    // remonte jusqu'en haut (le projecteur est au plafond de la salle).
+    final immersive = _tab == 3;
     return Scaffold(
       extendBody: true,
+      extendBodyBehindAppBar: immersive,
       appBar: AppBar(
+        backgroundColor: immersive ? Colors.transparent : TtColors.bg,
         title: const Text.rich(TextSpan(children: [
           TextSpan(text: 'Track'),
           TextSpan(text: 'Time', style: TextStyle(color: TtColors.amber)),
