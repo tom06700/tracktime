@@ -61,11 +61,8 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Lance la synchro TMDB dès que la clé API est réellement chargée
-    // (SharedPreferences est asynchrone : au montage, elle est souvent encore
-    // vide, d'où l'onglet « À venir » resté vide sans ce déclenchement tardif).
-    final key = ref.watch(tvdbKeyProvider).value;
-    if (!_syncStarted && key != null && key.isNotEmpty) {
+    // Lance la synchro TheTVDB au montage (la clé est embarquée).
+    if (!_syncStarted) {
       _syncStarted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
     }

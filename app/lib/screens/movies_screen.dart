@@ -70,10 +70,8 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Lance le rattrapage TMDB dès que la clé API est réellement chargée
-    // (SharedPreferences est asynchrone), pour peupler l'onglet « À venir ».
-    final key = ref.watch(tvdbKeyProvider).value;
-    if (!_syncStarted && key != null && key.isNotEmpty) {
+    // Rattrapage des métadonnées films au montage (clé embarquée).
+    if (!_syncStarted) {
       _syncStarted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
     }

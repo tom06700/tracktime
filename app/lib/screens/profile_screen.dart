@@ -67,10 +67,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Rattrape les genres manquants dès que la clé TheTVDB est chargée (les
-    // séries ajoutées avant la colonne `genres`, ou importées, n'en ont pas).
-    final key = ref.watch(tvdbKeyProvider).value;
-    if (!_backfillStarted && key != null && key.isNotEmpty) {
+    // Rattrape les genres manquants au montage (clé TheTVDB embarquée).
+    if (!_backfillStarted) {
       _backfillStarted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _backfill());
     }
@@ -266,8 +264,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   Future<void> _export(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final key = ref.read(tvdbKeyProvider).value ?? '';
-      await exportBackup(ref.read(databaseProvider), tmdbKey: key);
+      await exportBackup(ref.read(databaseProvider));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Export impossible : $e')));
     }
@@ -607,9 +604,9 @@ class _DataCard extends StatelessWidget {
           ),
           const _TileDivider(),
           _ActionTile(
-            icon: Icons.key_outlined,
-            title: 'Clé API TMDB',
-            subtitle: 'Réglages de connexion à TMDB',
+            icon: Icons.tune,
+            title: 'Réglages',
+            subtitle: 'Métadonnées TheTVDB, à propos',
             onTap: () => context.push('/settings'),
           ),
         ],

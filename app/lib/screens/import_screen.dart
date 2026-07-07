@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../import/importer.dart';
 import '../import/parser.dart';
@@ -78,12 +77,6 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   }
 
   Future<void> _runImport() async {
-    final key = ref.read(tvdbKeyProvider).value ?? '';
-    if (key.isEmpty) {
-      _toast('Ajoute d’abord ta clé TheTVDB dans ⚙️ Réglages');
-      if (mounted) context.push('/settings');
-      return;
-    }
     setState(() {
       _importing = true;
       _pct = 0;
@@ -144,7 +137,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 const Text(
                   'Sélectionne un backup TrackTime (JSON, restauré '
                   'immédiatement) ou les fichiers de ton export TV Time '
-                  '(CSV/JSON, mis en correspondance via TMDB).',
+                  '(CSV/JSON, mis en correspondance via TheTVDB).',
                   style: TextStyle(
                       fontSize: 13, color: TtColors.dim, height: 1.6),
                 ),
@@ -185,7 +178,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                           backgroundColor: TtColors.surfaceHi),
                     ),
                     const SizedBox(height: 6),
-                    Text('Correspondance TMDB… ${(_pct * 100).round()} %',
+                    Text('Correspondance TheTVDB… ${(_pct * 100).round()} %',
                         style: const TextStyle(
                             fontSize: 13, color: TtColors.dim)),
                   ] else
@@ -193,7 +186,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                       children: [
                         ProminentGlassButton(
                           onPressed: _runImport,
-                          child: const Text('Importer via TMDB'),
+                          child: const Text('Importer via TheTVDB'),
                         ),
                         const SizedBox(width: 8),
                         GlassButton(
