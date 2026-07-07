@@ -36,10 +36,17 @@ class EpisodeSheet extends ConsumerStatefulWidget {
   ConsumerState<EpisodeSheet> createState() => _EpisodeSheetState();
 }
 
-class _EpisodeSheetState extends ConsumerState<EpisodeSheet> {
+class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
+    with SingleTickerProviderStateMixin {
   List<int> _episodes = const [];
   PageController? _controller;
   int _current = 0;
+
+  // Fermeture interactive : la feuille suit le doigt.
+  double _dragOffset = 0;
+  late final AnimationController _drag =
+      AnimationController.unbounded(vsync: this)
+        ..addListener(() => setState(() => _dragOffset = _drag.value));
 
   @override
   void initState() {
@@ -49,8 +56,37 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet> {
 
   @override
   void dispose() {
+    _drag.dispose();
     _controller?.dispose();
     super.dispose();
+  }
+
+  void _onDragStart(DragStartDetails _) => _drag.stop();
+
+  void _onDragUpdate(DragUpdateDetails d) {
+    setState(() {
+      _dragOffset = (_dragOffset + d.delta.dy).clamp(0.0, double.infinity);
+    });
+  }
+
+  void _onDragEnd(DragEndDetails d) {
+    final h = MediaQuery.sizeOf(context).height;
+    final velocity = d.primaryVelocity ?? 0;
+    final dismiss = _dragOffset > h * 0.16 || velocity > 700;
+    _drag.value = _dragOffset;
+    if (dismiss) {
+      _drag
+          .animateTo(h,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeIn)
+          .whenComplete(() {
+        if (mounted) context.pop();
+      });
+    } else {
+      _drag.animateTo(0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic);
+    }
   }
 
   Future<void> _loadSeason() async {
@@ -97,16 +133,18 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet> {
     final height = MediaQuery.sizeOf(context).height;
     return Align(
       alignment: Alignment.bottomCenter,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Dots dans l'espace vide au-dessus de la carte → indique le swipe.
-          if (_controller != null && _episodes.length > 1)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _DotsIndicator(count: _episodes.length, index: _current),
-            ),
-          ClipRRect(
+      child: Transform.translate(
+        offset: Offset(0, _dragOffset),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Dots dans l'espace vide au-dessus de la carte → indique le swipe.
+            if (_controller != null && _episodes.length > 1)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _DotsIndicator(count: _episodes.length, index: _current),
+              ),
+            ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
             // Material : fournit le style de texte (sinon soulignés jaunes) et
             // la surface de la carte.
@@ -143,17 +181,18 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
 
-  /// Poignée : glisser vers le bas pour fermer.
+  /// Poignée : glisser vers le bas ferme la feuille (la feuille suit le doigt).
   Widget _handle() {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onVerticalDragEnd: (d) {
-        if ((d.primaryVelocity ?? 0) > 250) context.pop();
-      },
+      onVerticalDragStart: _onDragStart,
+      onVerticalDragUpdate: _onDragUpdate,
+      onVerticalDragEnd: _onDragEnd,
       child: Container(
         alignment: Alignment.center,
         padding: const EdgeInsets.only(top: 10, bottom: 8),
