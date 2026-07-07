@@ -1,43 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme.dart';
-import '../tmdb/tvdb.dart';
-import '../tmdb/tvdb_config.dart';
-import '../widgets/glass.dart';
 
-class SettingsScreen extends ConsumerStatefulWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
-
-  @override
-  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _tvdbTesting = false;
 
   Future<void> _open(String url) async {
     final uri = Uri.tryParse(url);
     if (uri != null) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
-
-  Future<void> _testTvdb() async {
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _tvdbTesting = true);
-    try {
-      final r = await TvdbClient(kTvdbApiKey).ping();
-      messenger.showSnackBar(SnackBar(
-        content: Text('TheTVDB connecté ✓ — ${r.count} résultats '
-            '(ex. « ${r.sample} »)'),
-      ));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Échec TheTVDB : $e')));
-    } finally {
-      if (mounted) setState(() => _tvdbTesting = false);
     }
   }
 
@@ -48,64 +21,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
-          // ── Source de métadonnées ──
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Métadonnées',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Séries et films fournis par TheTVDB. C\'est intégré à '
-                    'l\'app — rien à configurer.',
-                    style: TextStyle(
-                        fontSize: 13, color: TtColors.dim, height: 1.6),
-                  ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: GlassButton(
-                      onPressed: _tvdbTesting ? null : _testTvdb,
-                      child: Text(
-                          _tvdbTesting ? 'Test…' : 'Tester la connexion'),
-                    ),
-                  ),
-                  // Attribution requise par TheTVDB (lien direct obligatoire).
-                  const SizedBox(height: 16),
-                  const Divider(height: 1, color: TtColors.surfaceHi),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Metadata provided by TheTVDB. Please consider adding '
-                    'missing information or subscribing.\n'
-                    'Métadonnées fournies par TheTVDB — pense à compléter les '
-                    'informations manquantes ou à t\'abonner.',
-                    style: TextStyle(
-                        fontSize: 12.5, color: TtColors.dim, height: 1.6),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      _LinkChip(
-                        label: 'TheTVDB.com',
-                        onTap: () => _open('https://thetvdb.com'),
-                      ),
-                      _LinkChip(
-                        label: 'S\'abonner',
-                        onTap: () => _open('https://thetvdb.com/subscribe'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
           const Padding(
-            padding: EdgeInsets.fromLTRB(20, 14, 20, 4),
+            padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
             child: Text('IMPORT / RESTAURATION',
                 style: TextStyle(
                     fontSize: 11,
@@ -126,15 +43,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onTap: () => context.push('/import'),
             ),
           ),
+
+          // ── À propos + attribution TheTVDB (lien direct obligatoire) ──
           const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: EdgeInsets.fromLTRB(20, 22, 20, 4),
+            child: Text('À PROPOS',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.5,
+                    color: TtColors.dim)),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Text(
               'TrackTime — 100 % local, aucun compte, aucune donnée envoyée '
               'ailleurs que TheTVDB (métadonnées).\n\n'
-              'Metadata provided by TheTVDB.com. TrackTime n\'est ni approuvé '
-              'ni certifié par TheTVDB.',
+              'Metadata provided by TheTVDB. Please consider adding missing '
+              'information or subscribing. TrackTime n\'est ni approuvé ni '
+              'certifié par TheTVDB.',
               style:
                   TextStyle(fontSize: 13, color: TtColors.dim, height: 1.6),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                _LinkChip(
+                  label: 'TheTVDB.com',
+                  onTap: () => _open('https://thetvdb.com'),
+                ),
+                _LinkChip(
+                  label: 'S\'abonner',
+                  onTap: () => _open('https://thetvdb.com/subscribe'),
+                ),
+              ],
             ),
           ),
         ],
