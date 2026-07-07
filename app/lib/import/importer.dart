@@ -78,13 +78,14 @@ class ImportSummary {
 }
 
 /// Importe des entrées TV Time parsées en les faisant correspondre sur
-/// TheTVDB (matching par titre). [onProgress] est appelé après chaque élément.
+/// TheTVDB (matching par titre). Traitement en parallèle borné pour la
+/// rapidité. [onProgress] est appelé après chaque élément terminé.
 Future<ImportSummary> runTvTimeImport(
   AppDatabase db,
   TvdbClient tvdb,
   ParsedData parsed, {
   required void Function(double pct, String? logLine) onProgress,
-  Future<void> Function()? throttle,
+  int concurrency = 6,
 }) async {
   final summary = ImportSummary();
   final showNames = parsed.byShow.keys.toList();
@@ -96,73 +97,96 @@ Future<ImportSummary> runTvTimeImport(
   }
   final movieList = uniqueMovies.values.toList();
 
-  final total = showNames.length + movieList.length;
+  // Une tâche par titre ; renvoie une ligne de log (null si succès sans note).
+  final tasks = <Future<String?> Function()>[
+    for (final name in showNames)
+      () => _importShow(db, tvdb, name, parsed.byShow[name]!, summary),
+    for (final m in movieList) () => _importMovie(db, tvdb, m, summary),
+  ];
+
+  final total = tasks.length;
   var done = 0;
+  final it = tasks.iterator;
 
-  void step(String? log) {
-    done++;
-    onProgress(total == 0 ? 1 : done / total, log);
-  }
-
-  for (final name in showNames) {
-    try {
-      final results = await tvdb.search(name, type: 'series');
-      final id = results.isEmpty ? null : TvdbClient.tvdbId(results.first);
-      if (id == null) {
-        summary.failed++;
-        step('❓ Série introuvable sur TheTVDB : $name');
-      } else {
-        if (await db.showById(id) == null) {
-          final d = await tvdb.seriesExtended(id);
-          await db.upsertShow(ShowsCompanion.insert(
-            id: Value(id),
-            name: '${d['name'] ?? name}',
-            poster: Value(TvdbClient.posterOf(d)),
-            runtime: Value((d['averageRuntime'] as num?)?.toInt() ?? 42),
-            status: Value(TvdbClient.statusOf(d)),
-            genres: Value(TvdbClient.genresOf(d)),
-          ));
-        }
-        for (final ep in parsed.byShow[name]!) {
-          await db.setEpisodeWatched(id, ep.season, ep.episode,
-              at: _dateOrNow(ep.date));
-        }
-        summary.matched++;
-        step(null);
-      }
-    } on TvdbException catch (e) {
-      summary.failed++;
-      step('⚠️ $name : $e');
+  // Pool de workers : chacun tire la tâche suivante dès qu'il est libre
+  // (répartition naturelle, pas de barrière entre séries et films).
+  Future<void> worker() async {
+    while (it.moveNext()) {
+      final task = it.current;
+      final log = await task();
+      done++;
+      onProgress(total == 0 ? 1 : done / total, log);
     }
-    await throttle?.call();
   }
 
-  for (final m in movieList) {
-    try {
-      final results = await tvdb.search(m.title, type: 'movie');
-      final id = results.isEmpty ? null : TvdbClient.tvdbId(results.first);
-      if (id == null) {
-        summary.failed++;
-        step('❓ Film introuvable sur TheTVDB : ${m.title}');
-      } else {
-        if (await db.movieById(id) == null) {
-          final r = results.first;
-          await db.upsertMovie(MoviesCompanion.insert(
-            id: Value(id),
-            title: '${r['name'] ?? m.title}',
-            poster: Value(r['image_url'] as String?),
-            watchedAt: Value(m.watched ? _dateOrNow(m.date) : null),
-          ));
-        }
-        summary.matched++;
-        step(null);
-      }
-    } on TvdbException catch (e) {
-      summary.failed++;
-      step('⚠️ ${m.title} : $e');
-    }
-    await throttle?.call();
-  }
-
+  final n = total < concurrency ? total : concurrency;
+  await Future.wait([for (var i = 0; i < n; i++) worker()]);
   return summary;
+}
+
+Future<String?> _importShow(
+  AppDatabase db,
+  TvdbClient tvdb,
+  String name,
+  List<ParsedEpisode> episodes,
+  ImportSummary summary,
+) async {
+  try {
+    final results = await tvdb.search(name, type: 'series');
+    final id = results.isEmpty ? null : TvdbClient.tvdbId(results.first);
+    if (id == null) {
+      summary.failed++;
+      return '❓ Série introuvable sur TheTVDB : $name';
+    }
+    if (await db.showById(id) == null) {
+      final d = await tvdb.seriesExtended(id);
+      await db.upsertShow(ShowsCompanion.insert(
+        id: Value(id),
+        name: '${d['name'] ?? name}',
+        poster: Value(TvdbClient.posterOf(d)),
+        runtime: Value((d['averageRuntime'] as num?)?.toInt() ?? 42),
+        status: Value(TvdbClient.statusOf(d)),
+        genres: Value(TvdbClient.genresOf(d)),
+      ));
+    }
+    for (final ep in episodes) {
+      await db.setEpisodeWatched(id, ep.season, ep.episode,
+          at: _dateOrNow(ep.date));
+    }
+    summary.matched++;
+    return null;
+  } on TvdbException catch (e) {
+    summary.failed++;
+    return '⚠️ $name : $e';
+  }
+}
+
+Future<String?> _importMovie(
+  AppDatabase db,
+  TvdbClient tvdb,
+  ParsedMovie m,
+  ImportSummary summary,
+) async {
+  try {
+    final results = await tvdb.search(m.title, type: 'movie');
+    final id = results.isEmpty ? null : TvdbClient.tvdbId(results.first);
+    if (id == null) {
+      summary.failed++;
+      return '❓ Film introuvable sur TheTVDB : ${m.title}';
+    }
+    if (await db.movieById(id) == null) {
+      final r = results.first;
+      await db.upsertMovie(MoviesCompanion.insert(
+        id: Value(id),
+        title: '${r['name'] ?? m.title}',
+        poster: Value(r['image_url'] as String?),
+        watchedAt: Value(m.watched ? _dateOrNow(m.date) : null),
+      ));
+    }
+    summary.matched++;
+    return null;
+  } on TvdbException catch (e) {
+    summary.failed++;
+    return '⚠️ ${m.title} : $e';
+  }
 }

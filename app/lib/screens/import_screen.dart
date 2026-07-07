@@ -92,7 +92,6 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           if (line != null) _log.add(line);
         });
       },
-      throttle: () => Future.delayed(const Duration(milliseconds: 120)),
     );
     if (!mounted) return;
     setState(() {
