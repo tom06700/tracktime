@@ -55,7 +55,15 @@ class _HomeShellState extends State<HomeShell> {
           ),
         ],
       ),
-      body: IndexedStack(index: _tab, children: screens),
+      // TickerMode : gèle les animations des onglets cachés (ex. le fond
+      // vivant du Profil), l'IndexedStack gardant leur état.
+      body: IndexedStack(
+        index: _tab,
+        children: [
+          for (var i = 0; i < screens.length; i++)
+            TickerMode(enabled: i == _tab, child: screens[i]),
+        ],
+      ),
       bottomNavigationBar: LiquidGlassNavBar(
         items: _navItems,
         selectedIndex: _tab,

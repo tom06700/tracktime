@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -95,7 +97,8 @@ class UniverseSectionTitle extends StatelessWidget {
 typedef _FilmSlice = ({String name, double weight, Color color});
 
 /// Pellicule 35 mm : chaque photogramme est un genre, sa largeur est
-/// proportionnelle au temps passé. Perforations haut/bas, halo par couleur.
+/// proportionnelle au temps passé, et il est habillé de l'affiche de ta
+/// série/ton film phare du genre (teintée). Perforations haut/bas.
 class GenreFilmStrip extends StatelessWidget {
   const GenreFilmStrip({super.key, required this.universe});
 
@@ -126,10 +129,31 @@ class GenreFilmStrip extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: 80,
+            height: 84,
             width: double.infinity,
-            child: CustomPaint(
-              painter: _FilmStripPainter(slices: slices, total: total),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                const CustomPaint(painter: _FilmBasePainter()),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 17.5, 8, 17.5),
+                  child: Row(
+                    children: [
+                      for (final s in slices)
+                        Expanded(
+                          flex: math.max(1, (s.weight / total * 1000).round()),
+                          child: _FilmFrame(
+                            slice: s,
+                            poster: s.name == 'Autres'
+                                ? null
+                                : universe.posterByGenre[s.name],
+                            percent: (s.weight / total * 100).round(),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 14),
@@ -150,11 +174,9 @@ class GenreFilmStrip extends StatelessWidget {
   }
 }
 
-class _FilmStripPainter extends CustomPainter {
-  _FilmStripPainter({required this.slices, required this.total});
-
-  final List<_FilmSlice> slices;
-  final double total;
+/// Corps de la pellicule : fond sombre + perforations haut/bas.
+class _FilmBasePainter extends CustomPainter {
+  const _FilmBasePainter();
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -162,7 +184,6 @@ class _FilmStripPainter extends CustomPainter {
     final base =
         RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(12));
 
-    // Corps de la pellicule.
     canvas.drawRRect(base, Paint()..color = const Color(0xFF10141D));
     canvas.drawRRect(
       base,
@@ -171,7 +192,6 @@ class _FilmStripPainter extends CustomPainter {
         ..color = Colors.white.withValues(alpha: 0.08),
     );
 
-    // Perforations haut et bas.
     const holeW = 9.0, holeH = 6.5, step = 17.0;
     final holePaint = Paint()..color = const Color(0xFF060810);
     for (var x = 10.0; x + holeW < w - 10; x += step) {
@@ -186,96 +206,117 @@ class _FilmStripPainter extends CustomPainter {
         holePaint,
       );
     }
-
-    // Photogrammes proportionnels.
-    const inset = 8.0;
-    const top = 6.0 + holeH + 5.0;
-    final frameH = h - top * 2;
-    final availW = w - inset * 2;
-    var x = inset;
-    for (final s in slices) {
-      final fw = availW * (s.weight / total);
-      final r = Rect.fromLTWH(x + 1.5, top, fw - 3, frameH);
-      if (r.width > 2) {
-        final rr = RRect.fromRectAndRadius(r, const Radius.circular(5));
-
-        // Halo lumineux derrière le photogramme.
-        canvas.drawRRect(
-          rr,
-          Paint()
-            ..blendMode = BlendMode.screen
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8)
-            ..color = s.color.withValues(alpha: 0.35),
-        );
-        // Photogramme.
-        canvas.drawRRect(
-          rr,
-          Paint()
-            ..shader = LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color.lerp(s.color, Colors.white, 0.16)!,
-                Color.lerp(s.color, Colors.black, 0.28)!,
-              ],
-            ).createShader(r),
-        );
-        // Lustre.
-        canvas.drawRRect(
-          rr,
-          Paint()
-            ..shader = LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.white.withValues(alpha: 0.20),
-                Colors.white.withValues(alpha: 0),
-              ],
-              stops: const [0, 0.45],
-            ).createShader(r),
-        );
-
-        // Libellé si le photogramme est assez large.
-        if (r.width > 58) {
-          final pct = (s.weight / total * 100).round();
-          final tp = TextPainter(
-            text: TextSpan(children: [
-              TextSpan(
-                text: s.name,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  shadows: [Shadow(color: Color(0xAA000000), blurRadius: 4)],
-                ),
-              ),
-              TextSpan(
-                text: '\n$pct %',
-                style: TextStyle(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white.withValues(alpha: 0.85),
-                ),
-              ),
-            ]),
-            textAlign: TextAlign.center,
-            textDirection: TextDirection.ltr,
-            maxLines: 2,
-            ellipsis: '…',
-          )..layout(minWidth: r.width - 8, maxWidth: r.width - 8);
-          tp.paint(
-            canvas,
-            Offset(r.left + 4, r.top + (r.height - tp.height) / 2),
-          );
-        }
-      }
-      x += fw;
-    }
   }
 
   @override
-  bool shouldRepaint(_FilmStripPainter old) =>
-      old.slices != slices || old.total != total;
+  bool shouldRepaint(_FilmBasePainter old) => false;
+}
+
+/// Un photogramme : affiche du titre phare du genre (si connue) teintée par
+/// la couleur du genre, sinon aplat coloré ; libellé si la place le permet.
+class _FilmFrame extends StatelessWidget {
+  const _FilmFrame({
+    required this.slice,
+    required this.poster,
+    required this.percent,
+  });
+
+  final _FilmSlice slice;
+  final String? poster;
+  final int percent;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorBox = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color.lerp(slice.color, Colors.white, 0.16)!,
+            Color.lerp(slice.color, Colors.black, 0.28)!,
+          ],
+        ),
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 1.5),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(5),
+        child: LayoutBuilder(
+          builder: (context, c) => Stack(
+            fit: StackFit.expand,
+            children: [
+              if (poster != null)
+                Image.network(
+                  tmdbImageUrl(poster!),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => colorBox,
+                )
+              else
+                colorBox,
+              // Teinte du genre par-dessus l'affiche.
+              if (poster != null)
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: slice.color.withValues(alpha: 0.38),
+                  ),
+                ),
+              // Lustre + assise sombre pour le libellé.
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.16),
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.38),
+                    ],
+                    stops: const [0, 0.42, 1],
+                  ),
+                ),
+              ),
+              if (c.maxWidth > 58)
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        slice.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(color: Color(0xAA000000), blurRadius: 4)
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '$percent %',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white.withValues(alpha: 0.85),
+                          shadows: const [
+                            Shadow(color: Color(0xAA000000), blurRadius: 4)
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _GenreChip extends StatelessWidget {
@@ -700,52 +741,176 @@ Widget _posterFallback(String name, {double iconSize = 26}) {
 
 // ─────────────────────────── Heatmap d'activité ────────────────────────────
 
+/// Bandeau streaks : jours d'affilée en cours + record.
+class StreakRow extends StatelessWidget {
+  const StreakRow({
+    super.key,
+    required this.current,
+    required this.best,
+    required this.accent,
+  });
+
+  final int current;
+  final int best;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget chip(String emoji, String label, String value, bool lit) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: lit
+                ? accent.withValues(alpha: 0.12)
+                : Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: lit
+                  ? accent.withValues(alpha: 0.55)
+                  : Colors.white.withValues(alpha: 0.08),
+            ),
+          ),
+          child: Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        letterSpacing: 1,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Row(
+        children: [
+          chip('🔥', 'En ce moment',
+              current > 0 ? '$current jour${current > 1 ? 's' : ''} d\'affilée' : '—',
+              current > 0),
+          const SizedBox(width: 10),
+          chip('🏆', 'Record',
+              best > 0 ? '$best jour${best > 1 ? 's' : ''}' : '—', false),
+        ],
+      ),
+    );
+  }
+}
+
 /// Calendrier d'activité type « contributions » : dernières ~18 semaines,
-/// intensité teintée par la couleur dominante de l'univers.
-class ActivityHeatmap extends StatelessWidget {
+/// intensité teintée par la couleur dominante. Tap sur un jour → détail de
+/// ce qui a été regardé.
+class ActivityHeatmap extends StatefulWidget {
   const ActivityHeatmap({
     super.key,
     required this.activityByDay,
+    required this.labelsByDay,
     required this.accent,
     required this.now,
   });
 
   final Map<DateTime, int> activityByDay;
+  final Map<DateTime, List<String>> labelsByDay;
   final Color accent;
   final DateTime now;
 
-  static const _weeks = 18;
+  static const weeks = 18;
+
+  @override
+  State<ActivityHeatmap> createState() => _ActivityHeatmapState();
+}
+
+class _ActivityHeatmapState extends State<ActivityHeatmap> {
+  DateTime? _selected;
+
+  DateTime get _today =>
+      DateTime(widget.now.year, widget.now.month, widget.now.day);
+
+  DateTime get _firstMonday {
+    final mondayThisWeek =
+        _today.subtract(Duration(days: _today.weekday - 1));
+    return mondayThisWeek
+        .subtract(Duration(days: (ActivityHeatmap.weeks - 1) * 7));
+  }
+
+  void _onTap(Offset pos, double cell, double gap) {
+    final w = pos.dx ~/ (cell + gap);
+    final d = pos.dy ~/ (cell + gap);
+    if (w < 0 || w >= ActivityHeatmap.weeks || d < 0 || d > 6) return;
+    final date = _firstMonday.add(Duration(days: w * 7 + d));
+    if (date.isAfter(_today)) return;
+    final has = (widget.activityByDay[date] ?? 0) > 0;
+    setState(() {
+      _selected = (_selected == date || !has) ? null : date;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (activityByDay.isEmpty) {
+    if (widget.activityByDay.isEmpty) {
       return const _EmptyHint(
         icon: Icons.calendar_today_outlined,
         text: 'Ton calendrier se remplit à chaque épisode coché.',
       );
     }
+    final accent = widget.accent;
+    final sel = _selected;
+    final selLabels = sel == null
+        ? const <String>[]
+        : (widget.labelsByDay[sel] ?? const <String>[]);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: LayoutBuilder(
         builder: (context, c) {
           const gap = 4.0;
-          final cell = ((c.maxWidth - gap * (_weeks - 1)) / _weeks)
-              .clamp(8.0, 18.0);
+          final cell =
+              ((c.maxWidth - gap * (ActivityHeatmap.weeks - 1)) /
+                      ActivityHeatmap.weeks)
+                  .clamp(8.0, 18.0);
           final height = cell * 7 + gap * 6;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                height: height,
-                width: double.infinity,
-                child: CustomPaint(
-                  painter: _HeatmapPainter(
-                    activityByDay: activityByDay,
-                    accent: accent,
-                    now: now,
-                    weeks: _weeks,
-                    cell: cell,
-                    gap: gap,
+              GestureDetector(
+                onTapUp: (d) => _onTap(d.localPosition, cell, gap),
+                child: SizedBox(
+                  height: height,
+                  width: double.infinity,
+                  child: CustomPaint(
+                    painter: _HeatmapPainter(
+                      activityByDay: widget.activityByDay,
+                      accent: accent,
+                      now: widget.now,
+                      weeks: ActivityHeatmap.weeks,
+                      cell: cell,
+                      gap: gap,
+                      selected: sel,
+                    ),
                   ),
                 ),
               ),
@@ -776,6 +941,62 @@ class ActivityHeatmap extends StatelessWidget {
                           fontSize: 11,
                           color: Colors.white.withValues(alpha: 0.5))),
                 ],
+              ),
+              // Détail du jour sélectionné.
+              AnimatedSize(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: sel == null
+                    ? const SizedBox(width: double.infinity)
+                    : Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: accent.withValues(alpha: 0.45)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${frenchDate(sel)} · ${selLabels.length} visionnage${selLabels.length > 1 ? 's' : ''}',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            for (final l in selLabels.take(6))
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Text(
+                                  l,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    height: 1.35,
+                                    color:
+                                        Colors.white.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              ),
+                            if (selLabels.length > 6)
+                              Text(
+                                '+ ${selLabels.length - 6} autres',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
               ),
             ],
           );
@@ -813,6 +1034,7 @@ class _HeatmapPainter extends CustomPainter {
     required this.weeks,
     required this.cell,
     required this.gap,
+    this.selected,
   });
 
   final Map<DateTime, int> activityByDay;
@@ -821,6 +1043,7 @@ class _HeatmapPainter extends CustomPainter {
   final int weeks;
   final double cell;
   final double gap;
+  final DateTime? selected;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -849,6 +1072,15 @@ class _HeatmapPainter extends CustomPainter {
               ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
           );
         }
+        if (date == selected) {
+          canvas.drawRRect(
+            r,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.8
+              ..color = Colors.white.withValues(alpha: 0.95),
+          );
+        }
       }
     }
   }
@@ -858,7 +1090,8 @@ class _HeatmapPainter extends CustomPainter {
       old.activityByDay != activityByDay ||
       old.accent != accent ||
       old.now != now ||
-      old.cell != cell;
+      old.cell != cell ||
+      old.selected != selected;
 }
 
 // ──────────────────────────────── Records ──────────────────────────────────
@@ -1015,6 +1248,37 @@ class _BadgeTile extends StatelessWidget {
 
 // ─────────────────────────── Liste de lecture ──────────────────────────────
 
+/// Élément de la liste de lecture (film non vu ou série pas commencée).
+class WatchItem {
+  const WatchItem({
+    required this.id,
+    required this.title,
+    required this.poster,
+    required this.isMovie,
+  });
+  final int id;
+  final String title;
+  final String? poster;
+  final bool isMovie;
+}
+
+/// Construit la liste de lecture : films non vus + séries pas commencées.
+List<WatchItem> watchlistItems(
+    List<Movie> movies, List<ShowWithProgress> shows) {
+  return [
+    for (final m in movies)
+      if (m.watchedAt == null)
+        WatchItem(id: m.id, title: m.title, poster: m.poster, isMovie: true),
+    for (final s in shows)
+      if (s.watchedCount == 0)
+        WatchItem(
+            id: s.show.id,
+            title: s.show.name,
+            poster: s.show.poster,
+            isMovie: false),
+  ];
+}
+
 /// « Liste de lecture » : films non vus + séries pas encore commencées,
 /// en bande horizontale d'affiches.
 class WatchlistStrip extends StatelessWidget {
@@ -1029,24 +1293,7 @@ class WatchlistStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = <_WatchItem>[
-      for (final m in movies)
-        if (m.watchedAt == null)
-          _WatchItem(
-            id: m.id,
-            title: m.title,
-            poster: m.poster,
-            isMovie: true,
-          ),
-      for (final s in shows)
-        if (s.watchedCount == 0)
-          _WatchItem(
-            id: s.show.id,
-            title: s.show.name,
-            poster: s.show.poster,
-            isMovie: false,
-          ),
-    ];
+    final items = watchlistItems(movies, shows);
     if (items.isEmpty) {
       return const _EmptyHint(
         icon: Icons.playlist_add_check,
@@ -1067,23 +1314,10 @@ class WatchlistStrip extends StatelessWidget {
   }
 }
 
-class _WatchItem {
-  const _WatchItem({
-    required this.id,
-    required this.title,
-    required this.poster,
-    required this.isMovie,
-  });
-  final int id;
-  final String title;
-  final String? poster;
-  final bool isMovie;
-}
-
 class _WatchTile extends StatelessWidget {
   const _WatchTile({required this.item});
 
-  final _WatchItem item;
+  final WatchItem item;
 
   @override
   Widget build(BuildContext context) {

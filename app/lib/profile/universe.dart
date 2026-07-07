@@ -77,7 +77,11 @@ class Universe {
     required this.palette,
     required this.seed,
     required this.activityByDay,
+    required this.labelsByDay,
     required this.lastActivityByShow,
+    required this.posterByGenre,
+    required this.currentStreak,
+    required this.bestStreak,
     required this.badges,
     required this.records,
     required this.hasGenres,
@@ -88,8 +92,19 @@ class Universe {
   final int seed;
   final Map<DateTime, int> activityByDay;
 
+  /// Ce qui a été vu chaque jour (« Dark · S1E3 », « Inception · film »),
+  /// pour le détail au tap sur la heatmap.
+  final Map<DateTime, List<String>> labelsByDay;
+
   /// Dernière coche par série, pour trier « à l'affiche » et « Mes séries ».
   final Map<int, DateTime> lastActivityByShow;
+
+  /// Affiche de la série/du film phare de chaque genre (pellicule).
+  final Map<String, String> posterByGenre;
+
+  /// Jours d'affilée avec au moins un visionnage (grâce d'un jour), et record.
+  final int currentStreak;
+  final int bestStreak;
 
   final List<UniverseBadge> badges;
   final List<UniverseRecord> records;
@@ -144,12 +159,17 @@ Universe buildUniverse({
       ? _defaultPalette
       : genreList.take(4).map((g) => g.color).toList();
 
-  // ---- Activité par jour + dernière coche par série ----
+  // ---- Activité par jour + libellés + dernière coche par série ----
   final byDay = <DateTime, int>{};
+  final labelsByDay = <DateTime, List<String>>{};
   final lastByShow = <int, DateTime>{};
+  final nameById = {for (final s in shows) s.show.id: s.show.name};
   for (final w in watched) {
     final d = _day(w.watchedAt);
     byDay[d] = (byDay[d] ?? 0) + 1;
+    labelsByDay
+        .putIfAbsent(d, () => [])
+        .add('${nameById[w.showId] ?? 'Série'} · S${w.season}E${w.episode}');
     final cur = lastByShow[w.showId];
     if (cur == null || w.watchedAt.isAfter(cur)) {
       lastByShow[w.showId] = w.watchedAt;
@@ -159,6 +179,53 @@ Universe buildUniverse({
     if (m.watchedAt != null) {
       final d = _day(m.watchedAt!);
       byDay[d] = (byDay[d] ?? 0) + 1;
+      labelsByDay.putIfAbsent(d, () => []).add('${m.title} · film');
+    }
+  }
+
+  // ---- Streaks (jours consécutifs avec visionnage) ----
+  var bestStreak = 0;
+  {
+    final days = byDay.keys.toList()..sort();
+    DateTime? prev;
+    var run = 0;
+    for (final d in days) {
+      run = (prev != null && d.difference(prev).inDays == 1) ? run + 1 : 1;
+      if (run > bestStreak) bestStreak = run;
+      prev = d;
+    }
+  }
+  var currentStreak = 0;
+  {
+    // Grâce d'un jour : une série entamée hier n'est pas encore rompue.
+    var probe = _day(now);
+    if (!byDay.containsKey(probe)) {
+      probe = probe.subtract(const Duration(days: 1));
+    }
+    while (byDay.containsKey(probe)) {
+      currentStreak++;
+      probe = probe.subtract(const Duration(days: 1));
+    }
+  }
+
+  // ---- Affiche phare par genre (pour la pellicule) ----
+  final posterByGenre = <String, String>{};
+  final byWatched = [...shows]
+    ..sort((a, b) => b.watchedCount.compareTo(a.watchedCount));
+  for (final sw in byWatched) {
+    final p = sw.show.poster;
+    if (p == null || p.isEmpty || sw.watchedCount == 0) continue;
+    for (final g in (sw.show.genres ?? '').split('|')) {
+      final t = g.trim();
+      if (t.isNotEmpty) posterByGenre.putIfAbsent(t, () => p);
+    }
+  }
+  for (final m in movies) {
+    final p = m.poster;
+    if (m.watchedAt == null || p == null || p.isEmpty) continue;
+    for (final g in (m.genres ?? '').split('|')) {
+      final t = g.trim();
+      if (t.isNotEmpty) posterByGenre.putIfAbsent(t, () => p);
     }
   }
 
@@ -248,7 +315,11 @@ Universe buildUniverse({
     palette: palette,
     seed: seed & 0x7fffffff,
     activityByDay: byDay,
+    labelsByDay: labelsByDay,
     lastActivityByShow: lastByShow,
+    posterByGenre: posterByGenre,
+    currentStreak: currentStreak,
+    bestStreak: bestStreak,
     badges: badges,
     records: records,
     hasGenres: genreList.isNotEmpty,

@@ -89,6 +89,72 @@ void main() {
     // Dernière coche par série : la plus récente l'emporte.
     expect(u.lastActivityByShow[1], DateTime(2026, 7, 5));
     expect(u.lastActivityByShow[2], DateTime(2026, 6, 20));
+    // Détail par jour pour la heatmap.
+    expect(u.labelsByDay[DateTime(2026, 7, 1)], ['A · S1E1']);
+    expect(u.labelsByDay[DateTime(2026, 7, 7)], ['M · film']);
+  });
+
+  test('buildUniverse : streaks courant (grâce d\'un jour) et record', () {
+    final now = DateTime(2026, 7, 7, 21);
+    WatchedEpisode w(int ep, DateTime at) =>
+        WatchedEpisode(showId: 1, season: 1, episode: ep, watchedAt: at);
+
+    final u = buildUniverse(
+      shows: const [],
+      watched: [
+        // Record : 4 jours consécutifs en juin.
+        w(1, DateTime(2026, 6, 1)),
+        w(2, DateTime(2026, 6, 2)),
+        w(3, DateTime(2026, 6, 3)),
+        w(4, DateTime(2026, 6, 4)),
+        // En cours : hier et avant-hier (rien aujourd'hui → grâce).
+        w(5, DateTime(2026, 7, 5, 20)),
+        w(6, DateTime(2026, 7, 6, 22)),
+      ],
+      movies: const [],
+      profileName: 'T',
+      now: now,
+      stats: _stats(episodeCount: 6),
+    );
+
+    expect(u.bestStreak, 4);
+    expect(u.currentStreak, 2);
+  });
+
+  test('buildUniverse : affiche phare par genre (série la plus vue)', () {
+    final now = DateTime(2026, 7, 7);
+    final u = buildUniverse(
+      shows: [
+        ShowWithProgress(
+          Show(
+              id: 1,
+              name: 'A',
+              runtime: 40,
+              addedAt: now,
+              poster: '/a.jpg',
+              genres: 'Drame'),
+          10,
+        ),
+        ShowWithProgress(
+          Show(
+              id: 2,
+              name: 'B',
+              runtime: 40,
+              addedAt: now,
+              poster: '/b.jpg',
+              genres: 'Drame|Comédie'),
+          3,
+        ),
+      ],
+      watched: const [],
+      movies: const [],
+      profileName: 'T',
+      now: now,
+      stats: _stats(showCount: 2),
+    );
+
+    expect(u.posterByGenre['Drame'], '/a.jpg'); // la plus regardée gagne
+    expect(u.posterByGenre['Comédie'], '/b.jpg');
   });
 
   test('buildUniverse : univers vide → palette par défaut, pas de genres', () {

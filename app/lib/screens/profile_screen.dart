@@ -7,12 +7,15 @@ import '../db/database.dart';
 import '../profile/cinema.dart';
 import '../profile/genre_sync.dart';
 import '../profile/profile.dart';
+import '../profile/reveal.dart';
 import '../profile/sections.dart';
+import '../profile/tonight.dart';
 import '../profile/universe.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/glass.dart';
 
 /// Page Profil « Univers » : une frise verticale cinématographique, unique
 /// par profil (salle obscure + projecteur teinté par les genres regardés),
@@ -25,7 +28,8 @@ class ProfileScreen extends ConsumerStatefulWidget {
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen>
+    with SingleTickerProviderStateMixin {
   static const _months = [
     'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
     'août', 'septembre', 'octobre', 'novembre', 'décembre'
@@ -33,8 +37,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   bool _backfillStarted = false;
 
+  /// Horloge du fond vivant (poussières, scintillement) : 30 s en boucle.
+  late final AnimationController _drive =
+      AnimationController(vsync: this, duration: const Duration(seconds: 30));
+  final _scrollCtrl = ScrollController();
+
   static String memberSince(DateTime since) =>
       'Membre depuis ${_months[since.month - 1]} ${since.year}';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (reduce) {
+      _drive.stop();
+      _drive.value = 0;
+    } else if (!_drive.isAnimating) {
+      _drive.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _drive.dispose();
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +80,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Stack(
       children: [
-        Positioned.fill(child: CinemaBackground(seed: seed, palette: palette)),
+        Positioned.fill(
+          child: CinemaBackground(
+            seed: seed,
+            palette: palette,
+            drive: _drive,
+            scroll: _scrollCtrl,
+          ),
+        ),
         Positioned.fill(child: _content(context, universe)),
       ],
     );
@@ -65,74 +100,121 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final moviesAsync = ref.watch(moviesProvider);
     final shows = showsAsync.value ?? const [];
     final movies = moviesAsync.value ?? const [];
+    final tonight = watchlistItems(movies, shows);
+
+    // Chaque section apparaît en fondu quand elle entre à l'écran (léger
+    // stagger pour les premières, visibles dès l'ouverture).
+    Widget sec(int i, List<Widget> children) => Reveal(
+          delayMs: i < 3 ? i * 90 : 0,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        );
 
     return ListView(
+      controller: _scrollCtrl,
       padding: EdgeInsets.fromLTRB(0, 8, 0, bottomNavInset(context)),
       children: [
         // ── Identité cosmique ──
-        profileAsync.when(
-          loading: () => const SizedBox(height: 200),
-          error: (e, _) => EmptyState(icon: Icons.error_outline, message: '$e'),
-          data: (profile) => _UniverseHeader(
-            profile: profile,
-            tagline: universe == null ? '…' : universeTagline(universe),
-            palette: universe?.palette ?? const [Color(0xFF6C4CE0)],
-            memberSince: memberSince(profile.since),
+        sec(0, [
+          profileAsync.when(
+            loading: () => const SizedBox(height: 200),
+            error: (e, _) =>
+                EmptyState(icon: Icons.error_outline, message: '$e'),
+            data: (profile) => _UniverseHeader(
+              profile: profile,
+              tagline: universe == null ? '…' : universeTagline(universe),
+              palette: universe?.palette ?? const [Color(0xFF6C4CE0)],
+              memberSince: memberSince(profile.since),
+            ),
           ),
-        ),
+        ]),
 
         // ── Chiffres clés ──
-        statsAsync.when(
-          loading: () => const SizedBox(height: 120),
-          error: (_, _) => const SizedBox.shrink(),
-          data: (stats) => _HeroStats(stats: stats),
-        ),
+        sec(1, [
+          statsAsync.when(
+            loading: () => const SizedBox(height: 120),
+            error: (_, _) => const SizedBox.shrink(),
+            data: (stats) => _HeroStats(stats: stats),
+          ),
+        ]),
 
         // ── À l'affiche (aperçu, la page dédiée montre tout) ──
-        UniverseSectionTitle('À l\'affiche',
-            subtitle: 'Tes séries du moment, en grand écran.',
-            actionLabel: 'Tout voir',
-            onAction: () => context.push('/series')),
-        MarqueeCarousel(
-          shows: shows,
-          lastActivity: universe?.lastActivityByShow ?? const {},
-        ),
+        sec(2, [
+          UniverseSectionTitle('À l\'affiche',
+              subtitle: 'Tes séries du moment, en grand écran.',
+              actionLabel: 'Tout voir',
+              onAction: () => context.push('/series')),
+          MarqueeCarousel(
+            shows: shows,
+            lastActivity: universe?.lastActivityByShow ?? const {},
+          ),
+        ]),
 
         // ── Pellicule de genres ──
-        const UniverseSectionTitle('Ta pellicule',
-            subtitle:
-                'Chaque photogramme, un genre — à la mesure du temps passé.'),
-        if (universe != null) GenreFilmStrip(universe: universe),
+        sec(3, [
+          const UniverseSectionTitle('Ta pellicule',
+              subtitle:
+                  'Chaque photogramme, un genre — à la mesure du temps passé.'),
+          if (universe != null) GenreFilmStrip(universe: universe),
+        ]),
 
         // ── Activité ──
-        const UniverseSectionTitle('Ton année en épisodes',
-            subtitle: 'Chaque cellule, un jour de visionnage.'),
-        if (universe != null)
-          ActivityHeatmap(
-            activityByDay: universe.activityByDay,
-            accent: universe.palette.first,
-            now: DateTime.now(),
-          ),
+        sec(4, [
+          const UniverseSectionTitle('Ton année en épisodes',
+              subtitle: 'Chaque cellule, un jour — touche pour le détail.'),
+          if (universe != null) ...[
+            StreakRow(
+              current: universe.currentStreak,
+              best: universe.bestStreak,
+              accent: universe.palette.first,
+            ),
+            ActivityHeatmap(
+              activityByDay: universe.activityByDay,
+              labelsByDay: universe.labelsByDay,
+              accent: universe.palette.first,
+              now: DateTime.now(),
+            ),
+          ],
+        ]),
 
         // ── Records ──
-        if (universe != null && universe.records.isNotEmpty) ...[
-          const UniverseSectionTitle('Records'),
-          RecordsBand(records: universe.records),
-        ],
+        if (universe != null && universe.records.isNotEmpty)
+          sec(5, [
+            const UniverseSectionTitle('Records'),
+            RecordsBand(records: universe.records),
+          ]),
 
         // ── Badges ──
-        const UniverseSectionTitle('Trophées',
-            subtitle: 'Débloque-les en explorant ton univers.'),
-        if (universe != null) BadgeWall(badges: universe.badges),
+        sec(6, [
+          const UniverseSectionTitle('Trophées',
+              subtitle: 'Débloque-les en explorant ton univers.'),
+          if (universe != null) BadgeWall(badges: universe.badges),
+        ]),
 
         // ── Liste de lecture ──
-        const UniverseSectionTitle('Liste de lecture',
-            subtitle: 'À voir prochainement.'),
-        WatchlistStrip(movies: movies, shows: shows),
+        sec(7, [
+          const UniverseSectionTitle('Liste de lecture',
+              subtitle: 'À voir prochainement.'),
+          WatchlistStrip(movies: movies, shows: shows),
+          const SizedBox(height: 16),
+          Center(
+            child: ProminentGlassButton(
+              icon: Icons.movie_filter_outlined,
+              onPressed: tonight.isEmpty
+                  ? null
+                  : () => showTonightPicker(context, tonight),
+              child: const Text('Quoi regarder ce soir ?'),
+            ),
+          ),
+        ]),
 
         // ── Données & réglages ──
-        const UniverseSectionTitle('Mes données'),
-        _DataCard(onExport: () => _export(context)),
+        sec(8, [
+          const UniverseSectionTitle('Mes données'),
+          _DataCard(onExport: () => _export(context)),
+        ]),
 
         const Padding(
           padding: EdgeInsets.fromLTRB(22, 18, 22, 8),
