@@ -233,6 +233,15 @@ class AppDatabase extends _$AppDatabase {
   Future<Movie?> movieById(int id) =>
       (select(movies)..where((m) => m.id.equals(id))).getSingleOrNull();
 
+  /// Efface toutes les données utilisateur (séries, épisodes, films et
+  /// historique de visionnage). Irréversible.
+  Future<void> clearAll() => transaction(() async {
+        await delete(watchedEpisodes).go();
+        await delete(episodes).go();
+        await delete(shows).go();
+        await delete(movies).go();
+      });
+
   Future<void> upsertShow(ShowsCompanion entry) =>
       into(shows).insertOnConflictUpdate(entry);
 

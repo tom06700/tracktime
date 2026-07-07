@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../providers.dart';
 import '../theme.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   Future<void> _open(String url) async {
@@ -14,8 +16,39 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _confirmClearAll(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Effacer toutes mes données ?'),
+        content: const Text(
+            'Toutes tes séries, films et ton historique de visionnage seront '
+            'définitivement supprimés de cet appareil. Cette action est '
+            'irréversible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text('Tout effacer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await ref.read(databaseProvider).clearAll();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+          const SnackBar(content: Text('Toutes tes données ont été effacées.')));
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: const Text('Réglages')),
       body: ListView(
@@ -41,6 +74,32 @@ class SettingsScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 12.5, color: TtColors.dim)),
               trailing: const Icon(Icons.chevron_right, color: TtColors.dim),
               onTap: () => context.push('/import'),
+            ),
+          ),
+
+          // ── Zone dangereuse ──
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 22, 20, 4),
+            child: Text('ZONE DANGEREUSE',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.5,
+                    color: TtColors.dim)),
+          ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.delete_forever_outlined,
+                  color: Colors.redAccent),
+              title: const Text('Effacer toutes mes données',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.redAccent)),
+              subtitle: const Text(
+                  'Supprime toutes les séries, films et l\'historique',
+                  style: TextStyle(fontSize: 12.5, color: TtColors.dim)),
+              onTap: () => _confirmClearAll(context, ref),
             ),
           ),
 
