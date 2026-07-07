@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../theme.dart';
 import '../tmdb/tvdb.dart';
@@ -26,6 +27,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _keyController.dispose();
     _tvdbController.dispose();
     super.dispose();
+  }
+
+  Future<void> _open(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   Future<void> _testTvdb() async {
@@ -176,6 +184,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ],
                   ),
+                  // Attribution requise par TheTVDB (lien direct obligatoire).
+                  const SizedBox(height: 16),
+                  const Divider(height: 1, color: TtColors.surfaceHi),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Metadata provided by TheTVDB. Please consider adding '
+                    'missing information or subscribing.\n'
+                    'Métadonnées fournies par TheTVDB — pense à compléter les '
+                    'informations manquantes ou à t\'abonner.',
+                    style: TextStyle(
+                        fontSize: 12.5, color: TtColors.dim, height: 1.6),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      _LinkChip(
+                        label: 'TheTVDB.com',
+                        onTap: () => _open('https://thetvdb.com'),
+                      ),
+                      _LinkChip(
+                        label: 'S\'abonner',
+                        onTap: () => _open('https://thetvdb.com/subscribe'),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -216,6 +250,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Petit lien en pastille (attribution TheTVDB).
+class _LinkChip extends StatelessWidget {
+  const _LinkChip({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: TtColors.surfaceHi,
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: TtColors.amber.withValues(alpha: 0.45)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: TtColors.amber),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.open_in_new, size: 13, color: TtColors.amber),
+          ],
+        ),
       ),
     );
   }
