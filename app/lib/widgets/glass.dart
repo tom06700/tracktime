@@ -250,11 +250,21 @@ class _GlassButtonState extends State<GlassButton> {
       onTap: widget.onPressed,
       child: Opacity(
         opacity: enabled ? 1 : 0.45,
-        child: GlassSurface(
-          borderRadius: 14,
-          blurSigma: 10,
-          tintOpacity: 0.16,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          decoration: BoxDecoration(
+            // Capsule translucide claire, liseré net, léger relief.
+            borderRadius: BorderRadius.circular(100),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.white.withValues(alpha: 0.14),
+                Colors.white.withValues(alpha: 0.06),
+              ],
+            ),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+          ),
           child: _ButtonLabel(
               icon: widget.icon, color: TtColors.text, child: widget.child),
         ),
@@ -302,34 +312,41 @@ class _ProminentGlassButtonState extends State<ProminentGlassButton> {
       onTap: widget.onPressed,
       child: Opacity(
         opacity: enabled ? 1 : 0.5,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        child: DecoratedBox(
+          // Halo coloré diffus derrière la capsule.
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [top, tint, bottom],
-              stops: const [0.0, 0.45, 1.0],
-            ),
-            border: Border.all(
-                color: Colors.white.withValues(alpha: 0.28), width: 1),
+            borderRadius: BorderRadius.circular(100),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.30),
-                blurRadius: 12,
-                offset: const Offset(0, 5),
+                color: Colors.black.withValues(alpha: 0.28),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
               ),
               BoxShadow(
-                color: tint.withValues(alpha: _down ? 0.20 : 0.38),
-                blurRadius: 18,
-                spreadRadius: -3,
-                offset: const Offset(0, 4),
+                color: tint.withValues(alpha: _down ? 0.22 : 0.45),
+                blurRadius: 22,
+                spreadRadius: -4,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
-          child:
-              _ButtonLabel(icon: widget.icon, color: onTint, child: widget.child),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
+            decoration: BoxDecoration(
+              // Capsule bombée : dégradé vertical + reflet spéculaire en haut.
+              borderRadius: BorderRadius.circular(100),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [top, tint, bottom],
+                stops: const [0.0, 0.5, 1.0],
+              ),
+              border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.35), width: 1),
+            ),
+            child: _ButtonLabel(
+                icon: widget.icon, color: onTint, child: widget.child),
+          ),
         ),
       ),
     );
@@ -346,14 +363,18 @@ class _ButtonLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = DefaultTextStyle.merge(
-      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color),
+      style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+          color: color),
       child: child,
     );
     if (icon == null) return Center(widthFactor: 1, child: text);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 18, color: color),
+        Icon(icon, size: 19, color: color),
         const SizedBox(width: 8),
         text,
       ],

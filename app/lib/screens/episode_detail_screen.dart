@@ -45,6 +45,23 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(EpisodeDetailScreen old) {
+    super.didUpdateWidget(old);
+    // Changement d'épisode via les flèches (context.replace réutilise l'état) :
+    // on recharge le contenu.
+    if (old.showId != widget.showId ||
+        old.season != widget.season ||
+        old.episode != widget.episode) {
+      setState(() {
+        _data = null;
+        _error = null;
+        _seasonEpisodes = const [];
+      });
+      _load();
+    }
+  }
+
   Future<void> _load() async {
     final tmdb = ref.read(tmdbClientProvider);
     try {
@@ -581,34 +598,46 @@ class _NavButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
-    final row = Row(
-      mainAxisAlignment:
-          alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
-      children: alignEnd
-          ? [
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 13.5, fontWeight: FontWeight.w600)),
-              Icon(icon, size: 22),
-            ]
-          : [
-              Icon(icon, size: 22),
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 13.5, fontWeight: FontWeight.w600)),
-            ],
-    );
+    final content = [
+      Icon(icon, size: 22, color: TtColors.amber),
+      const SizedBox(width: 4),
+      Flexible(
+        child: Text(label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+                fontSize: 14, fontWeight: FontWeight.w700)),
+      ),
+    ];
     return Opacity(
-      opacity: enabled ? 1 : 0.35,
+      opacity: enabled ? 1 : 0.3,
       child: Material(
-        color: TtColors.surface,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.transparent,
+        shape: StadiumBorder(
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.14))),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            child: row,
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.white.withValues(alpha: 0.10),
+                  Colors.white.withValues(alpha: 0.04),
+                ],
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                mainAxisAlignment: alignEnd
+                    ? MainAxisAlignment.end
+                    : MainAxisAlignment.start,
+                children: alignEnd ? content.reversed.toList() : content,
+              ),
+            ),
           ),
         ),
       ),
