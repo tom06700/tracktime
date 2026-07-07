@@ -270,44 +270,48 @@ class _UniverseHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Teinte chaude « projecteur » dérivée de la palette du profil.
+    final spot = Color.lerp(palette.first, const Color(0xFFF5D9A0), 0.45)!;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
       child: Column(
         children: [
-          // Avatar dans un anneau lumineux teinté par la palette.
+          // Avatar mis en lumière : halo doux du projecteur + anneau net,
+          // reflet en haut (la lumière qui tombe dessus).
           GestureDetector(
             onTap: () => _pickEmoji(context, ref),
             child: Container(
-              width: 108,
-              height: 108,
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
+                color: const Color(0xFF0C0F16),
                 shape: BoxShape.circle,
-                gradient: SweepGradient(
+                border: Border.all(
+                  color: spot.withValues(alpha: 0.55),
+                  width: 1.5,
+                ),
+                gradient: RadialGradient(
+                  center: const Alignment(0, -0.7),
+                  radius: 1.1,
                   colors: [
-                    ...palette,
-                    palette.first,
+                    spot.withValues(alpha: 0.22),
+                    const Color(0xFF0C0F16),
                   ],
+                  stops: const [0, 0.75],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: palette.first.withValues(alpha: 0.5),
-                    blurRadius: 28,
-                    spreadRadius: -4,
+                    color: spot.withValues(alpha: 0.32),
+                    blurRadius: 34,
+                    spreadRadius: -6,
                   ),
                 ],
               ),
-              padding: const EdgeInsets.all(3),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFF0C0F16),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(profile.emoji, style: const TextStyle(fontSize: 48)),
-              ),
+              alignment: Alignment.center,
+              child: Text(profile.emoji, style: const TextStyle(fontSize: 46)),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           GestureDetector(
             onTap: () => _editName(context, ref, profile.name),
             child: Row(
