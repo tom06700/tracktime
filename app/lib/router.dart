@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'screens/episode_detail_screen.dart';
@@ -25,17 +26,31 @@ final router = GoRouter(
         return ShowDetailScreen(showId: id, title: name);
       },
     ),
+    // Détail d'épisode : page modale non opaque (le fil reste visible dessous)
+    // qui remonte du bas, avec carrousel d'épisodes à l'intérieur.
     GoRoute(
       path: '/episode/:showId/:season/:episode',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final p = state.pathParameters;
         final extra = (state.extra as Map<String, dynamic>?) ?? const {};
-        return EpisodeDetailScreen(
-          showId: int.parse(p['showId']!),
-          season: int.parse(p['season']!),
-          episode: int.parse(p['episode']!),
-          showName: extra['name'] as String? ?? '',
-          posterPath: extra['poster'] as String?,
+        return CustomTransitionPage(
+          opaque: false,
+          barrierDismissible: true,
+          barrierColor: Colors.black.withValues(alpha: 0.55),
+          transitionDuration: const Duration(milliseconds: 320),
+          reverseTransitionDuration: const Duration(milliseconds: 260),
+          transitionsBuilder: (_, anim, _, child) => SlideTransition(
+            position: Tween(begin: const Offset(0, 1), end: Offset.zero).animate(
+                CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+            child: child,
+          ),
+          child: EpisodeSheet(
+            showId: int.parse(p['showId']!),
+            season: int.parse(p['season']!),
+            initialEpisode: int.parse(p['episode']!),
+            showName: extra['name'] as String? ?? '',
+            posterPath: extra['poster'] as String?,
+          ),
         );
       },
     ),

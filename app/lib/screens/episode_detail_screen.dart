@@ -13,82 +13,60 @@ import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/glass.dart';
 
-class EpisodeDetailScreen extends ConsumerStatefulWidget {
-  const EpisodeDetailScreen({
+/// Feuille modale glissable (remonte du bas) contenant un carrousel : on glisse
+/// horizontalement pour changer d'épisode, vers le bas pour fermer. Ouverte via
+/// une route go_router non opaque (le fil reste visible dessous) — voir router.
+class EpisodeSheet extends ConsumerStatefulWidget {
+  const EpisodeSheet({
     super.key,
     required this.showId,
     required this.showName,
     required this.season,
-    required this.episode,
+    required this.initialEpisode,
     this.posterPath,
   });
 
   final int showId;
   final String showName;
   final int season;
-  final int episode;
+  final int initialEpisode;
   final String? posterPath;
 
   @override
-  ConsumerState<EpisodeDetailScreen> createState() =>
-      _EpisodeDetailScreenState();
+  ConsumerState<EpisodeSheet> createState() => _EpisodeSheetState();
 }
 
-class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
-  Map<String, dynamic>? _data;
-  List<int> _seasonEpisodes = const []; // numéros d'épisodes de la saison
-  String? _error;
+class _EpisodeSheetState extends ConsumerState<EpisodeSheet> {
+  List<int> _episodes = const [];
+  PageController? _controller;
+  int _current = 0;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadSeason();
   }
 
   @override
-  void didUpdateWidget(EpisodeDetailScreen old) {
-    super.didUpdateWidget(old);
-    // Changement d'épisode via les flèches (context.replace réutilise l'état) :
-    // on recharge le contenu.
-    if (old.showId != widget.showId ||
-        old.season != widget.season ||
-        old.episode != widget.episode) {
-      setState(() {
-        _data = null;
-        _error = null;
-        _seasonEpisodes = const [];
-      });
-      _load();
-    }
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
   }
 
-  Future<void> _load() async {
-    final tmdb = ref.read(tmdbClientProvider);
+  Future<void> _loadSeason() async {
+    var numbers = <int>[widget.initialEpisode];
     try {
-      final d = await tmdb.episode(widget.showId, widget.season, widget.episode);
-      if (!mounted) return;
-      setState(() => _data = d);
-      // Épisodes de la saison (position, précédent/suivant) + réchauffe le
-      // cache (bénéficie au fil « à voir » / « à venir »).
-      _loadSeason(tmdb);
-    } on TmdbException catch (e) {
-      if (!mounted) return;
-      setState(() => _error = '$e');
-    }
-  }
-
-  Future<void> _loadSeason(TmdbClient tmdb) async {
-    try {
-      final j = await tmdb.season(widget.showId, widget.season);
+      final j =
+          await ref.read(tmdbClientProvider).season(widget.showId, widget.season);
       final eps = ((j['episodes'] as List?) ?? const [])
           .whereType<Map<String, dynamic>>()
           .toList();
-      final numbers = <int>[];
       final rows = <EpisodesCompanion>[];
+      final nums = <int>[];
       for (final e in eps) {
         final n = (e['episode_number'] as num?)?.toInt();
         if (n == null) continue;
-        numbers.add(n);
+        nums.add(n);
         rows.add(EpisodesCompanion.insert(
           showId: widget.showId,
           season: widget.season,
@@ -101,24 +79,143 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
       if (rows.isNotEmpty) {
         await ref.read(databaseProvider).upsertEpisodes(rows);
       }
-      numbers.sort();
-      if (mounted) setState(() => _seasonEpisodes = numbers);
+      if (nums.isNotEmpty) numbers = (nums..sort());
     } on TmdbException {
-      /* ignoré */
+      /* on garde l'épisode seul */
     }
+    if (!mounted) return;
+    final index = numbers.indexOf(widget.initialEpisode).clamp(0, numbers.length - 1);
+    setState(() {
+      _episodes = numbers;
+      _current = index;
+      _controller = PageController(initialPage: index);
+    });
   }
 
-  int get _index => _seasonEpisodes.indexOf(widget.episode);
-  int? get _prev => _index > 0 ? _seasonEpisodes[_index - 1] : null;
-  int? get _next => (_index >= 0 && _index < _seasonEpisodes.length - 1)
-      ? _seasonEpisodes[_index + 1]
-      : null;
-
-  void _goTo(int episode) {
-    context.replace(
-      '/episode/${widget.showId}/${widget.season}/$episode',
-      extra: {'name': widget.showName, 'poster': widget.posterPath},
+  @override
+  Widget build(BuildContext context) {
+    final height = MediaQuery.sizeOf(context).height;
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+        child: Container(
+          height: height * 0.93,
+          color: TtColors.bg,
+          child: Column(
+            children: [
+              _handle(),
+              Expanded(
+                child: _controller == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : PageView.builder(
+                        controller: _controller,
+                        onPageChanged: (i) {
+                          HapticFeedback.selectionClick();
+                          setState(() => _current = i);
+                        },
+                        itemCount: _episodes.length,
+                        itemBuilder: (_, i) => _EpisodePage(
+                          showId: widget.showId,
+                          showName: widget.showName,
+                          season: widget.season,
+                          episode: _episodes[i],
+                          posterPath: widget.posterPath,
+                          position: '${i + 1} sur ${_episodes.length}',
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
+  }
+
+  /// Poignée : glisser vers le bas pour fermer, croix pour fermer.
+  Widget _handle() {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onVerticalDragEnd: (d) {
+        if ((d.primaryVelocity ?? 0) > 250) context.pop();
+      },
+      child: Padding(
+        padding: const EdgeInsets.only(top: 10, bottom: 6),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.28),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            if (_episodes.length > 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'ÉPISODE ${_episodes[_current]}  ·  ${_current + 1}/${_episodes.length}',
+                  style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                      color: TtColors.dim),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------- Une page d'épisode
+
+class _EpisodePage extends ConsumerStatefulWidget {
+  const _EpisodePage({
+    required this.showId,
+    required this.showName,
+    required this.season,
+    required this.episode,
+    required this.position,
+    this.posterPath,
+  });
+
+  final int showId;
+  final String showName;
+  final int season;
+  final int episode;
+  final String position;
+  final String? posterPath;
+
+  @override
+  ConsumerState<_EpisodePage> createState() => _EpisodePageState();
+}
+
+class _EpisodePageState extends ConsumerState<_EpisodePage>
+    with AutomaticKeepAliveClientMixin {
+  Map<String, dynamic>? _data;
+  String? _error;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final d = await ref
+          .read(tmdbClientProvider)
+          .episode(widget.showId, widget.season, widget.episode);
+      if (mounted) setState(() => _data = d);
+    } on TmdbException catch (e) {
+      if (mounted) setState(() => _error = '$e');
+    }
   }
 
   void _toggleWatched(bool watched) {
@@ -153,37 +250,24 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final ref0 = (
       showId: widget.showId,
       season: widget.season,
       episode: widget.episode
     );
     final watchedRow = ref.watch(watchedEpisodeProvider(ref0)).value;
-    final watched = watchedRow != null;
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.ios_share),
-            tooltip: 'Partager',
-            onPressed: _data == null ? null : _share,
-          ),
-        ],
-      ),
-      body: _error != null
-          ? EmptyState(icon: Icons.error_outline, message: _error!)
-          : _data == null
-              ? const Center(child: CircularProgressIndicator())
-              : _buildContent(_data!, watched, watchedRow?.watchedAt),
-    );
+    if (_error != null) {
+      return EmptyState(icon: Icons.error_outline, message: _error!);
+    }
+    if (_data == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return _content(_data!, watchedRow != null, watchedRow?.watchedAt);
   }
 
-  Widget _buildContent(
-      Map<String, dynamic> d, bool watched, DateTime? watchedAt) {
+  Widget _content(Map<String, dynamic> d, bool watched, DateTime? watchedAt) {
     final still = d['still_path'] as String?;
     final title = '${d['name'] ?? 'Épisode ${widget.episode}'}';
     final overview = '${d['overview'] ?? ''}';
@@ -199,12 +283,9 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
         .toList();
     final director = _crewName(crew, 'Director');
     final writer = _crewName(crew, 'Writer') ?? _crewDept(crew, 'Writing');
-    final position = _index >= 0 && _seasonEpisodes.isNotEmpty
-        ? '${_index + 1} sur ${_seasonEpisodes.length}'
-        : null;
 
     return ListView(
-      padding: EdgeInsets.only(bottom: bottomNavInset(context)),
+      padding: const EdgeInsets.only(bottom: 28),
       children: [
         _Hero(
           stillPath: still,
@@ -212,13 +293,13 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
           season: widget.season,
           episode: widget.episode,
           title: title,
+          onShare: _share,
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Note en étoiles + votes.
               if (vote > 0) ...[
                 Row(
                   children: [
@@ -237,7 +318,6 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
-              // Méta : date, durée, position.
               Wrap(
                 spacing: 16,
                 runSpacing: 6,
@@ -246,8 +326,7 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
                     _Meta(icon: Icons.event_outlined, text: frenchDate(air)),
                   if (runtime != null && runtime > 0)
                     _Meta(icon: Icons.schedule, text: fmtTime(runtime)),
-                  if (position != null)
-                    _Meta(icon: Icons.tag, text: position),
+                  _Meta(icon: Icons.tag, text: widget.position),
                 ],
               ),
               if (watched && watchedAt != null) ...[
@@ -258,13 +337,12 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
                         size: 16, color: TtColors.teal),
                     const SizedBox(width: 6),
                     Text('Vu le ${frenchDate(watchedAt)}',
-                        style: const TextStyle(
-                            fontSize: 13, color: TtColors.teal)),
+                        style:
+                            const TextStyle(fontSize: 13, color: TtColors.teal)),
                   ],
                 ),
               ],
               const SizedBox(height: 16),
-              // Actions vu / rattraper.
               Row(
                 children: [
                   Expanded(
@@ -317,11 +395,6 @@ class _EpisodeDetailScreenState extends ConsumerState<EpisodeDetailScreen> {
                   ),
                 ),
               ],
-              const SizedBox(height: 24),
-              _EpisodeNav(
-                onPrev: _prev == null ? null : () => _goTo(_prev!),
-                onNext: _next == null ? null : () => _goTo(_next!),
-              ),
             ],
           ),
         ),
@@ -353,6 +426,7 @@ class _Hero extends StatelessWidget {
     required this.season,
     required this.episode,
     required this.title,
+    required this.onShare,
   });
 
   final String? stillPath;
@@ -360,6 +434,7 @@ class _Hero extends StatelessWidget {
   final int season;
   final int episode;
   final String title;
+  final VoidCallback onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -378,7 +453,7 @@ class _Hero extends StatelessWidget {
       ),
     );
     return SizedBox(
-      height: 250,
+      height: 224,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
@@ -393,8 +468,24 @@ class _Hero extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0x66000000), Color(0x00000000), Color(0xE6000000)],
+                colors: [
+                  Color(0x00000000),
+                  Color(0x00000000),
+                  Color(0xE6000000)
+                ],
                 stops: [0, 0.4, 1],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Material(
+              color: Colors.black.withValues(alpha: 0.35),
+              shape: const CircleBorder(),
+              child: IconButton(
+                icon: const Icon(Icons.ios_share, color: Colors.white, size: 20),
+                onPressed: onShare,
               ),
             ),
           ),
@@ -419,7 +510,7 @@ class _Hero extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontSize: 24,
+                      fontSize: 23,
                       fontWeight: FontWeight.w800,
                       height: 1.15,
                       color: Colors.white),
@@ -434,13 +525,11 @@ class _Hero extends StatelessWidget {
 }
 
 class _Stars extends StatelessWidget {
-  const _Stars({required this.rating}); // rating 0..10
-
+  const _Stars({required this.rating});
   final double rating;
-
   @override
   Widget build(BuildContext context) {
-    final stars = rating / 2; // 0..5
+    final stars = rating / 2;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -490,7 +579,8 @@ class _CrewLine extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 13, color: TtColors.dim, fontWeight: FontWeight.w600)),
         TextSpan(
-            text: name, style: const TextStyle(fontSize: 13, color: TtColors.text)),
+            text: name,
+            style: const TextStyle(fontSize: 13, color: TtColors.text)),
       ])),
     );
   }
@@ -547,99 +637,6 @@ class _GuestStar extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 10.5, color: TtColors.dim)),
         ],
-      ),
-    );
-  }
-}
-
-class _EpisodeNav extends StatelessWidget {
-  const _EpisodeNav({this.onPrev, this.onNext});
-  final VoidCallback? onPrev;
-  final VoidCallback? onNext;
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _NavButton(
-            icon: Icons.chevron_left,
-            label: 'Précédent',
-            onTap: onPrev,
-            alignEnd: false,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _NavButton(
-            icon: Icons.chevron_right,
-            label: 'Suivant',
-            onTap: onNext,
-            alignEnd: true,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _NavButton extends StatelessWidget {
-  const _NavButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    required this.alignEnd,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  final bool alignEnd;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    final content = [
-      Icon(icon, size: 22, color: TtColors.amber),
-      const SizedBox(width: 4),
-      Flexible(
-        child: Text(label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w700)),
-      ),
-    ];
-    return Opacity(
-      opacity: enabled ? 1 : 0.3,
-      child: Material(
-        color: Colors.transparent,
-        shape: StadiumBorder(
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.14))),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Ink(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.white.withValues(alpha: 0.10),
-                  Colors.white.withValues(alpha: 0.04),
-                ],
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                mainAxisAlignment: alignEnd
-                    ? MainAxisAlignment.end
-                    : MainAxisAlignment.start,
-                children: alignEnd ? content.reversed.toList() : content,
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
