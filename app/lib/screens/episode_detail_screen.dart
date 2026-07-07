@@ -97,74 +97,116 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet> {
     final height = MediaQuery.sizeOf(context).height;
     return Align(
       alignment: Alignment.bottomCenter,
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
-        child: Container(
-          height: height * 0.93,
-          color: TtColors.bg,
-          child: Column(
-            children: [
-              _handle(),
-              Expanded(
-                child: _controller == null
-                    ? const Center(child: CircularProgressIndicator())
-                    : PageView.builder(
-                        controller: _controller,
-                        onPageChanged: (i) {
-                          HapticFeedback.selectionClick();
-                          setState(() => _current = i);
-                        },
-                        itemCount: _episodes.length,
-                        itemBuilder: (_, i) => _EpisodePage(
-                          showId: widget.showId,
-                          showName: widget.showName,
-                          season: widget.season,
-                          episode: _episodes[i],
-                          posterPath: widget.posterPath,
-                          position: '${i + 1} sur ${_episodes.length}',
-                        ),
-                      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Dots dans l'espace vide au-dessus de la carte → indique le swipe.
+          if (_controller != null && _episodes.length > 1)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _DotsIndicator(count: _episodes.length, index: _current),
+            ),
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+            // Material : fournit le style de texte (sinon soulignés jaunes) et
+            // la surface de la carte.
+            child: Material(
+              color: TtColors.bg,
+              child: SizedBox(
+                height: height * 0.9,
+                child: Column(
+                  children: [
+                    _handle(),
+                    Expanded(
+                      child: _controller == null
+                          ? const Center(child: CircularProgressIndicator())
+                          : PageView.builder(
+                              controller: _controller,
+                              onPageChanged: (i) {
+                                HapticFeedback.selectionClick();
+                                setState(() => _current = i);
+                              },
+                              itemCount: _episodes.length,
+                              itemBuilder: (_, i) => _EpisodePage(
+                                showId: widget.showId,
+                                showName: widget.showName,
+                                season: widget.season,
+                                episode: _episodes[i],
+                                posterPath: widget.posterPath,
+                                position: '${i + 1} sur ${_episodes.length}',
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  /// Poignée : glisser vers le bas pour fermer, croix pour fermer.
+  /// Poignée : glisser vers le bas pour fermer.
   Widget _handle() {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onVerticalDragEnd: (d) {
         if ((d.primaryVelocity ?? 0) > 250) context.pop();
       },
-      child: Padding(
-        padding: const EdgeInsets.only(top: 10, bottom: 6),
-        child: Column(
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.28),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            if (_episodes.length > 1)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'ÉPISODE ${_episodes[_current]}  ·  ${_current + 1}/${_episodes.length}',
-                  style: const TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                      color: TtColors.dim),
-                ),
-              ),
-          ],
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.only(top: 10, bottom: 8),
+        child: Container(
+          width: 40,
+          height: 4,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.28),
+            borderRadius: BorderRadius.circular(2),
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// Indicateur de pages (dots) : pastille active ambre allongée, fenêtre
+/// glissante quand il y a beaucoup d'épisodes.
+class _DotsIndicator extends StatelessWidget {
+  const _DotsIndicator({required this.count, required this.index});
+
+  final int count;
+  final int index;
+
+  static const _window = 9;
+
+  @override
+  Widget build(BuildContext context) {
+    final start =
+        count <= _window ? 0 : (index - _window ~/ 2).clamp(0, count - _window);
+    final end = count <= _window ? count : start + _window;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = start; i < end; i++) _dot(i, start, end),
+      ],
+    );
+  }
+
+  Widget _dot(int i, int start, int end) {
+    final active = i == index;
+    // Bords rétrécis quand d'autres dots existent au-delà de la fenêtre.
+    final edge = (i == start && start > 0) || (i == end - 1 && end < count);
+    final size = active ? 8.0 : (edge ? 4.0 : 6.0);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      margin: const EdgeInsets.symmetric(horizontal: 3),
+      width: active ? 20 : size,
+      height: size,
+      decoration: BoxDecoration(
+        color: active ? TtColors.amber : Colors.white.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(4),
       ),
     );
   }
