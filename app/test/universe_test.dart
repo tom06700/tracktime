@@ -62,9 +62,18 @@ void main() {
       ),
     ];
 
+    final watched = [
+      WatchedEpisode(
+          showId: 1, season: 1, episode: 1, watchedAt: DateTime(2026, 7, 1)),
+      WatchedEpisode(
+          showId: 1, season: 1, episode: 2, watchedAt: DateTime(2026, 7, 5)),
+      WatchedEpisode(
+          showId: 2, season: 1, episode: 1, watchedAt: DateTime(2026, 6, 20)),
+    ];
+
     final u = buildUniverse(
       shows: shows,
-      watched: const [],
+      watched: watched,
       movies: movies,
       profileName: 'Thomas',
       now: now,
@@ -72,12 +81,14 @@ void main() {
     );
 
     expect(u.hasGenres, isTrue);
-    // Drame domine (5 depuis A + 2.5 depuis le film) devant Crime (5) ? Non :
     // A = 10 épisodes / 2 genres = 5 chacun ; film Drame = 2.5. Drame = 7.5.
     expect(u.genres.first.name, 'Drame');
     expect(u.palette, isNotEmpty);
     expect(u.badges, hasLength(6));
     expect(u.seed, greaterThan(0));
+    // Dernière coche par série : la plus récente l'emporte.
+    expect(u.lastActivityByShow[1], DateTime(2026, 7, 5));
+    expect(u.lastActivityByShow[2], DateTime(2026, 6, 20));
   });
 
   test('buildUniverse : univers vide → palette par défaut, pas de genres', () {
@@ -94,5 +105,6 @@ void main() {
     expect(u.genres, isEmpty);
     expect(u.palette, isNotEmpty); // repli cosmos froid
     expect(u.records, isEmpty);
+    expect(u.lastActivityByShow, isEmpty);
   });
 }

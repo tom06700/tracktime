@@ -77,6 +77,7 @@ class Universe {
     required this.palette,
     required this.seed,
     required this.activityByDay,
+    required this.lastActivityByShow,
     required this.badges,
     required this.records,
     required this.hasGenres,
@@ -86,6 +87,10 @@ class Universe {
   final List<Color> palette; // couleurs dominantes (>=1)
   final int seed;
   final Map<DateTime, int> activityByDay;
+
+  /// Dernière coche par série, pour trier « à l'affiche » et « Mes séries ».
+  final Map<int, DateTime> lastActivityByShow;
+
   final List<UniverseBadge> badges;
   final List<UniverseRecord> records;
   final bool hasGenres;
@@ -139,11 +144,16 @@ Universe buildUniverse({
       ? _defaultPalette
       : genreList.take(4).map((g) => g.color).toList();
 
-  // ---- Activité par jour ----
+  // ---- Activité par jour + dernière coche par série ----
   final byDay = <DateTime, int>{};
+  final lastByShow = <int, DateTime>{};
   for (final w in watched) {
     final d = _day(w.watchedAt);
     byDay[d] = (byDay[d] ?? 0) + 1;
+    final cur = lastByShow[w.showId];
+    if (cur == null || w.watchedAt.isAfter(cur)) {
+      lastByShow[w.showId] = w.watchedAt;
+    }
   }
   for (final m in movies) {
     if (m.watchedAt != null) {
@@ -238,6 +248,7 @@ Universe buildUniverse({
     palette: palette,
     seed: seed & 0x7fffffff,
     activityByDay: byDay,
+    lastActivityByShow: lastByShow,
     badges: badges,
     records: records,
     hasGenres: genreList.isNotEmpty,

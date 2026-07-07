@@ -8,43 +8,82 @@ import 'universe.dart';
 
 // ───────────────────────────── En-tête de section ──────────────────────────
 
-/// Titre de section « cosmique » : petit libellé lumineux + sous-titre.
+/// Titre de section : petit libellé lumineux + sous-titre, avec action
+/// optionnelle à droite (ex. « Tout voir »).
 class UniverseSectionTitle extends StatelessWidget {
-  const UniverseSectionTitle(this.title, {super.key, this.subtitle});
+  const UniverseSectionTitle(
+    this.title, {
+    super.key,
+    this.subtitle,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final String title;
   final String? subtitle;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 30, 22, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(22, 30, 16, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            title.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 2,
-              color: Colors.white,
-              shadows: [
-                Shadow(color: Color(0x99000000), blurRadius: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 2,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(color: Color(0x99000000), blurRadius: 8),
+                    ],
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle!,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      height: 1.4,
+                      color: Colors.white.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 3),
-            Text(
-              subtitle!,
-              style: TextStyle(
-                fontSize: 12.5,
-                height: 1.4,
-                color: Colors.white.withValues(alpha: 0.6),
+          if (onAction != null)
+            GestureDetector(
+              onTap: onAction,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 6, 2, 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      actionLabel ?? 'Tout voir',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: TtColors.amber,
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right,
+                        size: 17, color: TtColors.amber),
+                  ],
+                ),
               ),
             ),
-          ],
         ],
       ),
     );
@@ -53,10 +92,12 @@ class UniverseSectionTitle extends StatelessWidget {
 
 // ─────────────────────────── Répartition par genre ─────────────────────────
 
-/// Bande « aurore » : dégradé horizontal fondu, pondéré par le temps passé
-/// dans chaque genre, avec halo. Signature visuelle du profil.
-class GenreSpectrum extends StatelessWidget {
-  const GenreSpectrum({super.key, required this.universe});
+typedef _FilmSlice = ({String name, double weight, Color color});
+
+/// Pellicule 35 mm : chaque photogramme est un genre, sa largeur est
+/// proportionnelle au temps passé. Perforations haut/bas, halo par couleur.
+class GenreFilmStrip extends StatelessWidget {
+  const GenreFilmStrip({super.key, required this.universe});
 
   final Universe universe;
 
@@ -66,10 +107,18 @@ class GenreSpectrum extends StatelessWidget {
     final total = universe.totalGenreWeight;
     if (genres.isEmpty || total <= 0) {
       return const _EmptyHint(
-        icon: Icons.auto_awesome,
-        text: 'Ajoute des séries et des films pour révéler ton spectre.',
+        icon: Icons.theaters_outlined,
+        text: 'Ajoute des séries et des films pour impressionner ta pellicule.',
       );
     }
+
+    final top = genres.take(6).toList();
+    final rest = total - top.fold(0.0, (s, g) => s + g.weight);
+    final slices = <_FilmSlice>[
+      for (final g in top) (name: g.name, weight: g.weight, color: g.color),
+      if (rest > total * 0.005)
+        (name: 'Autres', weight: rest, color: const Color(0xFF454D5E)),
+    ];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -77,18 +126,18 @@ class GenreSpectrum extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: 26,
+            height: 80,
             width: double.infinity,
             child: CustomPaint(
-              painter: _SpectrumPainter(genres: genres, total: total),
+              painter: _FilmStripPainter(slices: slices, total: total),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final g in genres.take(6))
+              for (final g in top)
                 _GenreChip(
                   slice: g,
                   percent: g.weight / total,
@@ -101,64 +150,132 @@ class GenreSpectrum extends StatelessWidget {
   }
 }
 
-class _SpectrumPainter extends CustomPainter {
-  _SpectrumPainter({required this.genres, required this.total});
+class _FilmStripPainter extends CustomPainter {
+  _FilmStripPainter({required this.slices, required this.total});
 
-  final List<GenreSlice> genres;
+  final List<_FilmSlice> slices;
   final double total;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(13));
+    final w = size.width, h = size.height;
+    final base =
+        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(12));
 
-    // Construit des arrêts de dégradé fondus au milieu de chaque segment.
-    final colors = <Color>[];
-    final stops = <double>[];
-    var acc = 0.0;
-    for (final g in genres) {
-      final frac = g.weight / total;
-      colors.add(g.color);
-      stops.add((acc + frac / 2).clamp(0.0, 1.0));
-      acc += frac;
-    }
-    if (colors.length == 1) {
-      colors.add(colors.first);
-      stops
-        ..clear()
-        ..addAll([0, 1]);
-    }
-
-    // Halo diffus sous la bande.
-    final glow = Paint()
-      ..shader = LinearGradient(colors: colors, stops: stops).createShader(rect)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
-    canvas.drawRRect(rrect, glow);
-
-    // Bande nette.
-    final band = Paint()
-      ..shader = LinearGradient(colors: colors, stops: stops).createShader(rect);
-    canvas.drawRRect(rrect, band);
-
-    // Lustre en haut.
+    // Corps de la pellicule.
+    canvas.drawRRect(base, Paint()..color = const Color(0xFF10141D));
     canvas.drawRRect(
-      rrect,
+      base,
       Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white.withValues(alpha: 0.28),
-            Colors.white.withValues(alpha: 0),
-          ],
-          stops: const [0, 0.5],
-        ).createShader(rect),
+        ..style = PaintingStyle.stroke
+        ..color = Colors.white.withValues(alpha: 0.08),
     );
+
+    // Perforations haut et bas.
+    const holeW = 9.0, holeH = 6.5, step = 17.0;
+    final holePaint = Paint()..color = const Color(0xFF060810);
+    for (var x = 10.0; x + holeW < w - 10; x += step) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+            Rect.fromLTWH(x, 6, holeW, holeH), const Radius.circular(2)),
+        holePaint,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(x, h - 6 - holeH, holeW, holeH),
+            const Radius.circular(2)),
+        holePaint,
+      );
+    }
+
+    // Photogrammes proportionnels.
+    const inset = 8.0;
+    const top = 6.0 + holeH + 5.0;
+    final frameH = h - top * 2;
+    final availW = w - inset * 2;
+    var x = inset;
+    for (final s in slices) {
+      final fw = availW * (s.weight / total);
+      final r = Rect.fromLTWH(x + 1.5, top, fw - 3, frameH);
+      if (r.width > 2) {
+        final rr = RRect.fromRectAndRadius(r, const Radius.circular(5));
+
+        // Halo lumineux derrière le photogramme.
+        canvas.drawRRect(
+          rr,
+          Paint()
+            ..blendMode = BlendMode.screen
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8)
+            ..color = s.color.withValues(alpha: 0.35),
+        );
+        // Photogramme.
+        canvas.drawRRect(
+          rr,
+          Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color.lerp(s.color, Colors.white, 0.16)!,
+                Color.lerp(s.color, Colors.black, 0.28)!,
+              ],
+            ).createShader(r),
+        );
+        // Lustre.
+        canvas.drawRRect(
+          rr,
+          Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.white.withValues(alpha: 0.20),
+                Colors.white.withValues(alpha: 0),
+              ],
+              stops: const [0, 0.45],
+            ).createShader(r),
+        );
+
+        // Libellé si le photogramme est assez large.
+        if (r.width > 58) {
+          final pct = (s.weight / total * 100).round();
+          final tp = TextPainter(
+            text: TextSpan(children: [
+              TextSpan(
+                text: s.name,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  shadows: [Shadow(color: Color(0xAA000000), blurRadius: 4)],
+                ),
+              ),
+              TextSpan(
+                text: '\n$pct %',
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white.withValues(alpha: 0.85),
+                ),
+              ),
+            ]),
+            textAlign: TextAlign.center,
+            textDirection: TextDirection.ltr,
+            maxLines: 2,
+            ellipsis: '…',
+          )..layout(minWidth: r.width - 8, maxWidth: r.width - 8);
+          tp.paint(
+            canvas,
+            Offset(r.left + 4, r.top + (r.height - tp.height) / 2),
+          );
+        }
+      }
+      x += fw;
+    }
   }
 
   @override
-  bool shouldRepaint(_SpectrumPainter old) =>
-      old.genres != genres || old.total != total;
+  bool shouldRepaint(_FilmStripPainter old) =>
+      old.slices != slices || old.total != total;
 }
 
 class _GenreChip extends StatelessWidget {
@@ -212,51 +329,259 @@ class _GenreChip extends StatelessWidget {
   }
 }
 
-// ───────────────────────── Constellation de séries ─────────────────────────
+// ─────────────────────────────── À l'affiche ───────────────────────────────
 
-/// Affiches des séries en cours/regardées avec une barre de progression
-/// posée dessus. Les séries terminées ont un liseré lumineux.
-class SeriesConstellation extends StatelessWidget {
-  const SeriesConstellation({super.key, required this.shows});
+/// Carrousel « hall de cinéma » : une grande affiche centrale avec sa
+/// progression, les voisines en retrait sur les côtés. Aperçu limité —
+/// la page « Mes séries » montre tout.
+class MarqueeCarousel extends StatefulWidget {
+  const MarqueeCarousel({
+    super.key,
+    required this.shows,
+    required this.lastActivity,
+  });
 
   final List<ShowWithProgress> shows;
+  final Map<int, DateTime> lastActivity;
+
+  static const maxItems = 8;
+
+  @override
+  State<MarqueeCarousel> createState() => _MarqueeCarouselState();
+}
+
+class _MarqueeCarouselState extends State<MarqueeCarousel> {
+  late final PageController _controller =
+      PageController(viewportFraction: 0.58);
+  int _current = 0;
+
+  /// Séries en cours d'abord (les plus récemment regardées en tête),
+  /// puis les terminées.
+  List<ShowWithProgress> get _items {
+    final started = widget.shows.where((s) => s.watchedCount > 0).toList()
+      ..sort((a, b) {
+        final byOngoing = (a.isDone ? 1 : 0).compareTo(b.isDone ? 1 : 0);
+        if (byOngoing != 0) return byOngoing;
+        final da = widget.lastActivity[a.show.id];
+        final db = widget.lastActivity[b.show.id];
+        if (da != null && db != null) return db.compareTo(da);
+        if (da != null) return -1;
+        if (db != null) return 1;
+        return b.watchedCount.compareTo(a.watchedCount);
+      });
+    return started.take(MarqueeCarousel.maxItems).toList();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final started = shows.where((s) => s.watchedCount > 0).toList()
-      ..sort((a, b) {
-        final byDone = (b.isDone ? 1 : 0).compareTo(a.isDone ? 1 : 0);
-        if (byDone != 0) return byDone;
-        return b.watchedCount.compareTo(a.watchedCount);
-      });
-    if (started.isEmpty) {
+    final items = _items;
+    if (items.isEmpty) {
       return const _EmptyHint(
-        icon: Icons.tv_off_outlined,
-        text: 'Tes séries en cours apparaîtront ici, affiche et progression.',
+        icon: Icons.theaters_outlined,
+        text: 'Commence une série pour la voir à l\'affiche.',
       );
     }
+    final current = items[_current.clamp(0, items.length - 1)];
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.zero,
-        itemCount: started.length,
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 116,
-          childAspectRatio: 0.62,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
+    return Column(
+      children: [
+        SizedBox(
+          height: 306,
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: items.length,
+            onPageChanged: (i) => setState(() => _current = i),
+            itemBuilder: (context, i) => AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                double delta;
+                if (_controller.position.haveDimensions) {
+                  delta = ((_controller.page ?? 0) - i).clamp(-1.0, 1.0);
+                } else {
+                  delta = (_current - i).clamp(-1, 1).toDouble();
+                }
+                final f = 1 - delta.abs();
+                return Center(
+                  child: Transform.scale(
+                    scale: 0.84 + 0.16 * f,
+                    child: Opacity(opacity: 0.42 + 0.58 * f, child: child),
+                  ),
+                );
+              },
+              child: _MarqueePoster(item: items[i]),
+            ),
+          ),
         ),
-        itemBuilder: (context, i) => _ConstellationTile(item: started[i]),
+        const SizedBox(height: 14),
+        // Légende de l'affiche courante.
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: Column(
+            key: ValueKey(current.show.id),
+            children: [
+              Text(
+                current.show.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16.5,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  shadows: [Shadow(color: Color(0xAA000000), blurRadius: 10)],
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                current.isDone
+                    ? 'Terminée · ${current.watchedCount} ép.'
+                    : '${(current.progress * 100).round()} % · '
+                        '${current.watchedCount} ép. vus',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: current.isDone
+                      ? TtColors.teal
+                      : Colors.white.withValues(alpha: 0.65),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MarqueePoster extends StatelessWidget {
+  const _MarqueePoster({required this.item});
+
+  final ShowWithProgress item;
+
+  @override
+  Widget build(BuildContext context) {
+    final show = item.show;
+    final done = item.isDone;
+    final accent = done ? TtColors.teal : TtColors.amber;
+    final path = show.poster;
+
+    return GestureDetector(
+      onTap: () => context.push('/show/${show.id}', extra: show.name),
+      child: AspectRatio(
+        aspectRatio: 2 / 3,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 26,
+                offset: const Offset(0, 12),
+              ),
+              BoxShadow(
+                color: accent.withValues(alpha: 0.22),
+                blurRadius: 34,
+                spreadRadius: -6,
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (path != null && path.isNotEmpty)
+                  Image.network(
+                    tmdbImageUrl(path, size: 'w500'),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) =>
+                        _posterFallback(show.name, iconSize: 34),
+                  )
+                else
+                  _posterFallback(show.name, iconSize: 34),
+                // Liseré.
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: done
+                              ? TtColors.teal.withValues(alpha: 0.8)
+                              : Colors.white.withValues(alpha: 0.10),
+                          width: done ? 1.4 : 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Voile bas + progression.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(12, 28, 12, 12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.80),
+                        ],
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: item.progress,
+                            minHeight: 6,
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.22),
+                            color: accent,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          done
+                              ? 'Terminé'
+                              : '${(item.progress * 100).round()} %',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: done ? TtColors.teal : Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-class _ConstellationTile extends StatelessWidget {
-  const _ConstellationTile({required this.item});
+// ───────────────────────── Tuile d'affiche (grilles) ───────────────────────
+
+/// Affiche compacte avec barre de progression posée dessus — utilisée par la
+/// page « Mes séries ». Les séries terminées ont un liseré lumineux.
+class SeriesPosterTile extends StatelessWidget {
+  const SeriesPosterTile({super.key, required this.item});
 
   final ShowWithProgress item;
 
@@ -281,7 +606,11 @@ class _ConstellationTile extends StatelessWidget {
               width: done ? 1.5 : 1,
             ),
             boxShadow: done
-                ? [BoxShadow(color: TtColors.teal.withValues(alpha: 0.35), blurRadius: 14)]
+                ? [
+                    BoxShadow(
+                        color: TtColors.teal.withValues(alpha: 0.35),
+                        blurRadius: 14)
+                  ]
                 : null,
           ),
           child: Stack(
@@ -291,10 +620,10 @@ class _ConstellationTile extends StatelessWidget {
                 Image.network(
                   tmdbImageUrl(path, size: 'w342'),
                   fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => _poster(show.name),
+                  errorBuilder: (_, _, _) => _posterFallback(show.name),
                 )
               else
-                _poster(show.name),
+                _posterFallback(show.name),
               // Voile bas pour la barre.
               Positioned(
                 left: 0,
@@ -346,26 +675,27 @@ class _ConstellationTile extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _poster(String name) {
-    final hue =
-        (name.codeUnits.fold<int>(0, (a, c) => a * 31 + c) % 360).toDouble();
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            HSLColor.fromAHSL(1, hue, 0.5, 0.4).toColor(),
-            HSLColor.fromAHSL(1, (hue + 40) % 360, 0.55, 0.24).toColor(),
-          ],
-        ),
+/// Dégradé de repli (stable par titre) quand il n'y a pas d'affiche.
+Widget _posterFallback(String name, {double iconSize = 26}) {
+  final hue =
+      (name.codeUnits.fold<int>(0, (a, c) => a * 31 + c) % 360).toDouble();
+  return DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          HSLColor.fromAHSL(1, hue, 0.5, 0.4).toColor(),
+          HSLColor.fromAHSL(1, (hue + 40) % 360, 0.55, 0.24).toColor(),
+        ],
       ),
-      child: const Center(
-        child: Icon(Icons.tv, color: Colors.white54, size: 26),
-      ),
-    );
-  }
+    ),
+    child: Center(
+      child: Icon(Icons.tv, color: Colors.white54, size: iconSize),
+    ),
+  );
 }
 
 // ─────────────────────────── Heatmap d'activité ────────────────────────────
@@ -840,11 +1170,11 @@ class _EmptyHint extends StatelessWidget {
 /// Tagline poétique dérivée des genres dominants.
 String universeTagline(Universe u) {
   if (!u.hasGenres) {
-    return 'Ton univers attend sa première étoile.';
+    return 'Ta salle attend sa première séance.';
   }
   final names = u.genres.take(3).map((g) => g.name).toList();
   final joined = names.length == 1
       ? names.first
       : '${names.sublist(0, names.length - 1).join(', ')} & ${names.last}';
-  return 'Un cosmos tissé de $joined.';
+  return 'Un cinéma tissé de $joined.';
 }

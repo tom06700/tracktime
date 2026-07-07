@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'screens/episode_detail_screen.dart';
 import 'screens/import_screen.dart';
+import 'screens/series_library_screen.dart';
 import 'screens/show_detail_screen.dart';
 import 'settings/settings_screen.dart';
 import 'shell.dart';
@@ -18,6 +19,7 @@ final router = GoRouter(
     GoRoute(path: '/', builder: (_, _) => const HomeShell()),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
     GoRoute(path: '/import', builder: (_, _) => const ImportPage()),
+    GoRoute(path: '/series', builder: (_, _) => const SeriesLibraryScreen()),
     GoRoute(
       path: '/show/:id',
       builder: (context, state) {

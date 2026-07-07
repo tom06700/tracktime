@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../backup/backup.dart';
 import '../db/database.dart';
+import '../profile/cinema.dart';
 import '../profile/genre_sync.dart';
-import '../profile/nebula.dart';
 import '../profile/profile.dart';
 import '../profile/sections.dart';
 import '../profile/universe.dart';
@@ -14,10 +14,10 @@ import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 
-/// Page Profil « Univers » : une frise verticale génétivement unique par
-/// profil (nébuleuse teintée par les genres regardés) parcourue de haut en
-/// bas — identité, spectre de genres, constellation de séries, activité,
-/// records, badges et liste de lecture.
+/// Page Profil « Univers » : une frise verticale cinématographique, unique
+/// par profil (salle obscure + projecteur teinté par les genres regardés),
+/// parcourue de haut en bas — identité, à l'affiche, pellicule de genres,
+/// activité, records, badges et liste de lecture.
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -52,7 +52,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Stack(
       children: [
-        Positioned.fill(child: NebulaBackground(seed: seed, palette: palette)),
+        Positioned.fill(child: CinemaBackground(seed: seed, palette: palette)),
         Positioned.fill(child: _content(context, universe)),
       ],
     );
@@ -88,15 +88,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           data: (stats) => _HeroStats(stats: stats),
         ),
 
-        // ── Spectre de genres ──
-        const UniverseSectionTitle('Spectre de genres',
-            subtitle: 'La palette de ton univers, pondérée par le temps passé.'),
-        if (universe != null) GenreSpectrum(universe: universe),
+        // ── À l'affiche (aperçu, la page dédiée montre tout) ──
+        UniverseSectionTitle('À l\'affiche',
+            subtitle: 'Tes séries du moment, en grand écran.',
+            actionLabel: 'Tout voir',
+            onAction: () => context.push('/series')),
+        MarqueeCarousel(
+          shows: shows,
+          lastActivity: universe?.lastActivityByShow ?? const {},
+        ),
 
-        // ── Constellation de séries ──
-        const UniverseSectionTitle('Constellation',
-            subtitle: 'Tes séries et leur progression.'),
-        SeriesConstellation(shows: shows),
+        // ── Pellicule de genres ──
+        const UniverseSectionTitle('Ta pellicule',
+            subtitle:
+                'Chaque photogramme, un genre — à la mesure du temps passé.'),
+        if (universe != null) GenreFilmStrip(universe: universe),
 
         // ── Activité ──
         const UniverseSectionTitle('Ton année en épisodes',
@@ -366,7 +372,7 @@ class _HeroStats extends StatelessWidget {
             ),
           ),
           Text(
-            'DE VOYAGE À TRAVERS TON UNIVERS',
+            'DE PROJECTION DANS TA SALLE OBSCURE',
             style: TextStyle(
               fontSize: 10.5,
               letterSpacing: 2,
