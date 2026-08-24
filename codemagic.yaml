@@ -1,0 +1,80 @@
+# Codemagic — build iOS signé et envoi vers TestFlight.
+#
+# Prérequis (une seule fois, côté Codemagic / App Store Connect) :
+#  1. App Store Connect : créer l'app avec le bundle id com.thomasgomez.tracktime
+#  2. Codemagic > Teams > Integrations > Apple Developer Portal : ajouter une
+#     clé App Store Connect API et la nommer « codemagic » (ou changer le nom
+#     référencé ci-dessous dans `integrations`).
+#  3. Lancer le workflow à la main (Start new build). Pas de déclenchement
+#     automatique : les pushs sur main servent au déploiement Vercel et
+#     consommeraient les minutes de build iOS pour rien.
+
+workflows:
+  ios-testflight:
+    name: TrackTime · iOS TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    # L'app Flutter vit dans app/, pas à la racine du dépôt.
+    working_directory: app
+
+    integrations:
+      app_store_connect: codemagic
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.thomasgomez.tracktime
+
+    scripts:
+      - name: Récupérer les paquets Flutter
+        script: flutter pub get
+
+      - name: Analyse statique
+        script: flutter analyze
+
+      - name: Tests unitaires
+        # ignore_failure : le paquet sqlite3 télécharge une lib native au
+        # premier run ; on ne veut pas qu'un aléa réseau bloque la livraison.
+        # Passer à false une fois le pipeline stabilisé.
+        script: flutter test
+        ignore_failure: true
+
+      - name: Installer les pods
+        script: find . -name "Podfile" -execdir pod install \;
+
+      - name: Appliquer les profils de signature
+        script: xcode-project use-profiles
+
+      - name: Construire l'IPA
+        # Le numéro de build vient du compteur Codemagic : strictement
+        # croissant, donc toujours accepté par TestFlight, et sans dépendre
+        # de l'identifiant Apple de l'app.
+        script: |
+          flutter build ipa --release \
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Testeurs internes : disponible immédiatement, sans revue Apple.
+        # Décommenter et nommer un groupe pour une diffusion externe (revue ~1-2 j).
+        # beta_groups:
+        #   - Testeurs internes
+
+      # email:
+      #   recipients:
+      #     - ton.adresse@example.com
+      #   notify:
+      #     success: true
+      #     failure: true
