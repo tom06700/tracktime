@@ -72,3 +72,37 @@ workflows:
         # Testeurs internes : disponible sans revue Apple.
         # beta_groups:
         #   - Testeurs internes
+
+  # Workflow jetable (~1 min) : n'construit rien, affiche seulement ce que la
+  # clé API « chez-nous-asc » voit réellement dans le compte Apple. Sert à
+  # trancher entre « le profil n'existe pas » et « la clé appartient à une
+  # autre équipe Apple », deux causes du même message d'erreur.
+  diagnostic:
+    name: Diagnostic signature
+    max_build_duration: 10
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: chez-nous-asc
+
+    scripts:
+      - name: Bundle IDs visibles par la clé
+        script: |
+          echo "════════ BUNDLE IDS ════════"
+          app-store-connect bundle-ids list || echo "(échec ou aucun)"
+        ignore_failure: true
+
+      - name: Certificats de distribution visibles
+        script: |
+          echo "════════ CERTIFICATS ════════"
+          app-store-connect certificates list --type IOS_DISTRIBUTION \
+            || echo "(échec ou aucun)"
+        ignore_failure: true
+
+      - name: Profils App Store visibles
+        script: |
+          echo "════════ PROFILS ════════"
+          app-store-connect profiles list --type IOS_APP_STORE \
+            || app-store-connect profiles list \
+            || echo "(échec ou aucun)"
+        ignore_failure: true
