@@ -2,9 +2,9 @@
 #
 # Prérequis (une seule fois, côté Codemagic / App Store Connect) :
 #  1. App Store Connect : créer l'app avec le bundle id com.thomasgomez.tracktime
-#  2. Codemagic > Teams > Integrations > Apple Developer Portal : ajouter une
-#     clé App Store Connect API et la nommer « codemagic » (ou changer le nom
-#     référencé ci-dessous dans `integrations`).
+#  2. Codemagic > Teams > Integrations > Apple Developer Portal : la clé
+#     App Store Connect API « chez-nous-asc » est déjà en place (partagée
+#     avec l'autre app du compte).
 #  3. Lancer le workflow à la main (Start new build). Pas de déclenchement
 #     automatique : les pushs sur main servent au déploiement Vercel et
 #     consommeraient les minutes de build iOS pour rien.
@@ -19,7 +19,9 @@ workflows:
     working_directory: app
 
     integrations:
-      app_store_connect: codemagic
+      # Nom EXACT de l'intégration App Store Connect dans
+      # Codemagic > Teams > Integrations > Apple Developer Portal.
+      app_store_connect: chez-nous-asc
 
     environment:
       flutter: stable
