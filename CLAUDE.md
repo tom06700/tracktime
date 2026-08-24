@@ -1,38 +1,27 @@
 # Nitrate
 
-Suivi de séries/films, 100 % local, métadonnées TheTVDB. Déployé sur Vercel
-(statique, déploiement auto à chaque push sur `main` — le propriétaire veut
-des pushs directs sur `main`, sans PR).
+Suivi de séries/films, 100 % local, métadonnées TheTVDB.
+
+**Le développement ne porte plus que sur l'app Flutter (iOS, livrée par
+TestFlight via Codemagic).** Les deux cibles web ci-dessous sont gelées : ne
+plus les reconstruire ni les faire évoluer. Les pushs vont directement sur
+`main`, sans PR.
 
 ## Layout
 
-- `index.html` — version web historique (vanilla JS + localStorage), servie à
-  la racine du site, encore sous l'ancien nom TrackTime. Ne pas casser :
-  c'est l'app en production.
+- `index.html` — version web historique (vanilla JS + localStorage), gelée,
+  encore sous l'ancien nom TrackTime.
 - `app/` — application Flutter (iOS/Android, cible stores). Source de vérité
   pour la suite du développement.
-- `flutter/` — build web de l'app Flutter (artefacts commités), servi sur
-  `/flutter/`. Régénéré manuellement, voir ci-dessous.
+- `flutter/` — ancien build web de l'app Flutter (artefacts commités), gelé.
+  Ne plus le régénérer : la livraison passe par TestFlight.
 
-## Rebuild du build web Flutter (après chaque changement dans app/)
+## Livraison iOS
 
-```bash
-cd app
-flutter build web --base-href=/flutter/
-cd ..
-rm -rf flutter && cp -r app/build/web flutter
-# Allègement (renderer = canvaskit uniquement) :
-rm -rf flutter/canvaskit/skwasm* flutter/canvaskit/wimp* \
-  flutter/canvaskit/*webparagraph* flutter/canvaskit/*.symbols \
-  flutter/canvaskit/chromium/*.symbols flutter/drift_worker.dart \
-  flutter/drift_worker.js.deps flutter/drift_worker.js.map
-```
+`codemagic.yaml` à la racine : build signé + envoi TestFlight, déclenché à la
+main depuis Codemagic. Le numéro de build vient du compteur Codemagic.
 
-Si `app/web/drift_worker.dart` ou la version de drift change, recompiler le
-worker avant le build :
-`cd app && dart compile js -o web/drift_worker.js -O4 web/drift_worker.dart`
-
-## Notes web (drift/sqlite)
+## Notes web (drift/sqlite) — pour mémoire, cibles gelées
 
 - `app/web/sqlite3.wasm` doit correspondre à la version du package Dart
   `sqlite3` (source : package npm `sqlite3-web`, généré depuis le même repo).

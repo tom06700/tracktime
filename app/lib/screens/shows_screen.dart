@@ -10,7 +10,6 @@ import '../series/sync.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/glass_header.dart';
 import '../widgets/episode_card.dart';
 
 // Hauteurs fixes → calcul exact de l'offset d'ouverture sur « À voir ».
@@ -47,13 +46,8 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
     context.push('/show/$id', extra: name);
   }
 
-  void _openEpisode(
-    int showId,
-    String showName,
-    int season,
-    int episode,
-    String? poster,
-  ) {
+  void _openEpisode(int showId, String showName, int season, int episode,
+      String? poster) {
     context.push(
       '/episode/$showId/$season/$episode',
       extra: {'name': showName, 'poster': poster},
@@ -62,9 +56,7 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
 
   void _markWatched(NextUp n) {
     HapticFeedback.lightImpact();
-    ref
-        .read(databaseProvider)
-        .setEpisodeWatched(n.show.id, n.season, n.episode);
+    ref.read(databaseProvider).setEpisodeWatched(n.show.id, n.season, n.episode);
   }
 
   @override
@@ -77,37 +69,26 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
 
     return DefaultTabController(
       length: 2,
-      child: Stack(
+      child: Column(
         children: [
-          Padding(
-            padding: EdgeInsets.only(
-              top: glassHeaderInset(context, withTabs: true),
-            ),
-            child: TabBarView(
-              children: [_buildToWatch(context), _buildUpcoming(context)],
-            ),
+          const TabBar(
+            labelColor: TtColors.amber,
+            unselectedLabelColor: TtColors.dim,
+            indicatorColor: TtColors.amber,
+            indicatorSize: TabBarIndicatorSize.label,
+            labelStyle: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1),
+            tabs: [
+              Tab(text: 'À VOIR'),
+              Tab(text: 'À VENIR'),
+            ],
           ),
-          const Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: GlassHeader(
-              tabs: TabBar(
-                labelColor: TtColors.amber,
-                unselectedLabelColor: TtColors.dim,
-                indicatorColor: TtColors.amber,
-                indicatorSize: TabBarIndicatorSize.label,
-                dividerColor: Colors.transparent,
-                labelStyle: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1,
-                ),
-                tabs: [
-                  Tab(text: 'À VOIR'),
-                  Tab(text: 'À VENIR'),
-                ],
-              ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildToWatch(context),
+                _buildUpcoming(context),
+              ],
             ),
           ),
         ],
@@ -130,22 +111,17 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
         }
 
         Widget historyCard(HistoryEntry h) => EpisodeCard(
-          history: true,
-          showName: h.show.name,
-          code: h.code,
-          stillPath: h.still,
-          posterPath: h.show.poster,
-          seed: h.show.name,
-          episodeTitle: h.episodeName,
-          onTap: () => _openEpisode(
-            h.show.id,
-            h.show.name,
-            h.season,
-            h.episode,
-            h.show.poster,
-          ),
-          onShowTap: () => _openShow(h.show.id, h.show.name),
-        );
+              history: true,
+              showName: h.show.name,
+              code: h.code,
+              stillPath: h.still,
+              posterPath: h.show.poster,
+              seed: h.show.name,
+              episodeTitle: h.episodeName,
+              onTap: () => _openEpisode(
+                  h.show.id, h.show.name, h.season, h.episode, h.show.poster),
+              onShowTap: () => _openShow(h.show.id, h.show.name),
+            );
 
         final toWatchCards = [
           for (var i = 0; i < feed.toWatch.length; i++)
@@ -176,10 +152,7 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
           SliverToBoxAdapter(child: SizedBox(height: bottomNavInset(context))),
         ];
 
-        return CustomScrollView(
-          controller: _scrollController,
-          slivers: slivers,
-        );
+        return CustomScrollView(controller: _scrollController, slivers: slivers);
       },
     );
   }
@@ -225,12 +198,7 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
               episodeTitle: u.name ?? _formatDate(u.airDate),
               upcomingInDays: u.daysFrom(now),
               onTap: () => _openEpisode(
-                u.show.id,
-                u.show.name,
-                u.season,
-                u.episode,
-                u.show.poster,
-              ),
+                  u.show.id, u.show.name, u.season, u.episode, u.show.poster),
               onShowTap: () => _openShow(u.show.id, u.show.name),
             );
           },
@@ -240,18 +208,8 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
   }
 
   static const _months = [
-    'janv.',
-    'févr.',
-    'mars',
-    'avr.',
-    'mai',
-    'juin',
-    'juil.',
-    'août',
-    'sept.',
-    'oct.',
-    'nov.',
-    'déc.',
+    'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.',
+    'août', 'sept.', 'oct.', 'nov.', 'déc.'
   ];
 
   static String _formatDate(DateTime d) =>
@@ -268,12 +226,7 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
       remaining: n.remaining,
       badge: badge,
       onTap: () => _openEpisode(
-        n.show.id,
-        n.show.name,
-        n.season,
-        n.episode,
-        n.show.poster,
-      ),
+          n.show.id, n.show.name, n.season, n.episode, n.show.poster),
       onShowTap: () => _openShow(n.show.id, n.show.name),
       onMarkWatched: () => _markWatched(n),
     );

@@ -9,7 +9,6 @@ import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/glass_header.dart';
 import '../widgets/movie_card.dart';
 
 // Hauteurs fixes → calcul exact de l'offset d'ouverture sur « À voir »
@@ -58,13 +57,11 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
         content: Text('« ${m.title} » sera retiré de ta liste.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
-          ),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Annuler')),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Retirer'),
-          ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Retirer')),
         ],
       ),
     );
@@ -81,37 +78,26 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
 
     return DefaultTabController(
       length: 2,
-      child: Stack(
+      child: Column(
         children: [
-          Padding(
-            padding: EdgeInsets.only(
-              top: glassHeaderInset(context, withTabs: true),
-            ),
-            child: TabBarView(
-              children: [_buildToWatch(context), _buildUpcoming(context)],
-            ),
+          const TabBar(
+            labelColor: TtColors.amber,
+            unselectedLabelColor: TtColors.dim,
+            indicatorColor: TtColors.amber,
+            indicatorSize: TabBarIndicatorSize.label,
+            labelStyle: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1),
+            tabs: [
+              Tab(text: 'À VOIR'),
+              Tab(text: 'À VENIR'),
+            ],
           ),
-          const Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: GlassHeader(
-              tabs: TabBar(
-                labelColor: TtColors.amber,
-                unselectedLabelColor: TtColors.dim,
-                indicatorColor: TtColors.amber,
-                indicatorSize: TabBarIndicatorSize.label,
-                dividerColor: Colors.transparent,
-                labelStyle: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1,
-                ),
-                tabs: [
-                  Tab(text: 'À VOIR'),
-                  Tab(text: 'À VENIR'),
-                ],
-              ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildToWatch(context),
+                _buildUpcoming(context),
+              ],
             ),
           ),
         ],
@@ -139,9 +125,8 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
         ];
         final staleCards = [for (final m in feed.stale) _card(m)];
         // Historique inversé : le plus récent en bas, collé au « À voir ».
-        final historyCards = feed.history.reversed
-            .map((m) => _card(m, history: true))
-            .toList();
+        final historyCards =
+            feed.history.reversed.map((m) => _card(m, history: true)).toList();
 
         // Ouverture calée sur « À voir » : on saute la hauteur (exacte, car
         // hauteurs fixes) de la section Historique, une seule fois, quand elle
@@ -155,17 +140,15 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
         }
 
         final slivers = <Widget>[
-          if (historyCards.isNotEmpty) _section('Films vus', historyCards),
+          if (historyCards.isNotEmpty)
+            _section('Films vus', historyCards),
           if (toWatchCards.isNotEmpty) _section('À voir', toWatchCards),
           if (staleCards.isNotEmpty)
             _section('Dans ta liste depuis longtemps', staleCards),
           SliverToBoxAdapter(child: SizedBox(height: bottomNavInset(context))),
         ];
 
-        return CustomScrollView(
-          controller: _scrollController,
-          slivers: slivers,
-        );
+        return CustomScrollView(controller: _scrollController, slivers: slivers);
       },
     );
   }

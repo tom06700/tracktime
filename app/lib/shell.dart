@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import 'screens/explorer_screen.dart';
 import 'screens/movies_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/shows_screen.dart';
+import 'theme.dart';
 import 'widgets/liquid_glass_nav_bar.dart';
 import 'widgets/nitrate_icons.dart';
 
@@ -34,11 +36,33 @@ class _HomeShellState extends State<HomeShell> {
       ExplorerScreen(),
       ProfileScreen(),
     ];
-    // Aucune barre ici : chaque page pose son propre bandeau flottant
-    // (GlassHeader), qui loge au besoin ses onglets. Le Profil, lui, est
-    // immersif et n'a qu'un bouton Réglages flottant sur son décor.
+    // Le Profil est une page immersive plein écran (le décor « cinéma »
+    // occupe jusqu'à la safe area) : pas de barre — elle porterait un titre
+    // qui chevaucherait le contenu au défilement. Elle a son propre bouton
+    // Réglages flottant. Les autres onglets gardent la barre « Nitrate ».
+    final immersive = _tab == 3;
     return Scaffold(
       extendBody: true,
+      appBar: immersive
+          ? null
+          : AppBar(
+              title: const Text(
+                'NITRATE',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 4,
+                  color: TtColors.amber,
+                ),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: 'Réglages',
+                  onPressed: () => context.push('/settings'),
+                ),
+              ],
+            ),
       // TickerMode : gèle les animations des onglets cachés (ex. le fond
       // vivant du Profil), l'IndexedStack gardant leur état.
       body: IndexedStack(
