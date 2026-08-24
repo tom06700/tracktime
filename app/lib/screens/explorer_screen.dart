@@ -9,6 +9,7 @@ import '../theme.dart';
 import '../tmdb/add.dart';
 import '../tmdb/tvdb.dart';
 import '../widgets/common.dart';
+import '../widgets/glass_header.dart';
 
 /// Onglet Explorer : recherche TheTVDB (séries et films) + résultats.
 /// Conçu comme corps d'onglet (pas de Scaffold ni d'AppBar propre).
@@ -78,38 +79,44 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: TextField(
-            controller: _controller,
-            autocorrect: false,
-            textInputAction: TextInputAction.search,
-            onChanged: _onChanged,
-            onSubmitted: _search,
-            decoration: InputDecoration(
-              hintText: 'Chercher une série ou un film…',
-              prefixIcon: const Icon(Icons.search, color: TtColors.dim),
-              suffixIcon: _controller.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.close, color: TtColors.dim),
-                      onPressed: () {
-                        _controller.clear();
-                        _search('');
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: TtColors.surface,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
+        Column(
+          children: [
+            SizedBox(height: glassHeaderInset(context)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: TextField(
+                controller: _controller,
+                autocorrect: false,
+                textInputAction: TextInputAction.search,
+                onChanged: _onChanged,
+                onSubmitted: _search,
+                decoration: InputDecoration(
+                  hintText: 'Chercher une série ou un film…',
+                  prefixIcon: const Icon(Icons.search, color: TtColors.dim),
+                  suffixIcon: _controller.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.close, color: TtColors.dim),
+                          onPressed: () {
+                            _controller.clear();
+                            _search('');
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: TtColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
             ),
-          ),
+            Expanded(child: _buildResults()),
+          ],
         ),
-        Expanded(child: _buildResults()),
+        const Positioned(top: 0, left: 0, right: 0, child: GlassHeader()),
       ],
     );
   }
@@ -128,7 +135,10 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
       );
     }
     if (_results.isEmpty) {
-      return const EmptyState(icon: Icons.search_off, message: 'Aucun résultat.');
+      return const EmptyState(
+        icon: Icons.search_off,
+        message: 'Aucun résultat.',
+      );
     }
     return ListView.builder(
       padding: EdgeInsets.only(bottom: bottomNavInset(context)),
@@ -161,7 +171,8 @@ class _ResultCardState extends ConsumerState<_ResultCard> {
 
     final shows = ref.watch(showsProvider).value ?? const [];
     final movies = ref.watch(moviesProvider).value ?? const [];
-    final already = id != null &&
+    final already =
+        id != null &&
         (isTv
             ? shows.any((s) => s.show.id == id)
             : movies.any((m) => m.id == id));
@@ -182,11 +193,15 @@ class _ResultCardState extends ConsumerState<_ResultCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w700)),
+                  Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 3),
                   Text(
                     '${isTv ? 'Série' : 'Film'}${year.isNotEmpty ? ' · $year' : ''}',
@@ -202,9 +217,10 @@ class _ResultCardState extends ConsumerState<_ResultCard> {
               const Icon(Icons.check_circle, color: TtColors.teal)
             else if (_busy)
               const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2))
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
             else
               IconButton.filled(
                 icon: const Icon(Icons.add),
@@ -232,8 +248,7 @@ class _ResultCardState extends ConsumerState<_ResultCard> {
       );
     } on TvdbException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('$e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
