@@ -7,7 +7,6 @@ import 'screens/profile_screen.dart';
 import 'screens/shows_screen.dart';
 import 'theme.dart';
 import 'widgets/liquid_glass_nav_bar.dart';
-import 'widgets/nitrate_icons.dart';
 
 /// Coquille principale : 4 onglets (Séries · Films · Explorer · Profil) dans
 /// un IndexedStack, avec la nav bar « liquid glass » flottante.
@@ -22,10 +21,15 @@ class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
 
   static const _navItems = [
-    NavItem(icon: NitrateIcon.reel, label: 'Séries'),
-    NavItem(icon: NitrateIcon.clapper, label: 'Films'),
-    NavItem(icon: NitrateIcon.lens, label: 'Explorer'),
-    NavItem(icon: NitrateIcon.portrait, label: 'Profil'),
+    NavItem(icon: Icons.tv_outlined, activeIcon: Icons.tv, label: 'Séries'),
+    NavItem(
+        icon: Icons.movie_outlined, activeIcon: Icons.movie, label: 'Films'),
+    NavItem(
+        icon: Icons.travel_explore_outlined,
+        activeIcon: Icons.travel_explore,
+        label: 'Explorer'),
+    NavItem(
+        icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profil'),
   ];
 
   @override

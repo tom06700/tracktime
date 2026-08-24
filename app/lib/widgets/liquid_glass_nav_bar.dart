@@ -3,12 +3,13 @@ import 'package:flutter/services.dart';
 
 import '../theme.dart';
 import 'glass.dart';
-import 'nitrate_icons.dart';
 
 class NavItem {
-  const NavItem({required this.icon, required this.label});
+  const NavItem(
+      {required this.icon, required this.activeIcon, required this.label});
 
-  final NitrateIcon icon;
+  final IconData icon;
+  final IconData activeIcon;
   final String label;
 }
 
@@ -87,15 +88,43 @@ class _NavButton extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          AnimatedScale(
-            scale: selected ? 1.08 : 1.0,
+          AnimatedContainer(
             duration: const Duration(milliseconds: 260),
-            curve: Curves.easeOutBack,
-            child: NitrateIconView(
-              item.icon,
-              color: color,
-              size: 23,
-              active: selected,
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 4),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(15),
+              gradient: selected
+                  ? LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        TtColors.amber.withValues(alpha: 0.26),
+                        TtColors.amber.withValues(alpha: 0.12),
+                      ],
+                    )
+                  : null,
+              border: selected
+                  ? Border.all(
+                      color: TtColors.amber.withValues(alpha: 0.22), width: 1)
+                  : Border.all(color: Colors.transparent, width: 1),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: TtColors.amber.withValues(alpha: 0.28),
+                        blurRadius: 14,
+                        spreadRadius: -3,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: AnimatedScale(
+              scale: selected ? 1.06 : 1.0,
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutBack,
+              child: Icon(selected ? item.activeIcon : item.icon,
+                  size: 22, color: color),
             ),
           ),
           const SizedBox(height: 3),
@@ -108,17 +137,6 @@ class _NavButton extends StatelessWidget {
               letterSpacing: 0.1,
             ),
             child: Text(item.label),
-          ),
-          const SizedBox(height: 4),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 260),
-            curve: Curves.easeOutCubic,
-            height: 3,
-            width: selected ? 3 : 0,
-            decoration: BoxDecoration(
-              color: TtColors.amber,
-              borderRadius: BorderRadius.circular(2),
-            ),
           ),
         ],
       ),
