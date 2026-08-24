@@ -4,7 +4,11 @@
 #  1. App Store Connect : fiche créée avec le bundle id com.thomasgomez.tracktime
 #  2. Codemagic > Teams > Integrations > Apple Developer Portal : clé API
 #     « chez-nous-asc » (partagée avec l'autre app du compte).
-#  3. Lancer à la main (Start new build) : pas de déclenchement automatique,
+#  3. Variable d'environnement CERTIFICATE_PRIVATE_KEY (sécurisée, groupe
+#     « appstore ») : clé privée RSA du certificat de distribution. Réutiliser
+#     celle de l'autre app du compte évite de créer un second certificat
+#     (Apple en limite le nombre).
+#  4. Lancer à la main (Start new build) : pas de déclenchement automatique,
 #     les pushs sur main servent au déploiement Vercel.
 #
 # Signature : faite explicitement dans les scripts plutôt que via le bloc
@@ -26,6 +30,14 @@ workflows:
       app_store_connect: chez-nous-asc
 
     environment:
+      groups:
+        # Doit contenir CERTIFICATE_PRIVATE_KEY : la clé privée RSA à laquelle
+        # le certificat de distribution iOS est rattaché. Sans elle, la CLI
+        # trouve bien les certificats du compte mais ne peut pas les
+        # enregistrer (« Cannot save Signing Certificates without certificate
+        # private key ») — la clé privée d'un certificat ne quitte jamais la
+        # machine qui l'a généré.
+        - appstore
       flutter: stable
       xcode: latest
       cocoapods: default
@@ -52,6 +64,7 @@ workflows:
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --strict-match-identifier \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
             --create
 
       - name: Ajouter le certificat au trousseau
