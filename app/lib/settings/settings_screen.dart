@@ -70,7 +70,7 @@ class SettingsScreen extends ConsumerWidget {
                   style:
                       TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
               subtitle: const Text(
-                  'Backup TrackTime (JSON) ou export TV Time (CSV/JSON)',
+                  'Sauvegarde JSON ou export TV Time (CSV/JSON)',
                   style: TextStyle(fontSize: 12.5, color: TtColors.dim)),
               trailing: const Icon(Icons.chevron_right, color: TtColors.dim),
               onTap: () => context.push('/import'),
@@ -116,10 +116,10 @@ class SettingsScreen extends ConsumerWidget {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Text(
-              'TrackTime — 100 % local, aucun compte, aucune donnée envoyée '
+              'Nitrate — 100 % local, aucun compte, aucune donnée envoyée '
               'ailleurs que TheTVDB (métadonnées).\n\n'
               'Metadata provided by TheTVDB. Please consider adding missing '
-              'information or subscribing. TrackTime n\'est ni approuvé ni '
+              'information or subscribing. Nitrate n\'est ni approuvé ni '
               'certifié par TheTVDB.',
               style:
                   TextStyle(fontSize: 13, color: TtColors.dim, height: 1.6),

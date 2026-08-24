@@ -5,16 +5,16 @@ import 'router.dart';
 import 'theme.dart';
 
 void main() {
-  runApp(const ProviderScope(child: TrackTimeApp()));
+  runApp(const ProviderScope(child: NitrateApp()));
 }
 
-class TrackTimeApp extends StatelessWidget {
-  const TrackTimeApp({super.key});
+class NitrateApp extends StatelessWidget {
+  const NitrateApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'TrackTime',
+      title: 'Nitrate',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       routerConfig: router,

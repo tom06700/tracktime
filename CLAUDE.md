@@ -1,13 +1,14 @@
-# TrackTime
+# Nitrate
 
-Suivi de séries/films, 100 % local, métadonnées TMDB. Déployé sur Vercel
+Suivi de séries/films, 100 % local, métadonnées TheTVDB. Déployé sur Vercel
 (statique, déploiement auto à chaque push sur `main` — le propriétaire veut
 des pushs directs sur `main`, sans PR).
 
 ## Layout
 
 - `index.html` — version web historique (vanilla JS + localStorage), servie à
-  la racine du site. Ne pas casser : c'est l'app en production.
+  la racine du site, encore sous l'ancien nom TrackTime. Ne pas casser :
+  c'est l'app en production.
 - `app/` — application Flutter (iOS/Android, cible stores). Source de vérité
   pour la suite du développement.
 - `flutter/` — build web de l'app Flutter (artefacts commités), servi sur

@@ -73,6 +73,6 @@ Future<void> exportBackup(AppDatabase db,
   await SharePlus.instance.share(ShareParams(
     files: [file],
     fileNameOverrides: [name],
-    subject: 'Sauvegarde TrackTime',
+    subject: 'Sauvegarde Nitrate',
   ));
 }

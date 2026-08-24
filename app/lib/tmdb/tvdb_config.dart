@@ -1,5 +1,5 @@
 /// Clé projet TheTVDB (v4) embarquée dans l'app : tous les utilisateurs
-/// passent par cette même clé fournie avec TrackTime (aucune saisie requise).
+/// passent par cette même clé fournie avec Nitrate (aucune saisie requise).
 ///
 /// C'est le modèle « clé projet » de TheTVDB (elle vit côté client). Elle est
 /// donc publiquement lisible dans le build — la régénérer sur le dashboard

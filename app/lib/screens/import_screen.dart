@@ -134,7 +134,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                         TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
                 const Text(
-                  'Sélectionne un backup TrackTime (JSON, restauré '
+                  'Sélectionne une sauvegarde (JSON, restaurée '
                   'immédiatement) ou les fichiers de ton export TV Time '
                   '(CSV/JSON, mis en correspondance via TheTVDB).',
                   style: TextStyle(

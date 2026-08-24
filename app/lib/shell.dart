@@ -43,18 +43,22 @@ class _HomeShellState extends State<HomeShell> {
     // Le Profil est une page immersive plein écran (le décor « cinéma »
     // occupe jusqu'à la safe area) : pas de barre — elle porterait un titre
     // qui chevaucherait le contenu au défilement. Elle a son propre bouton
-    // Réglages flottant. Les autres onglets gardent la barre « TrackTime ».
+    // Réglages flottant. Les autres onglets gardent la barre « Nitrate ».
     final immersive = _tab == 3;
     return Scaffold(
       extendBody: true,
       appBar: immersive
           ? null
           : AppBar(
-              title: const Text.rich(TextSpan(children: [
-                TextSpan(text: 'Track'),
-                TextSpan(
-                    text: 'Time', style: TextStyle(color: TtColors.amber)),
-              ])),
+              title: const Text(
+                'NITRATE',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 4,
+                  color: TtColors.amber,
+                ),
+              ),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.settings_outlined),

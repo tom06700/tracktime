@@ -16,7 +16,7 @@ void main() {
 
     await tester.pumpWidget(ProviderScope(
       overrides: [databaseProvider.overrideWithValue(db)],
-      child: const TrackTimeApp(),
+      child: const NitrateApp(),
     ));
     await tester.pumpAndSettle();
 

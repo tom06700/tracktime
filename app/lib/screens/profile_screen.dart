@@ -238,9 +238,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         const Padding(
           padding: EdgeInsets.fromLTRB(22, 18, 22, 8),
           child: Text(
-            'TrackTime — 100 % local, aucun compte, aucune donnée envoyée '
+            'Nitrate — 100 % local, aucun compte, aucune donnée envoyée '
             'ailleurs que TheTVDB (métadonnées).\n\n'
-            'Metadata provided by TheTVDB.com — TrackTime n\'est ni approuvé '
+            'Metadata provided by TheTVDB.com — Nitrate n\'est ni approuvé '
             'ni certifié par TheTVDB.',
             style: TextStyle(fontSize: 12, color: TtColors.dim, height: 1.6),
           ),
@@ -599,7 +599,7 @@ class _DataCard extends StatelessWidget {
           _ActionTile(
             icon: Icons.download_outlined,
             title: 'Importer / restaurer',
-            subtitle: 'Backup TrackTime ou export TV Time',
+            subtitle: 'Sauvegarde ou export TV Time',
             onTap: () => context.push('/import'),
           ),
           const _TileDivider(),
