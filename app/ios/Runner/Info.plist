@@ -49,6 +49,12 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Nitrate n'ouvre votre photothèque que si vous y sélectionnez vous-même un fichier lors de l'import d'une sauvegarde.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Nitrate ne prend aucune photo. Cette mention est exigée par le sélecteur de fichiers du système.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Nitrate n'utilise pas votre position. Cette mention est exigée par une bibliothèque du système.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>UILaunchStoryboardName</key>
