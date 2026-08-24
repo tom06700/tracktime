@@ -4,18 +4,14 @@
 #  1. App Store Connect : fiche créée avec le bundle id com.thomasgomez.tracktime
 #  2. Codemagic > Teams > Integrations > Apple Developer Portal : clé API
 #     « chez-nous-asc » (partagée avec l'autre app du compte).
-#  3. Variable d'environnement CERTIFICATE_PRIVATE_KEY (sécurisée, groupe
-#     « appstore ») : clé privée RSA du certificat de distribution. Réutiliser
-#     celle de l'autre app du compte évite de créer un second certificat
-#     (Apple en limite le nombre).
-#  4. Lancer à la main (Start new build) : pas de déclenchement automatique,
+#  3. Codemagic > Teams > Code signing identities : le certificat de
+#     distribution iOS y est déjà, partagé entre les apps de l'équipe.
+#  4. Un profil de provisionnement App Store doit exister pour le bundle id
+#     sur developer.apple.com. `ios_signing` le RÉCUPÈRE mais ne le crée pas :
+#     sans lui, le build échoue dès la configuration de l'environnement avec
+#     « No matching profiles found ».
+#  5. Lancer à la main (Start new build) : pas de déclenchement automatique,
 #     les pushs sur main servent au déploiement Vercel.
-#
-# Signature : faite explicitement dans les scripts plutôt que via le bloc
-# déclaratif `ios_signing`. Celui-ci se contente de CHERCHER un profil déjà
-# existant et échoue à la configuration de l'environnement, avant les
-# scripts (« No matching profiles found »). `fetch-signing-files --create`
-# crée le profil et le certificat de distribution s'ils manquent.
 
 workflows:
   ios-testflight:
@@ -30,46 +26,14 @@ workflows:
       app_store_connect: chez-nous-asc
 
     environment:
-      groups:
-        # Doit contenir CERTIFICATE_PRIVATE_KEY : la clé privée RSA à laquelle
-        # le certificat de distribution iOS est rattaché. Sans elle, la CLI
-        # trouve bien les certificats du compte mais ne peut pas les
-        # enregistrer (« Cannot save Signing Certificates without certificate
-        # private key ») — la clé privée d'un certificat ne quitte jamais la
-        # machine qui l'a généré.
-        - appstore
       flutter: stable
       xcode: latest
       cocoapods: default
-      vars:
-        BUNDLE_ID: com.thomasgomez.tracktime
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.thomasgomez.tracktime
 
     scripts:
-      - name: Diagnostic — ce que la clé API voit
-        # Non bloquant : sert à lever le doute. Une liste vide signifie que la
-        # clé appartient à une autre équipe Apple que celle où le Bundle ID
-        # est enregistré.
-        script: |
-          echo "── Bundle IDs visibles pour cette clé ──"
-          app-store-connect bundle-ids list \
-            --bundle-id-identifier "$BUNDLE_ID" \
-            --strict-match-identifier || true
-        ignore_failure: true
-
-      - name: Initialiser le trousseau
-        script: keychain initialize
-
-      - name: Récupérer (ou créer) profil et certificat
-        script: |
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --strict-match-identifier \
-            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
-            --create
-
-      - name: Ajouter le certificat au trousseau
-        script: keychain add-certificates
-
       - name: Appliquer les profils de signature
         script: xcode-project use-profiles
 
