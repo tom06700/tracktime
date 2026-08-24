@@ -23,7 +23,7 @@ cd ..
 rm -rf flutter && cp -r app/build/web flutter
 # Allègement (renderer = canvaskit uniquement) :
 rm -rf flutter/canvaskit/skwasm* flutter/canvaskit/wimp* \
-  flutter/canvaskit/experimental_webparagraph flutter/canvaskit/*.symbols \
+  flutter/canvaskit/*webparagraph* flutter/canvaskit/*.symbols \
   flutter/canvaskit/chromium/*.symbols flutter/drift_worker.dart \
   flutter/drift_worker.js.deps flutter/drift_worker.js.map
 ```
