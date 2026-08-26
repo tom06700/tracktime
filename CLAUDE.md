@@ -2,40 +2,37 @@
 
 Suivi de séries/films, 100 % local, métadonnées TheTVDB.
 
-**Le développement ne porte plus que sur l'app Flutter (iOS, livrée par
-TestFlight via Codemagic).** Les deux cibles web ci-dessous sont gelées : ne
-plus les reconstruire ni les faire évoluer. Les pushs vont directement sur
-`main`, sans PR.
+**Le développement ne porte que sur l'app Flutter (iOS et Android).** Les
+pushs vont directement sur `main`, sans PR.
 
 ## Layout
 
-- `index.html` — version web historique (vanilla JS + localStorage), gelée,
-  encore sous l'ancien nom TrackTime.
-- `app/` — application Flutter (iOS/Android, cible stores). Source de vérité
-  pour la suite du développement.
-- `flutter/` — ancien build web de l'app Flutter (artefacts commités), gelé.
-  Ne plus le régénérer : la livraison passe par TestFlight.
+- `app/` — application Flutter (iOS et Android). Seul contenu du dépôt avec la
+  configuration de build.
+
+Les cibles web ont été supprimées : ancienne app vanilla à la racine, build
+Flutter commité dans `flutter/`, et dossier plateforme `app/web/`. Tout reste
+récupérable dans l'historique git si besoin.
 
 ## Livraison iOS
 
 `codemagic.yaml` à la racine : build signé + envoi TestFlight, déclenché à la
 main depuis Codemagic. Le numéro de build vient du compteur Codemagic.
 
-## Notes web (drift/sqlite) — pour mémoire, cibles gelées
-
-- `app/web/sqlite3.wasm` doit correspondre à la version du package Dart
-  `sqlite3` (source : package npm `sqlite3-web`, généré depuis le même repo).
-  Un mismatch donne `LinkError ... dispatch_xFunc` et un spinner infini.
-- CanvasKit est auto-hébergé (config dans `app/web/index.html`), pas de CDN.
+Prérequis déjà en place côté Codemagic : clé App Store Connect
+« chez-nous-asc », certificat de distribution partagé au niveau de l'équipe,
+et profil « Nitrate App Store » importé dans Code signing identities.
+`ios_signing` récupère les profils depuis ce magasin, pas depuis Apple : un
+profil créé sur developer.apple.com doit y être importé pour être vu.
 
 ## Spécificités du conteneur Claude Code (remote)
 
 - SDK Flutter : télécharger le tar.xz stable depuis
   storage.googleapis.com/flutter_infra_release, extraire dans `$HOME/flutter`.
-- github.com est bloqué par le proxy → le hook natif du package `sqlite3`
-  (téléchargement de libsqlite3) échoue avec un mismatch de hash. Pour
-  `flutter test` : vendorer le package sqlite3 (copie du pub-cache), patcher
-  `lib/src/hook/description.dart` (case null → `LookupSystem('sqlite3')`) et
-  pointer dessus via `app/pubspec_overrides.yaml` (gitignoré). IMPORTANT :
-  retirer l'override + `flutter pub get` avant tout commit, sinon
-  `pubspec.lock` référence un chemin local.
+- `flutter test` passe tel quel depuis Flutter 3.47 : le contournement qu'on
+  documentait ici (vendorer le package `sqlite3` via `pubspec_overrides.yaml`
+  parce que son hook natif échouait, github.com étant bloqué par le proxy)
+  n'est plus nécessaire. S'il le redevenait, ne jamais commiter l'override :
+  `pubspec.lock` référencerait un chemin local.
+- Pas de simulateur iOS ici (conteneur Linux). Pour un contrôle visuel, passer
+  par des tests golden plutôt que par un build web, désormais supprimé.

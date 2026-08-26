@@ -8,9 +8,8 @@ import 'screens/show_detail_screen.dart';
 import 'settings/settings_screen.dart';
 import 'shell.dart';
 
-/// Navigation par routes (go_router) : synchronise la pile Flutter avec
-/// l'historique du navigateur, pour que le geste de retour (web/PWA) et la
-/// touche retour dépilent correctement les écrans au lieu de sortir de l'app.
+/// Navigation par routes (go_router) : le geste de retour iOS et la touche
+/// retour Android dépilent correctement les écrans au lieu de sortir de l'app.
 ///
 /// Routes de PREMIER NIVEAU (pas imbriquées) : `context.push` empile alors une
 /// seule page au-dessus de la coquille, d'où une seule animation de retour.

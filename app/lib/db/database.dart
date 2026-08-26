@@ -144,14 +144,7 @@ class AppDatabase extends _$AppDatabase {
       );
 
   static QueryExecutor _openConnection() {
-    return driftDatabase(
-      name: 'tracktime',
-      // Sur le web : binaires servis à côté de l'app (résolus via <base href>).
-      web: DriftWebOptions(
-        sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-        driftWorker: Uri.parse('drift_worker.js'),
-      ),
-    );
+    return driftDatabase(name: 'tracktime');
   }
 
   // ---- Séries ----
