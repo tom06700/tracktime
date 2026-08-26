@@ -3,8 +3,12 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:tracktime/db/database.dart';
 import 'package:tracktime/providers.dart';
+import 'package:tracktime/settings/prefs.dart';
+import 'package:tracktime/tmdb/tvdb.dart';
 import 'package:tracktime/screens/shows_screen.dart';
 import 'package:tracktime/series/feed.dart';
 import 'package:tracktime/theme.dart';
@@ -39,7 +43,10 @@ Future<AppDatabase> _pump(WidgetTester tester, {bool seed = true}) async {
 
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [databaseProvider.overrideWithValue(db)],
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        tvdbClientProvider.overrideWithValue(_silentTvdb()),
+      ],
       child: MaterialApp(
         theme: buildTheme(),
         home: const Scaffold(body: ShowsScreen()),
@@ -58,6 +65,15 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump(const Duration(seconds: 1));
 }
+
+/// Client TheTVDB muet : les écrans déclenchent une synchro au montage, et son
+/// échec réseau lèverait une erreur asynchrone non gérée en plein test.
+TvdbClient _silentTvdb() => TvdbClient(
+  'test',
+  client: MockClient(
+    (_) async => http.Response('{"data":{"token":"t"},"status":"success"}', 200),
+  ),
+);
 
 void main() {
   testWidgets('une liste vide propose d\'aller explorer', (tester) async {

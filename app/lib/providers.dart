@@ -6,6 +6,7 @@ import 'movies/feed.dart';
 import 'profile/profile.dart';
 import 'profile/universe.dart';
 import 'series/feed.dart';
+import 'settings/prefs.dart';
 
 /// Onglet courant de la coquille. Porté par un provider plutôt que par l'état
 /// local du Shell, pour qu'un écran enfant puisse demander l'ouverture d'un
@@ -81,6 +82,28 @@ final seriesFeedProvider = Provider<AsyncValue<SeriesFeed>>((ref) {
     return feed;
   });
 });
+
+/// Séries et films les mieux notés de TheTVDB, pour l'écran de découverte.
+/// Chargés une fois puis conservés tant que l'onglet vit : la coquille garde
+/// Explorer monté, donc aucun rappel réseau au changement d'onglet.
+final popularSeriesProvider = FutureProvider<List<Map<String, dynamic>>>(
+    (ref) async =>
+        (await ref.watch(tvdbClientProvider).mostPopular(movies: false))
+            .take(20)
+            .toList());
+
+final popularMoviesProvider = FutureProvider<List<Map<String, dynamic>>>(
+    (ref) async =>
+        (await ref.watch(tvdbClientProvider).mostPopular(movies: true))
+            .take(20)
+            .toList());
+
+/// Films dont la sortie est annoncée.
+final upcomingReleasesProvider = FutureProvider<List<Map<String, dynamic>>>(
+    (ref) async =>
+        (await ref.watch(tvdbClientProvider).upcomingReleases())
+            .take(20)
+            .toList());
 
 /// Historique complet des épisodes vus, du plus récent au plus ancien.
 final watchHistoryProvider = Provider<AsyncValue<List<WatchedEntry>>>((ref) {

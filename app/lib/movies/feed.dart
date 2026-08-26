@@ -53,10 +53,9 @@ MovieFeed buildMovieFeed({
     ..sort((a, b) => b.watchedAt!.compareTo(a.watchedAt!));
 
   // ---- À voir : watchlist déjà sortie, ajout récent d'abord ----
-  final watchlist = movies
-      .where((m) => m.watchedAt == null && _released(m, now))
-      .toList()
-    ..sort((a, b) => b.addedAt.compareTo(a.addedAt));
+  final watchlist =
+      movies.where((m) => m.watchedAt == null && _released(m, now)).toList()
+        ..sort((a, b) => b.addedAt.compareTo(a.addedAt));
 
   final threshold = now.subtract(staleAfter);
   final toWatch = <Movie>[];
@@ -85,4 +84,41 @@ List<UpcomingMovie> buildUpcomingMovies({
         UpcomingMovie(movie: m, releaseDate: m.releaseDate!),
   ]..sort((a, b) => a.releaseDate.compareTo(b.releaseDate));
   return list;
+}
+
+/// Sorties regroupées par mois, du plus proche au plus lointain. Le cinéma se
+/// pense en mois de sortie, là où les séries se pensent en jours.
+List<({DateTime month, String label, List<UpcomingMovie> movies})>
+groupReleasesByMonth(List<UpcomingMovie> list) {
+  const months = [
+    'janvier',
+    'février',
+    'mars',
+    'avril',
+    'mai',
+    'juin',
+    'juillet',
+    'août',
+    'septembre',
+    'octobre',
+    'novembre',
+    'décembre',
+  ];
+
+  final byMonth = <DateTime, List<UpcomingMovie>>{};
+  for (final u in list) {
+    final key = DateTime(u.releaseDate.year, u.releaseDate.month);
+    (byMonth[key] ??= []).add(u);
+  }
+
+  final keys = byMonth.keys.toList()..sort();
+  return [
+    for (final k in keys)
+      (
+        month: k,
+        label: '${months[k.month - 1]} ${k.year}',
+        movies: byMonth[k]!
+          ..sort((a, b) => a.releaseDate.compareTo(b.releaseDate)),
+      ),
+  ];
 }

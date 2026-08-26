@@ -99,6 +99,34 @@ class TvdbClient {
         .toList();
   }
 
+  /// Séries ou films les mieux notés, pour l'écran de découverte.
+  ///
+  /// TheTVDB v4 n'expose ni tendances ni nouveautés : `/{type}/filter` trié
+  /// sur le score est le seul signal de popularité disponible. Le sens du tri
+  /// doit être passé en minuscules — `sortType=DESC` est silencieusement
+  /// ignoré et renvoie les fiches vides, sans image ni score.
+  Future<List<Map<String, dynamic>>> mostPopular({required bool movies}) =>
+      _filter(movies: movies, sort: 'score');
+
+  /// Films dont la sortie est annoncée, du plus lointain au plus proche.
+  Future<List<Map<String, dynamic>>> upcomingReleases() =>
+      _filter(movies: true, sort: 'firstAired');
+
+  Future<List<Map<String, dynamic>>> _filter({
+    required bool movies,
+    required String sort,
+  }) async {
+    final j = await _get('/${movies ? 'movies' : 'series'}/filter', {
+      'sort': sort,
+      'sortType': 'desc',
+    });
+    return ((j['data'] as List?) ?? const [])
+        .whereType<Map<String, dynamic>>()
+        // Sans affiche, une carte de découverte n'a aucun intérêt.
+        .where((e) => (e['image'] as String?)?.isNotEmpty ?? false)
+        .toList();
+  }
+
   /// Détails étendus d'une série (saisons, genres, artworks, network…).
   Future<Map<String, dynamic>> seriesExtended(int id) async {
     final j = await _get('/series/$id/extended');
