@@ -21,10 +21,26 @@ import '../theme.dart';
 List<double> _saturationMatrix(double s) {
   const lr = 0.2126, lg = 0.7152, lb = 0.0722;
   return <double>[
-    lr * (1 - s) + s, lg * (1 - s), lb * (1 - s), 0, 0,
-    lr * (1 - s), lg * (1 - s) + s, lb * (1 - s), 0, 0,
-    lr * (1 - s), lg * (1 - s), lb * (1 - s) + s, 0, 0,
-    0, 0, 0, 1, 0,
+    lr * (1 - s) + s,
+    lg * (1 - s),
+    lb * (1 - s),
+    0,
+    0,
+    lr * (1 - s),
+    lg * (1 - s) + s,
+    lb * (1 - s),
+    0,
+    0,
+    lr * (1 - s),
+    lg * (1 - s),
+    lb * (1 - s) + s,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
   ];
 }
 
@@ -32,7 +48,10 @@ List<double> _saturationMatrix(double s) {
 ui.ImageFilter _glassBackdrop(double sigma, {double saturation = 1.5}) {
   return ui.ImageFilter.compose(
     outer: ui.ImageFilter.blur(
-        sigmaX: sigma, sigmaY: sigma, tileMode: TileMode.mirror),
+      sigmaX: sigma,
+      sigmaY: sigma,
+      tileMode: TileMode.mirror,
+    ),
     inner: ColorFilter.matrix(_saturationMatrix(saturation)),
   );
 }
@@ -42,10 +61,19 @@ ui.ImageFilter _glassBackdrop(double sigma, {double saturation = 1.5}) {
 /// bord. Tout est peint (pas de second BackdropFilter : CanvasKit applique
 /// les filtres de fond au rectangle englobant, ce qui flouterait le contenu).
 class _GlassEdgePainter extends CustomPainter {
-  const _GlassEdgePainter({required this.radius, this.lensing = false});
+  const _GlassEdgePainter({
+    required this.radius,
+    this.lensing = false,
+    this.edgeOpacity = 1,
+  });
 
   final double radius;
   final bool lensing;
+
+  /// Facteur appliqué à l'arête spéculaire. En dessous de 1, le contour
+  /// s'efface : utile là où la bordure ne doit que suggérer le verre au lieu
+  /// d'être l'élément le plus lumineux de l'écran.
+  final double edgeOpacity;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -59,10 +87,10 @@ class _GlassEdgePainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          Colors.white.withValues(alpha: 0.55),
-          Colors.white.withValues(alpha: 0.08),
-          Colors.white.withValues(alpha: 0.04),
-          Colors.white.withValues(alpha: 0.30),
+          Colors.white.withValues(alpha: 0.55 * edgeOpacity),
+          Colors.white.withValues(alpha: 0.08 * edgeOpacity),
+          Colors.white.withValues(alpha: 0.04 * edgeOpacity),
+          Colors.white.withValues(alpha: 0.30 * edgeOpacity),
         ],
         stops: const [0.0, 0.35, 0.75, 1.0],
       ).createShader(rect);
@@ -96,7 +124,9 @@ class _GlassEdgePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GlassEdgePainter old) =>
-      old.radius != radius || old.lensing != lensing;
+      old.radius != radius ||
+      old.lensing != lensing ||
+      old.edgeOpacity != edgeOpacity;
 }
 
 class GlassSurface extends StatelessWidget {
@@ -107,6 +137,7 @@ class GlassSurface extends StatelessWidget {
     this.blurSigma = 12,
     this.tintOpacity = 0.38,
     this.lensing = false,
+    this.edgeOpacity = 1,
     this.padding = EdgeInsets.zero,
   });
 
@@ -120,6 +151,9 @@ class GlassSurface extends StatelessWidget {
   /// Active l'anneau de réfraction sur le pourtour (réserver à la surface
   /// primaire de la vue, ex. nav bar).
   final bool lensing;
+
+  /// Atténue l'arête spéculaire (1 = pleine intensité).
+  final double edgeOpacity;
 
   final EdgeInsetsGeometry padding;
 
@@ -180,8 +214,11 @@ class GlassSurface extends StatelessWidget {
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(
-              painter:
-                  _GlassEdgePainter(radius: borderRadius, lensing: lensing),
+              painter: _GlassEdgePainter(
+                radius: borderRadius,
+                lensing: lensing,
+                edgeOpacity: edgeOpacity,
+              ),
             ),
           ),
         ),
@@ -193,12 +230,25 @@ class GlassSurface extends StatelessWidget {
 /// Enveloppe d'ombre portée à placer AUTOUR d'une GlassSurface (l'ombre ne
 /// peut pas vivre dans la surface : elle serait floutée par le backdrop).
 class GlassShadow extends StatelessWidget {
-  const GlassShadow(
-      {super.key, required this.child, this.borderRadius = 24, this.glow});
+  const GlassShadow({
+    super.key,
+    required this.child,
+    this.borderRadius = 24,
+    this.glow,
+    this.blurRadius = 30,
+    this.opacity = 0.38,
+    this.offset = const Offset(0, 10),
+  });
 
   final Widget child;
   final double borderRadius;
   final Color? glow;
+
+  /// Portée de l'ombre. À réduire pour une surface qui doit flotter
+  /// discrètement plutôt que se détacher franchement du fond.
+  final double blurRadius;
+  final double opacity;
+  final Offset offset;
 
   @override
   Widget build(BuildContext context) {
@@ -207,9 +257,9 @@ class GlassShadow extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.38),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: opacity),
+            blurRadius: blurRadius,
+            offset: offset,
           ),
           if (glow != null)
             BoxShadow(
@@ -226,8 +276,12 @@ class GlassShadow extends StatelessWidget {
 
 /// Bouton « verre » neutre (frosté).
 class GlassButton extends StatefulWidget {
-  const GlassButton(
-      {super.key, required this.onPressed, required this.child, this.icon});
+  const GlassButton({
+    super.key,
+    required this.onPressed,
+    required this.child,
+    this.icon,
+  });
 
   final VoidCallback? onPressed;
   final Widget child;
@@ -266,7 +320,10 @@ class _GlassButtonState extends State<GlassButton> {
             border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
           ),
           child: _ButtonLabel(
-              icon: widget.icon, color: TtColors.text, child: widget.child),
+            icon: widget.icon,
+            color: TtColors.text,
+            child: widget.child,
+          ),
         ),
       ),
     );
@@ -300,8 +357,9 @@ class _ProminentGlassButtonState extends State<ProminentGlassButton> {
   Widget build(BuildContext context) {
     final enabled = widget.onPressed != null;
     final tint = widget.color ?? TtColors.amber;
-    final onTint =
-        tint.computeLuminance() > 0.5 ? const Color(0xFF1A1405) : Colors.white;
+    final onTint = tint.computeLuminance() > 0.5
+        ? const Color(0xFF1A1405)
+        : Colors.white;
     final top = Color.lerp(tint, Colors.white, 0.22)!;
     final bottom = Color.lerp(tint, Colors.black, 0.18)!;
 
@@ -342,10 +400,15 @@ class _ProminentGlassButtonState extends State<ProminentGlassButton> {
                 stops: const [0.0, 0.5, 1.0],
               ),
               border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.35), width: 1),
+                color: Colors.white.withValues(alpha: 0.35),
+                width: 1,
+              ),
             ),
             child: _ButtonLabel(
-                icon: widget.icon, color: onTint, child: widget.child),
+              icon: widget.icon,
+              color: onTint,
+              child: widget.child,
+            ),
           ),
         ),
       ),
@@ -364,10 +427,11 @@ class _ButtonLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = DefaultTextStyle.merge(
       style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.2,
-          color: color),
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.2,
+        color: color,
+      ),
       child: child,
     );
     if (icon == null) return Center(widthFactor: 1, child: text);
