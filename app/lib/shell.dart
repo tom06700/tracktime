@@ -6,10 +6,10 @@ import 'screens/movies_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/shows_screen.dart';
 import 'theme.dart';
-import 'widgets/liquid_glass_nav_bar.dart';
+import 'widgets/nav_bar.dart';
 
 /// Coquille principale : 4 onglets (Séries · Films · Explorer · Profil) dans
-/// un IndexedStack, avec la nav bar « liquid glass » flottante.
+/// un IndexedStack, surmontant le socle de navigation.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -17,50 +17,14 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell>
-    with SingleTickerProviderStateMixin {
+class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
 
-  /// Fondu joué à chaque bascule d'onglet. Il anime l'IndexedStack lui-même
-  /// plutôt que d'échanger ses enfants : l'état, les positions de défilement
-  /// et les contrôleurs de chaque page restent intacts.
-  late final AnimationController _switch = AnimationController(
-    vsync: this,
-    duration: kNavTransition,
-    value: 1,
-  );
-
-  @override
-  void dispose() {
-    _switch.dispose();
-    super.dispose();
-  }
-
-  void _select(int i) {
-    if (i == _tab) return;
-    setState(() => _tab = i);
-    if (!(MediaQuery.maybeDisableAnimationsOf(context) ?? false)) {
-      _switch.forward(from: 0);
-    }
-  }
-
   static const _navItems = [
-    NavItem(icon: Icons.tv_outlined, activeIcon: Icons.tv, label: 'Séries'),
-    NavItem(
-      icon: Icons.movie_outlined,
-      activeIcon: Icons.movie,
-      label: 'Films',
-    ),
-    NavItem(
-      icon: Icons.travel_explore_outlined,
-      activeIcon: Icons.travel_explore,
-      label: 'Explorer',
-    ),
-    NavItem(
-      icon: Icons.person_outline,
-      activeIcon: Icons.person,
-      label: 'Profil',
-    ),
+    NavItem(icon: Icons.tv_outlined, label: 'Séries'),
+    NavItem(icon: Icons.movie_outlined, label: 'Films'),
+    NavItem(icon: Icons.travel_explore_outlined, label: 'Explorer'),
+    NavItem(icon: Icons.person_outline, label: 'Profil'),
   ];
 
   @override
@@ -100,52 +64,22 @@ class _HomeShellState extends State<HomeShell>
             ),
       // TickerMode : gèle les animations des onglets cachés (ex. le fond
       // vivant du Profil), l'IndexedStack gardant leur état.
-      body: _SwitchFade(
-        animation: _switch,
-        child: IndexedStack(
-          index: _tab,
-          children: [
-            for (var i = 0; i < screens.length; i++)
-              TickerMode(enabled: i == _tab, child: screens[i]),
-          ],
-        ),
+      // Changement d'onglet instantané : aucune couche d'opacité ni de
+      // translation par-dessus l'IndexedStack. La version animée produisait
+      // un double mouvement — la page apparaissait d'abord telle quelle, puis
+      // l'animation repartait de zéro et la faisait remonter.
+      body: IndexedStack(
+        index: _tab,
+        children: [
+          for (var i = 0; i < screens.length; i++)
+            TickerMode(enabled: i == _tab, child: screens[i]),
+        ],
       ),
-      bottomNavigationBar: LiquidGlassNavBar(
+      bottomNavigationBar: NitrateNavBar(
         items: _navItems,
         selectedIndex: _tab,
-        onSelected: _select,
+        onSelected: (i) => setState(() => _tab = i),
       ),
-    );
-  }
-}
-
-/// Fondu + très légère montée appliqués à la page qui vient d'être affichée.
-/// Le sous-arbre n'est jamais reconstruit : seule la couche de composition
-/// change, donc l'état des écrans est préservé.
-class _SwitchFade extends StatelessWidget {
-  const _SwitchFade({required this.animation, required this.child});
-
-  final Animation<double> animation;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      // `child` passe par le paramètre dédié : il n'est pas reconstruit à
-      // chaque frame de l'animation.
-      child: child,
-      builder: (context, kid) {
-        final t = Curves.easeOutCubic.transform(animation.value);
-        if (t >= 1) return kid!;
-        return Opacity(
-          opacity: t,
-          child: Transform.translate(
-            offset: Offset(0, (1 - t) * 6),
-            child: kid,
-          ),
-        );
-      },
     );
   }
 }
