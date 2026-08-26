@@ -51,6 +51,14 @@ Future<AppDatabase> _pump(WidgetTester tester, {bool seed = true}) async {
   return db;
 }
 
+/// Démonte l'arbre puis avance l'horloge simulée : sans ça, les timers de
+/// fermeture des streams drift restent en attente et le framework de test les
+/// signale comme fuite.
+Future<void> _settle(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump(const Duration(seconds: 1));
+}
+
 void main() {
   testWidgets('une liste vide propose d\'aller explorer', (tester) async {
     late WidgetRef captured;
@@ -84,6 +92,7 @@ void main() {
 
     // Le CTA bascule l'onglet de la coquille au lieu d'empiler un écran.
     expect(captured.read(homeTabProvider), HomeTab.explorer);
+    await _settle(tester);
   });
 
   testWidgets('le prochain épisode devient le héros', (tester) async {
@@ -92,6 +101,7 @@ void main() {
     expect(find.text('Severance'), findsOneWidget);
     expect(find.textContaining('S02 | E04'), findsWidgets);
     expect(find.text('Marquer comme vu'), findsOneWidget);
+    await _settle(tester);
   });
 
   testWidgets('marquer comme vu enregistre puis passe au suivant', (
@@ -116,6 +126,7 @@ void main() {
     // Le fil se recompose : l'épisode suivant prend la place du héros.
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.textContaining('S02 | E05'), findsWidgets);
+    await _settle(tester);
   });
 
   testWidgets('l\'onglet À venir regroupe par échéance', (tester) async {
@@ -129,7 +140,9 @@ void main() {
         showId: 2,
         season: 2,
         episode: 5,
-        airDate: Value(DateTime.now().add(const Duration(days: 1, hours: 2))),
+        // 3 jours : tombe dans « Cette semaine » quelle que soit l'heure du
+        // run, là où « +1 jour » basculait de tranche selon l'heure.
+        airDate: Value(DateTime.now().add(const Duration(days: 3))),
       ),
     ]);
 
@@ -150,8 +163,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('Demain'), findsOneWidget);
+    expect(find.text('Cette semaine'), findsOneWidget);
     expect(find.text('The Last of Us'), findsOneWidget);
+    await _settle(tester);
   });
 
   group('groupUpcoming', () {
