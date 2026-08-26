@@ -7,6 +7,28 @@ import 'profile/profile.dart';
 import 'profile/universe.dart';
 import 'series/feed.dart';
 
+/// Onglet courant de la coquille. Porté par un provider plutôt que par l'état
+/// local du Shell, pour qu'un écran enfant puisse demander l'ouverture d'un
+/// autre onglet — le bouton « Explorer les séries » de l'état vide — sans
+/// empiler une seconde instance de l'écran visé.
+final homeTabProvider =
+    NotifierProvider<HomeTabNotifier, int>(HomeTabNotifier.new);
+
+class HomeTabNotifier extends Notifier<int> {
+  @override
+  int build() => HomeTab.series;
+
+  void select(int index) => state = index;
+}
+
+/// Index des onglets de la coquille, pour éviter les nombres nus.
+abstract final class HomeTab {
+  static const series = 0;
+  static const movies = 1;
+  static const explorer = 2;
+  static const profile = 3;
+}
+
 final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
   ref.onDispose(db.close);
@@ -58,6 +80,19 @@ final seriesFeedProvider = Provider<AsyncValue<SeriesFeed>>((ref) {
     );
     return feed;
   });
+});
+
+/// Historique complet des épisodes vus, du plus récent au plus ancien.
+final watchHistoryProvider = Provider<AsyncValue<List<WatchedEntry>>>((ref) {
+  final shows = ref.watch(showsProvider);
+  final episodes = ref.watch(_allEpisodesProvider);
+  final watched = ref.watch(_allWatchedProvider);
+
+  return shows.whenData((showList) => buildWatchHistory(
+        shows: showList,
+        episodes: episodes.value ?? const [],
+        watched: watched.value ?? const [],
+      ));
 });
 
 /// Épisodes à venir (prochain de chaque série suivie, du plus proche au plus

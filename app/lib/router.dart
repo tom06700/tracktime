@@ -6,6 +6,7 @@ import 'screens/import_screen.dart';
 import 'screens/series_library_screen.dart';
 import 'screens/show_detail_screen.dart';
 import 'settings/settings_screen.dart';
+import 'screens/history_screen.dart';
 import 'shell.dart';
 
 /// Navigation par routes (go_router) : le geste de retour iOS et la touche
@@ -19,6 +20,7 @@ final router = GoRouter(
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
     GoRoute(path: '/import', builder: (_, _) => const ImportPage()),
     GoRoute(path: '/series', builder: (_, _) => const SeriesLibraryScreen()),
+    GoRoute(path: '/history', builder: (_, _) => const HistoryScreen()),
     GoRoute(
       path: '/show/:id',
       builder: (context, state) {
@@ -41,8 +43,10 @@ final router = GoRouter(
           transitionDuration: const Duration(milliseconds: 320),
           reverseTransitionDuration: const Duration(milliseconds: 260),
           transitionsBuilder: (_, anim, _, child) => SlideTransition(
-            position: Tween(begin: const Offset(0, 1), end: Offset.zero).animate(
-                CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+            position: Tween(begin: const Offset(0, 1), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
+                ),
             child: child,
           ),
           child: EpisodeSheet(

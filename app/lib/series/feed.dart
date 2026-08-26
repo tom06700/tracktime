@@ -10,6 +10,7 @@ class NextUp {
     this.still,
     this.remaining,
     required this.precise,
+    this.lastActivity,
   });
 
   final Show show;
@@ -25,6 +26,10 @@ class NextUp {
   /// true si calculé à partir des métadonnées TMDB (titre/still fiables),
   /// false si estimé à partir des seules coches (fallback sans réseau).
   final bool precise;
+
+  /// Dernier visionnage sur cette série, ou son ajout si rien n'a été vu.
+  /// Sert au libellé « ça fait un moment » de la section « À reprendre ».
+  final DateTime? lastActivity;
 
   String get code =>
       'S${season.toString().padLeft(2, '0')} | E${episode.toString().padLeft(2, '0')}';
@@ -224,7 +229,17 @@ SeriesFeed buildSeriesFeed({
   final toWatch = <NextUp>[];
   final stale = <NextUp>[];
   for (final s in scored) {
-    (s.activity.isBefore(threshold) ? stale : toWatch).add(s.next);
+    final next = NextUp(
+      show: s.next.show,
+      season: s.next.season,
+      episode: s.next.episode,
+      episodeName: s.next.episodeName,
+      still: s.next.still,
+      remaining: s.next.remaining,
+      precise: s.next.precise,
+      lastActivity: s.activity,
+    );
+    (s.activity.isBefore(threshold) ? stale : toWatch).add(next);
   }
 
   return SeriesFeed(history: history, toWatch: toWatch, stale: stale);
@@ -249,4 +264,93 @@ NextUp _fallbackNext(Show show, Set<String> watchedKeys) {
   }
   return NextUp(
       show: show, season: maxS, episode: maxE + 1, precise: false);
+}
+
+/// Un épisode vu, pour la page Historique. Contrairement à
+/// [SeriesFeed.history] qui ne retient que le dernier épisode de chaque série,
+/// on liste ici toutes les coches, du plus récent au plus ancien.
+class WatchedEntry {
+  const WatchedEntry({
+    required this.show,
+    required this.season,
+    required this.episode,
+    required this.watchedAt,
+    this.episodeName,
+    this.still,
+  });
+
+  final Show show;
+  final int season;
+  final int episode;
+  final DateTime watchedAt;
+  final String? episodeName;
+  final String? still;
+
+  String get code =>
+      'S${season.toString().padLeft(2, '0')} | E${episode.toString().padLeft(2, '0')}';
+}
+
+/// Historique complet, du plus récent au plus ancien. Pur et déterministe.
+List<WatchedEntry> buildWatchHistory({
+  required List<ShowWithProgress> shows,
+  required List<Episode> episodes,
+  required List<WatchedEpisode> watched,
+}) {
+  final showById = {for (final s in shows) s.show.id: s.show};
+  final metaByKey = <String, Episode>{
+    for (final e in episodes) '${e.showId}|${e.season}|${e.episode}': e,
+  };
+
+  final entries = <WatchedEntry>[];
+  for (final w in watched) {
+    final show = showById[w.showId];
+    if (show == null) continue;
+    final meta = metaByKey['${w.showId}|${w.season}|${w.episode}'];
+    entries.add(WatchedEntry(
+      show: show,
+      season: w.season,
+      episode: w.episode,
+      watchedAt: w.watchedAt,
+      episodeName: meta?.name,
+      still: meta?.still,
+    ));
+  }
+  entries.sort((a, b) => b.watchedAt.compareTo(a.watchedAt));
+  return entries;
+}
+
+/// Tranches temporelles de l'onglet « À venir ».
+enum UpcomingBucket { today, tomorrow, thisWeek, later }
+
+extension UpcomingBucketLabel on UpcomingBucket {
+  String get label => switch (this) {
+        UpcomingBucket.today => "Aujourd'hui",
+        UpcomingBucket.tomorrow => 'Demain',
+        UpcomingBucket.thisWeek => 'Cette semaine',
+        UpcomingBucket.later => 'Plus tard',
+      };
+}
+
+/// Répartit les épisodes à venir par proximité, en conservant l'ordre
+/// chronologique à l'intérieur de chaque tranche. Les tranches vides sont
+/// omises. Pur et déterministe.
+List<({UpcomingBucket bucket, List<UpcomingEpisode> episodes})> groupUpcoming(
+  List<UpcomingEpisode> list,
+  DateTime now,
+) {
+  final byBucket = <UpcomingBucket, List<UpcomingEpisode>>{};
+  for (final u in list) {
+    final days = u.daysFrom(now);
+    final bucket = switch (days) {
+      <= 0 => UpcomingBucket.today,
+      1 => UpcomingBucket.tomorrow,
+      <= 7 => UpcomingBucket.thisWeek,
+      _ => UpcomingBucket.later,
+    };
+    (byBucket[bucket] ??= []).add(u);
+  }
+  return [
+    for (final b in UpcomingBucket.values)
+      if (byBucket[b] != null) (bucket: b, episodes: byBucket[b]!),
+  ];
 }

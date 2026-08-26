@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_sticky_header/flutter_sticky_header.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers.dart';
 import '../series/feed.dart';
 import '../series/sync.dart';
+import '../series/widgets/continue_watching_hero.dart';
+import '../series/widgets/next_episode_card.dart';
+import '../series/widgets/series_skeleton.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/episode_card.dart';
-
-// Hauteurs fixes → calcul exact de l'offset d'ouverture sur « À voir ».
-const double _kCardExtent = 130; // EpisodeCard 120 + marge Card 2×5
-const double _kHeaderExtent = 46;
+import '../widgets/media_image.dart';
+import '../widgets/states.dart';
 
 class ShowsScreen extends ConsumerStatefulWidget {
   const ShowsScreen({super.key});
@@ -23,71 +21,250 @@ class ShowsScreen extends ConsumerStatefulWidget {
   ConsumerState<ShowsScreen> createState() => _ShowsScreenState();
 }
 
+/// Synchronise les métadonnées TheTVDB des séries en retard.
+Future<void> _sync(WidgetRef ref) => syncStaleShows(
+  ref.read(databaseProvider),
+  ref.read(tvdbClientProvider),
+  throttle: () => Future.delayed(const Duration(milliseconds: 120)),
+);
+
+void _openShow(BuildContext context, int id, String name) =>
+    context.push('/show/$id', extra: name);
+
+void _openEpisode(BuildContext context, NextUp n) => context.push(
+  '/episode/${n.show.id}/${n.season}/${n.episode}',
+  extra: {'name': n.show.name, 'poster': n.show.poster},
+);
+
+void _markWatched(WidgetRef ref, NextUp n) => ref
+    .read(databaseProvider)
+    .setEpisodeWatched(n.show.id, n.season, n.episode);
+
 class _ShowsScreenState extends ConsumerState<ShowsScreen> {
   bool _syncStarted = false;
-  final _scrollController = ScrollController();
-  bool _positioned = false;
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _sync() async {
-    await syncStaleShows(
-      ref.read(databaseProvider),
-      ref.read(tvdbClientProvider),
-      throttle: () => Future.delayed(const Duration(milliseconds: 120)),
-    );
-  }
-
-  void _openShow(int id, String name) {
-    context.push('/show/$id', extra: name);
-  }
-
-  void _openEpisode(int showId, String showName, int season, int episode,
-      String? poster) {
-    context.push(
-      '/episode/$showId/$season/$episode',
-      extra: {'name': showName, 'poster': poster},
-    );
-  }
-
-  void _markWatched(NextUp n) {
-    HapticFeedback.lightImpact();
-    ref.read(databaseProvider).setEpisodeWatched(n.show.id, n.season, n.episode);
-  }
 
   @override
   Widget build(BuildContext context) {
     // Lance la synchro TheTVDB au montage (la clé est embarquée).
     if (!_syncStarted) {
       _syncStarted = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
+      WidgetsBinding.instance.addPostFrameCallback((_) => _sync(ref));
     }
 
     return DefaultTabController(
       length: 2,
       child: Column(
         children: [
-          const TabBar(
-            labelColor: TtColors.amber,
-            unselectedLabelColor: TtColors.dim,
-            indicatorColor: TtColors.amber,
-            indicatorSize: TabBarIndicatorSize.label,
-            labelStyle: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1),
-            tabs: [
-              Tab(text: 'À VOIR'),
-              Tab(text: 'À VENIR'),
-            ],
-          ),
+          const _SeriesTabBar(),
           Expanded(
-            child: TabBarView(
+            child: TabBarView(children: [_ToWatchTab(), _UpcomingTab()]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Onglets discrets : bas de casse, graisse mesurée, filet fin sous le libellé.
+class _SeriesTabBar extends StatelessWidget {
+  const _SeriesTabBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return const TabBar(
+      labelColor: TtColors.amber,
+      unselectedLabelColor: TtColors.dim,
+      indicatorColor: TtColors.amber,
+      indicatorSize: TabBarIndicatorSize.label,
+      indicatorWeight: 2,
+      dividerColor: Colors.transparent,
+      labelStyle: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+      unselectedLabelStyle: TextStyle(
+        fontSize: 14.5,
+        fontWeight: FontWeight.w600,
+      ),
+      tabs: [
+        Tab(text: 'À voir'),
+        Tab(text: 'À venir'),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────── Onglet « À voir » ───────────────────────────
+
+class _ToWatchTab extends ConsumerWidget {
+  const _ToWatchTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final feedAsync = ref.watch(seriesFeedProvider);
+
+    return feedAsync.when(
+      loading: () => const SeriesSkeleton(),
+      error: (e, st) {
+        debugPrint('Séries — chargement du fil impossible : $e\n$st');
+        return ErrorRetry(
+          title: 'Impossible de charger tes séries',
+          message:
+              'Tes données sont toujours là. '
+              'Réessaie dans un instant.',
+          onRetry: () => ref.invalidate(showsProvider),
+        );
+      },
+      data: (feed) {
+        if (feed.isEmpty) {
+          return EmptyPrompt(
+            icon: Icons.tv_outlined,
+            title: 'Ta liste est vide',
+            message:
+                'Ajoute une série et Nitrate te montrera '
+                'automatiquement le prochain épisode à regarder.',
+            actionLabel: 'Explorer les séries',
+            onAction: () =>
+                ref.read(homeTabProvider.notifier).select(HomeTab.explorer),
+          );
+        }
+        return _ToWatchFeed(feed: feed);
+      },
+    );
+  }
+}
+
+class _ToWatchFeed extends ConsumerWidget {
+  const _ToWatchFeed({required this.feed});
+
+  final SeriesFeed feed;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hero = feed.toWatch.isEmpty ? null : feed.toWatch.first;
+    final next = feed.toWatch.skip(1).toList();
+
+    return RefreshIndicator(
+      color: TtColors.amber,
+      backgroundColor: TtColors.surface,
+      onRefresh: () async {
+        await _sync(ref);
+        ref.invalidate(showsProvider);
+      },
+      child: ListView(
+        padding: EdgeInsets.only(top: 12, bottom: bottomNavInset(context)),
+        children: [
+          if (hero != null)
+            ContinueWatchingHero(
+              // La clé lie l'état de la carte à l'épisode : la validation ne
+              // « déteint » pas sur celui qui prend sa place.
+              key: ValueKey('${hero.show.id}-${hero.season}-${hero.episode}'),
+              next: hero,
+              onOpen: () => _openEpisode(context, hero),
+              onOpenShow: () =>
+                  _openShow(context, hero.show.id, hero.show.name),
+              onMarkWatched: () => _markWatched(ref, hero),
+            ),
+          if (next.isNotEmpty) ...[
+            const SizedBox(height: 30),
+            const _SectionHeader('Ensuite'),
+            _Carousel(
+              height: 178,
+              itemCount: next.length,
+              separator: 14,
+              itemBuilder: (_, i) => NextEpisodeCard(
+                next: next[i],
+                onTap: () => _openEpisode(context, next[i]),
+              ),
+            ),
+          ],
+          if (feed.stale.isNotEmpty) ...[
+            const SizedBox(height: 30),
+            const _SectionHeader('À reprendre', subtitle: 'Ça fait un moment.'),
+            _Carousel(
+              height: 232,
+              itemCount: feed.stale.length,
+              separator: 12,
+              itemBuilder: (_, i) => ResumeShowCard(
+                next: feed.stale[i],
+                since: feed.stale[i].lastActivity,
+                onTap: () => _openEpisode(context, feed.stale[i]),
+              ),
+            ),
+          ],
+          if (feed.history.isNotEmpty) ...[
+            const SizedBox(height: 30),
+            _HistoryLink(),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Carrousel horizontal paresseux : seules les cartes visibles sont
+/// construites, images comprises.
+class _Carousel extends StatelessWidget {
+  const _Carousel({
+    required this.height,
+    required this.itemCount,
+    required this.itemBuilder,
+    required this.separator,
+  });
+
+  final double height;
+  final int itemCount;
+  final IndexedWidgetBuilder itemBuilder;
+  final double separator;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: itemCount,
+        separatorBuilder: (_, _) => SizedBox(width: separator),
+        itemBuilder: itemBuilder,
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.title, {this.subtitle});
+
+  final String title;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildToWatch(context),
-                _buildUpcoming(context),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: TtColors.text,
+                  ),
+                ),
+                if (subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      subtitle!,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: TtColors.dim,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -95,140 +272,243 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
       ),
     );
   }
+}
 
-  Widget _buildToWatch(BuildContext context) {
-    final feedAsync = ref.watch(seriesFeedProvider);
-    return feedAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => EmptyState(icon: Icons.error_outline, message: '$e'),
-      data: (feed) {
-        if (feed.isEmpty) {
-          return const EmptyState(
-            icon: Icons.tv,
-            message:
-                "Aucune série pour l'instant.\nAjoute-en via Explorer ou importe ton export TV Time.",
-          );
-        }
-
-        Widget historyCard(HistoryEntry h) => EpisodeCard(
-              history: true,
-              showName: h.show.name,
-              code: h.code,
-              stillPath: h.still,
-              posterPath: h.show.poster,
-              seed: h.show.name,
-              episodeTitle: h.episodeName,
-              onTap: () => _openEpisode(
-                  h.show.id, h.show.name, h.season, h.episode, h.show.poster),
-              onShowTap: () => _openShow(h.show.id, h.show.name),
-            );
-
-        final toWatchCards = [
-          for (var i = 0; i < feed.toWatch.length; i++)
-            _card(feed.toWatch[i], badge: i == 0 ? 'PLUS RÉCENT' : null),
-        ];
-        final staleCards = [for (final n in feed.stale) _card(n)];
-        // Historique inversé : le plus récent en bas, collé au « À voir ».
-        final historyCards = feed.history.reversed.map(historyCard).toList();
-
-        // Ouverture calée sur « À voir » : on saute la hauteur (exacte, car
-        // hauteurs fixes) de la section Historique. Déclenché seulement quand
-        // l'historique est réellement chargé (les flux arrivent de façon
-        // asynchrone), et une seule fois.
-        if (!_positioned && historyCards.isNotEmpty) {
-          _positioned = true;
-          final offset = _kHeaderExtent + historyCards.length * _kCardExtent;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_scrollController.hasClients) _scrollController.jumpTo(offset);
-          });
-        }
-
-        final slivers = <Widget>[
-          if (historyCards.isNotEmpty)
-            _section('Historique de visionnage', historyCards),
-          if (toWatchCards.isNotEmpty) _section('À voir', toWatchCards),
-          if (staleCards.isNotEmpty)
-            _section('Pas regardé depuis un moment', staleCards),
-          SliverToBoxAdapter(child: SizedBox(height: bottomNavInset(context))),
-        ];
-
-        return CustomScrollView(controller: _scrollController, slivers: slivers);
-      },
-    );
-  }
-
-  /// Section à en-tête collant : la pastille reste en tête de sa catégorie et
-  /// est poussée dehors par la suivante (pas d'empilement).
-  Widget _section(String label, List<Widget> cards) {
-    return SliverStickyHeader(
-      header: Container(
-        height: _kHeaderExtent,
-        alignment: Alignment.center,
-        child: SectionPill(label),
+/// Accès secondaire à l'historique. Il ne précède plus le contenu principal :
+/// on le consulte quand on le cherche.
+class _HistoryLink extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Semantics(
+        button: true,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => context.push('/history'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.history, size: 20, color: TtColors.dim),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Historique de visionnage',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: TtColors.text,
+                    ),
+                  ),
+                ),
+                const Text(
+                  'Voir tout',
+                  style: TextStyle(fontSize: 13.5, color: TtColors.amber),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: TtColors.amber,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      sliver: SliverList.list(children: cards),
     );
   }
+}
 
-  Widget _buildUpcoming(BuildContext context) {
+// ────────────────────────── Onglet « À venir » ──────────────────────────
+
+class _UpcomingTab extends ConsumerWidget {
+  const _UpcomingTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final upcomingAsync = ref.watch(upcomingProvider);
+
     return upcomingAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => EmptyState(icon: Icons.error_outline, message: '$e'),
+      loading: () => const SeriesSkeleton(),
+      error: (e, st) {
+        debugPrint('Séries — chargement des sorties impossible : $e\n$st');
+        return ErrorRetry(
+          title: 'Impossible de charger les prochaines sorties',
+          message:
+              'Tes données sont toujours là. '
+              'Réessaie dans un instant.',
+          onRetry: () => ref.invalidate(showsProvider),
+        );
+      },
       data: (list) {
         if (list.isEmpty) {
-          return const EmptyState(
+          return const EmptyPrompt(
             icon: Icons.event_outlined,
+            title: 'Rien d\'annoncé',
             message:
-                'Aucun épisode à venir connu.\nAjoute des séries en cours de diffusion — leurs prochaines dates apparaîtront ici.',
+                'Ajoute des séries en cours de diffusion — '
+                'leurs prochaines dates apparaîtront ici.',
           );
         }
+
         final now = DateTime.now();
+        final groups = groupUpcoming(list, now);
         return ListView.builder(
-          padding: EdgeInsets.only(top: 8, bottom: bottomNavInset(context)),
-          itemCount: list.length,
-          itemBuilder: (_, i) {
-            final u = list[i];
-            return EpisodeCard(
-              showName: u.show.name,
-              code: u.code,
-              stillPath: u.still,
-              posterPath: u.show.poster,
-              seed: u.show.name,
-              episodeTitle: u.name ?? _formatDate(u.airDate),
-              upcomingInDays: u.daysFrom(now),
-              onTap: () => _openEpisode(
-                  u.show.id, u.show.name, u.season, u.episode, u.show.poster),
-              onShowTap: () => _openShow(u.show.id, u.show.name),
+          padding: EdgeInsets.only(top: 16, bottom: bottomNavInset(context)),
+          itemCount: groups.length,
+          itemBuilder: (context, gi) {
+            final group = groups[gi];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (gi > 0) const SizedBox(height: 26),
+                _SectionHeader(group.bucket.label),
+                for (final u in group.episodes)
+                  _UpcomingRow(upcoming: u, now: now),
+              ],
             );
           },
         );
       },
     );
   }
+}
+
+class _UpcomingRow extends StatelessWidget {
+  const _UpcomingRow({required this.upcoming, required this.now});
+
+  final UpcomingEpisode upcoming;
+  final DateTime now;
 
   static const _months = [
-    'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.',
-    'août', 'sept.', 'oct.', 'nov.', 'déc.'
+    'janv.',
+    'févr.',
+    'mars',
+    'avr.',
+    'mai',
+    'juin',
+    'juil.',
+    'août',
+    'sept.',
+    'oct.',
+    'nov.',
+    'déc.',
   ];
 
-  static String _formatDate(DateTime d) =>
-      '${d.day} ${_months[d.month - 1]} ${d.year}';
+  @override
+  Widget build(BuildContext context) {
+    final u = upcoming;
+    final days = u.daysFrom(now);
 
-  Widget _card(NextUp n, {String? badge}) {
-    return EpisodeCard(
-      showName: n.show.name,
-      code: n.code,
-      stillPath: n.still,
-      posterPath: n.show.poster,
-      seed: n.show.name,
-      episodeTitle: n.episodeName,
-      remaining: n.remaining,
-      badge: badge,
-      onTap: () => _openEpisode(
-          n.show.id, n.show.name, n.season, n.episode, n.show.poster),
-      onShowTap: () => _openShow(n.show.id, n.show.name),
-      onMarkWatched: () => _markWatched(n),
+    return Semantics(
+      button: true,
+      label: '${u.show.name}, ${u.code}',
+      child: InkWell(
+        onTap: () => context.push(
+          '/episode/${u.show.id}/${u.season}/${u.episode}',
+          extra: {'name': u.show.name, 'poster': u.show.poster},
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 7, 16, 7),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 104,
+                  height: 59,
+                  child: MediaImage(
+                    sources: [u.still, u.show.poster],
+                    seed: u.show.name,
+                    icon: Icons.tv,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      u.show.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: TtColors.text,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      u.name == null || u.name!.isEmpty
+                          ? u.code
+                          : '${u.code}  ·  ${u.name}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: TtColors.dim,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${u.airDate.day} ${_months[u.airDate.month - 1]}',
+                      style: const TextStyle(fontSize: 12, color: TtColors.dim),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              _DayCounter(days: days),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Compteur de jours restants. Il reste discret : c'est une métadonnée, pas
+/// l'information principale de la ligne.
+class _DayCounter extends StatelessWidget {
+  const _DayCounter({required this.days});
+
+  final int days;
+
+  @override
+  Widget build(BuildContext context) {
+    if (days <= 0) {
+      return const Text(
+        'Ce soir',
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          color: TtColors.amber,
+        ),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$days',
+          style: const TextStyle(
+            fontSize: 19,
+            fontWeight: FontWeight.w800,
+            height: 1,
+            color: TtColors.amber,
+          ),
+        ),
+        const SizedBox(height: 1),
+        Text(
+          days > 1 ? 'jours' : 'jour',
+          style: const TextStyle(fontSize: 10.5, color: TtColors.dim),
+        ),
+      ],
     );
   }
 }

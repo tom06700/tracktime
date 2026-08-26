@@ -18,13 +18,16 @@ void main() {
       overrides: [databaseProvider.overrideWithValue(db)],
       child: const NitrateApp(),
     ));
-    await tester.pumpAndSettle();
+    // Pas de pumpAndSettle : le battement des squelettes de chargement est
+    // une animation sans fin, qui ferait attendre le test indéfiniment.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('Séries'), findsOneWidget);
     expect(find.text('Films'), findsOneWidget);
     expect(find.text('Explorer'), findsOneWidget);
     expect(find.text('Profil'), findsOneWidget);
-    expect(find.textContaining('Aucune série'), findsOneWidget);
+    expect(find.text('Ta liste est vide'), findsOneWidget);
 
     // Démonte l'arbre puis avance l'horloge simulée pour déclencher les
     // timers de fermeture des streams drift, sinon le framework de test

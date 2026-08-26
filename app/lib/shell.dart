@@ -1,24 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'screens/explorer_screen.dart';
 import 'screens/movies_screen.dart';
 import 'screens/profile_screen.dart';
+import 'providers.dart';
 import 'screens/shows_screen.dart';
 import 'theme.dart';
 import 'widgets/nav_bar.dart';
 
 /// Coquille principale : 4 onglets (Séries · Films · Explorer · Profil) dans
 /// un IndexedStack, surmontant le socle de navigation.
-class HomeShell extends StatefulWidget {
+class HomeShell extends ConsumerWidget {
   const HomeShell({super.key});
-
-  @override
-  State<HomeShell> createState() => _HomeShellState();
-}
-
-class _HomeShellState extends State<HomeShell> {
-  int _tab = 0;
 
   static const _navItems = [
     NavItem(icon: Icons.tv_outlined, label: 'Séries'),
@@ -28,7 +23,11 @@ class _HomeShellState extends State<HomeShell> {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // L'onglet courant vit dans un provider : un écran enfant peut ainsi
+    // demander l'ouverture d'un autre onglet — le bouton « Explorer les
+    // séries » de l'état vide — sans empiler une seconde instance.
+    final tab = ref.watch(homeTabProvider);
     const screens = [
       ShowsScreen(),
       MoviesScreen(),
@@ -39,7 +38,7 @@ class _HomeShellState extends State<HomeShell> {
     // occupe jusqu'à la safe area) : pas de barre — elle porterait un titre
     // qui chevaucherait le contenu au défilement. Elle a son propre bouton
     // Réglages flottant. Les autres onglets gardent la barre « Nitrate ».
-    final immersive = _tab == 3;
+    final immersive = tab == HomeTab.profile;
     return Scaffold(
       extendBody: true,
       appBar: immersive
@@ -69,16 +68,16 @@ class _HomeShellState extends State<HomeShell> {
       // un double mouvement — la page apparaissait d'abord telle quelle, puis
       // l'animation repartait de zéro et la faisait remonter.
       body: IndexedStack(
-        index: _tab,
+        index: tab,
         children: [
           for (var i = 0; i < screens.length; i++)
-            TickerMode(enabled: i == _tab, child: screens[i]),
+            TickerMode(enabled: i == tab, child: screens[i]),
         ],
       ),
       bottomNavigationBar: NitrateNavBar(
         items: _navItems,
-        selectedIndex: _tab,
-        onSelected: (i) => setState(() => _tab = i),
+        selectedIndex: tab,
+        onSelected: ref.read(homeTabProvider.notifier).select,
       ),
     );
   }
