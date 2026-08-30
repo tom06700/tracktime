@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../build_info.dart';
 import '../providers.dart';
 import '../theme.dart';
 
@@ -139,6 +140,13 @@ class SettingsScreen extends ConsumerWidget {
                   onTap: () => _open('https://thetvdb.com/subscribe'),
                 ),
               ],
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 6, 20, 20),
+            child: Text(
+              'Version $kBuildMarker',
+              style: TextStyle(fontSize: 12, color: TtColors.dim),
             ),
           ),
         ],

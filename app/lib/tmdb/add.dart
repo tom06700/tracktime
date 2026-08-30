@@ -3,10 +3,29 @@ import 'package:drift/drift.dart';
 import '../db/database.dart';
 import 'tvdb.dart';
 
-String? _pick(Object? a, Object? b) {
-  if (a is String && a.trim().isNotEmpty) return a;
-  if (b is String && b.trim().isNotEmpty) return b;
-  return null;
+String? _clean(Object? v) {
+  final s = v is String ? v.trim() : '';
+  return s.isEmpty ? null : s;
+}
+
+/// Titre à retenir pour une œuvre TheTVDB, du plus lisible au moins lisible.
+///
+/// [preferred] vient de la recherche, qui expose déjà toutes les traductions ;
+/// sinon on interroge le français, puis l'anglais. Beaucoup d'animés n'ont pas
+/// de fiche française mais ont un titre anglais lisible : mieux vaut
+/// « One Piece » que « ワンピース », qu'un francophone ne reconnaît pas.
+Future<String> _bestTitle(
+  String? preferred,
+  Object? original,
+  Future<Map<String, dynamic>> Function(String lang) translation,
+) async {
+  final wanted = _clean(preferred);
+  if (wanted != null) return wanted;
+  for (final lang in const ['fra', 'eng']) {
+    final t = _clean((await translation(lang))['name']);
+    if (t != null) return t;
+  }
+  return _clean(original) ?? '';
 }
 
 /// Nombre de saisons « officielles » (> 0) d'une série TheTVDB étendue.
@@ -22,12 +41,24 @@ int? _officialSeasonCount(Map<String, dynamic> d) {
 }
 
 /// Ajoute une série depuis TheTVDB si absente. Renvoie son nom (FR si dispo).
-Future<String> addShowFromTvdb(AppDatabase db, TvdbClient tvdb, int id) async {
+///
+/// [preferredName] court-circuite l'appel de traduction quand l'appelant a
+/// déjà un titre lisible sous la main — typiquement un résultat de recherche,
+/// qui porte toutes les traductions.
+Future<String> addShowFromTvdb(
+  AppDatabase db,
+  TvdbClient tvdb,
+  int id, {
+  String? preferredName,
+}) async {
   final existing = await db.showById(id);
   if (existing != null) return existing.name;
   final d = await tvdb.seriesExtended(id);
-  final fr = await tvdb.seriesTranslation(id, 'fra');
-  final name = _pick(fr['name'], d['name']) ?? '';
+  final name = await _bestTitle(
+    preferredName,
+    d['name'],
+    (lang) => tvdb.seriesTranslation(id, lang),
+  );
   await db.upsertShow(ShowsCompanion.insert(
     id: Value(id),
     name: name,
@@ -41,12 +72,20 @@ Future<String> addShowFromTvdb(AppDatabase db, TvdbClient tvdb, int id) async {
 }
 
 /// Ajoute un film depuis TheTVDB si absent (dans la watchlist). Renvoie son titre.
-Future<String> addMovieFromTvdb(AppDatabase db, TvdbClient tvdb, int id) async {
+Future<String> addMovieFromTvdb(
+  AppDatabase db,
+  TvdbClient tvdb,
+  int id, {
+  String? preferredTitle,
+}) async {
   final existing = await db.movieById(id);
   if (existing != null) return existing.title;
   final d = await tvdb.movieExtended(id);
-  final fr = await tvdb.movieTranslation(id, 'fra');
-  final title = _pick(fr['name'], d['name']) ?? '';
+  final title = await _bestTitle(
+    preferredTitle,
+    d['name'],
+    (lang) => tvdb.movieTranslation(id, lang),
+  );
   await db.upsertMovie(MoviesCompanion.insert(
     id: Value(id),
     title: title,

@@ -158,19 +158,28 @@ Future<String?> _importShow(
   try {
     final match = await _bestMatch(tvdb, name, SearchMediaType.series);
     final id = match?.tvdbId;
-    if (id == null) {
+    if (match == null || id == null) {
       summary.failed++;
       return '❓ Série introuvable sur TheTVDB : $name';
     }
-    // Passe par le même chemin que « Ajouter à ma liste » : nom français,
-    // affiche, saisons officielles.
-    await addShowFromTvdb(db, tvdb, id);
+    // Passe par le même chemin que « Ajouter à ma liste » : affiche, saisons
+    // officielles. Le nom vient du résultat de recherche, qui porte déjà les
+    // traductions — inutile de redemander, et ça évite de retomber sur le
+    // titre d'origine si l'appel de traduction échoue en pleine rafale.
+    final stored = await addShowFromTvdb(
+      db,
+      tvdb,
+      id,
+      preferredName: match.name,
+    );
     for (final ep in episodes) {
       await db.setEpisodeWatched(id, ep.season, ep.episode,
           at: _dateOrNow(ep.date));
     }
     summary.matched++;
-    return null;
+    // On dit à quoi chaque titre a été rattaché : sans ça, un mauvais
+    // appariement ne se découvre qu'en ouvrant la fiche, des jours plus tard.
+    return '✅ $name → $stored · TheTVDB $id';
   } on TvdbException catch (e) {
     summary.failed++;
     return '⚠️ $name : $e';
@@ -186,7 +195,7 @@ Future<String?> _importMovie(
   try {
     final match = await _bestMatch(tvdb, m.title, SearchMediaType.movie);
     final id = match?.tvdbId;
-    if (id == null) {
+    if (match == null || id == null) {
       summary.failed++;
       return '❓ Film introuvable sur TheTVDB : ${m.title}';
     }
@@ -195,13 +204,13 @@ Future<String?> _importMovie(
       // alors que l'ajout manuel range le film dans la watchlist.
       await db.upsertMovie(MoviesCompanion.insert(
         id: Value(id),
-        title: match!.name,
+        title: match.name,
         poster: Value(match.image),
         watchedAt: Value(m.watched ? _dateOrNow(m.date) : null),
       ));
     }
     summary.matched++;
-    return null;
+    return '✅ ${m.title} → ${match.name} · TheTVDB $id';
   } on TvdbException catch (e) {
     summary.failed++;
     return '⚠️ ${m.title} : $e';

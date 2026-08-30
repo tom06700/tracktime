@@ -142,7 +142,10 @@ Série Inconnue,1,1,
 
     expect(summary.matched, 2); // Dark + Parasite
     expect(summary.failed, 1); // Série Inconnue
-    expect(logs.single, contains('Série Inconnue'));
+    expect(logs, contains(contains('Série Inconnue')));
+    // Le journal dit à quoi chaque titre a été rattaché.
+    expect(logs, contains('✅ Dark → Dark · TheTVDB 70523'));
+    expect(logs, contains('✅ Parasite → Parasite · TheTVDB 496243'));
 
     final dark = await db.showById(70523);
     expect(dark!.runtime, 53);

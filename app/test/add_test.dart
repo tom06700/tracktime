@@ -98,4 +98,51 @@ void main() {
     expect(movie.watchedAt, isNull);
     expect(movie.releaseDate, DateTime(2019, 5, 30));
   });
+
+  test('sans fiche française, le titre anglais plutôt que l\'original',
+      () async {
+    // Beaucoup d'animés n'ont pas de traduction française mais ont un titre
+    // anglais lisible ; « ワンピース » dans la bibliothèque ne parle à personne.
+    final client = _mock({
+      '/v4/series/81797/extended': {'name': 'ワンピース', 'averageRuntime': 25},
+      '/v4/series/81797/translations/eng': {'name': 'One Piece'},
+    });
+
+    final name = await addShowFromTvdb(db, TvdbClient('k', client: client), 81797);
+
+    expect(name, 'One Piece');
+    expect((await db.showById(81797))!.name, 'One Piece');
+  });
+
+  test('preferredName évite l\'appel de traduction', () async {
+    var calls = 0;
+    final client = _mock(
+      {
+        '/v4/series/81797/extended': {'name': 'ワンピース'},
+        '/v4/series/81797/translations/fra': {'name': 'Ne devrait pas servir'},
+      },
+      onCall: () => calls++,
+    );
+
+    final name = await addShowFromTvdb(
+      db,
+      TvdbClient('k', client: client),
+      81797,
+      preferredName: 'One Piece',
+    );
+
+    expect(name, 'One Piece');
+    // login + extended, et rien de plus.
+    expect(calls, 2);
+  });
+
+  test('sans aucune traduction, on garde le titre d\'origine', () async {
+    final client = _mock({
+      '/v4/series/5/extended': {'name': 'Titre brut'},
+    });
+
+    final name = await addShowFromTvdb(db, TvdbClient('k', client: client), 5);
+
+    expect(name, 'Titre brut');
+  });
 }

@@ -150,9 +150,24 @@ List<MediaSearchResult> parseSearchResults(List<Map<String, dynamic>> raw) {
 /// Rang d'un résultat pour une requête donnée : plus petit = plus pertinent.
 int _rank(MediaSearchResult r, String query) {
   final q = normalizeTitle(query);
-  if (q.isEmpty) return 6;
+  final known = [?r.originalName, ...r.aliases];
+
+  // Requête sans un seul caractère latin — un titre japonais, cyrillique,
+  // arabe… La normalisation la réduirait à une chaîne vide et tous les
+  // résultats se vaudraient. On compare alors les chaînes brutes, seule
+  // comparaison qui garde du sens.
+  if (q.isEmpty) {
+    final raw = query.trim().toLowerCase();
+    if (raw.isEmpty) return 6;
+    if (r.name.trim().toLowerCase() == raw) return 0;
+    if (known.any((a) => a.trim().toLowerCase() == raw)) return 2;
+    return 6;
+  }
+
   final name = normalizeTitle(r.name);
-  final aliases = r.aliases.map(normalizeTitle).toList();
+  // Le titre d'origine compte parmi les titres alternatifs : c'est sous lui
+  // que beaucoup d'œuvres sont cataloguées.
+  final aliases = known.map(normalizeTitle).where((a) => a.isNotEmpty).toList();
 
   // Égalité stricte du titre avant égalité après normalisation : « One Piece »
   // doit primer sur « One Piece! ». Sans ce palier il faudrait privilégier les

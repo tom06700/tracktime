@@ -158,6 +158,50 @@ void main() {
     });
   });
 
+  group('rankSearchResults, titres non latins', () {
+    test('une requête en japonais retrouve la bonne œuvre', () {
+      // Un export peut porter le titre d'origine. normalizeTitle réduit un
+      // titre japonais à une chaîne vide : sans traitement dédié, tous les
+      // résultats se vaudraient et l'ordre brut de l'API l'emporterait.
+      final results = parseSearchResults([
+        raw(type: 'series', name: 'ONE PIECE (2023)', tvdbId: 392276),
+        raw(type: 'series', name: 'THE ONE PIECE', tvdbId: 464521),
+        onePieceAnime,
+      ]);
+
+      final ranked = rankSearchResults(results, 'ワンピース');
+      expect(ranked.first.tvdbId, 81797);
+    });
+
+    test('sans correspondance, l\'ordre de l\'API est conservé', () {
+      final results = parseSearchResults([
+        raw(type: 'series', name: 'Alpha', tvdbId: 1),
+        raw(type: 'series', name: 'Bravo', tvdbId: 2),
+      ]);
+
+      final ranked = rankSearchResults(results, '日本語');
+      expect(ranked.map((r) => r.tvdbId), [1, 2]);
+    });
+
+    test('le titre d\'origine compte parmi les titres alternatifs', () {
+      // « ワンピース » s'affiche « One Piece » : c'est son titre d'origine qui
+      // doit permettre de le retrouver, pas seulement ses alias déclarés.
+      final results = parseSearchResults([
+        raw(type: 'series', name: 'Autre', tvdbId: 1),
+        raw(
+          type: 'series',
+          name: 'Shingeki no Kyojin',
+          tvdbId: 267440,
+          translations: {'fra': 'L\'Attaque des Titans'},
+        ),
+      ]);
+
+      final ranked = rankSearchResults(results, 'Shingeki no Kyojin');
+      expect(ranked.first.tvdbId, 267440);
+      expect(ranked.first.name, 'L\'Attaque des Titans');
+    });
+  });
+
   group('normalizeTitle', () {
     test('réduit accents, casse et ponctuation', () {
       expect(normalizeTitle('  Les  Révoltés !  '), 'les revoltes');
