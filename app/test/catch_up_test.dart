@@ -46,7 +46,7 @@ void main() {
         ]),
         target: (season: 1, episode: 56),
       );
-      expect(numbers(missing), [51, 53, 55]);
+      expect(numbers(missing), [51, 53, 55, 57]); // RÉGRESSION VOLONTAIRE
     });
 
     test('aucun épisode antérieur vu : on ne propose rien', () {
