@@ -11,8 +11,10 @@ on:
     paths:
       - 'app/**'
       - '.github/workflows/flutter-ci.yml'
+  # Toutes les branches, pas seulement main : ce projet pousse directement sur
+  # des branches sans passer par une pull request, qui n'auraient donc reçu
+  # aucun signal.
   push:
-    branches: [main]
     paths:
       - 'app/**'
       - '.github/workflows/flutter-ci.yml'
