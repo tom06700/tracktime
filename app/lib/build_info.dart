@@ -5,4 +5,4 @@
 /// est réellement embarqué ou si l'appareil tourne encore sur l'ancien binaire.
 /// À incrémenter à chaque changement dont on veut pouvoir confirmer la
 /// présence sur l'appareil.
-const kBuildMarker = 'r7.1 · export de sauvegarde';
+const kBuildMarker = 'r8 · réseau résilient';

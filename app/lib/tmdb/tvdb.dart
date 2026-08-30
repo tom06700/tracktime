@@ -1,90 +1,338 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-class TvdbException implements Exception {
-  const TvdbException(this.message);
+/// Nature d'un échec TheTVDB.
+///
+/// Sert à deux décisions qu'on ne peut pas prendre sur un simple message :
+/// faut-il réessayer, et que dire à l'utilisateur.
+enum TvdbErrorKind {
+  /// Pas de connexion, DNS injoignable, coupure en cours de transfert.
+  network,
 
+  /// Le serveur n'a pas répondu dans le délai imparti.
+  timeout,
+
+  /// Clé absente ou refusée.
+  auth,
+
+  /// 429 : trop de requêtes.
+  rateLimited,
+
+  /// 5xx.
+  server,
+
+  /// 404 : l'œuvre n'existe pas (ou plus) chez TheTVDB.
+  notFound,
+
+  /// Réponse reçue mais illisible.
+  malformed,
+
+  /// Autre code d'erreur HTTP.
+  http,
+}
+
+class TvdbException implements Exception {
+  const TvdbException(
+    this.message, {
+    this.kind = TvdbErrorKind.network,
+    this.status,
+    this.detail,
+  });
+
+  /// Phrase destinée à l'utilisateur. Jamais un code, jamais une trace.
   final String message;
+
+  final TvdbErrorKind kind;
+  final int? status;
+
+  /// Détail technique, pour les traces uniquement.
+  final String? detail;
+
+  /// Un échec passager mérite une nouvelle tentative ; une clé refusée ou une
+  /// fiche inexistante n'en méritent aucune.
+  bool get isTransient =>
+      kind == TvdbErrorKind.network ||
+      kind == TvdbErrorKind.timeout ||
+      kind == TvdbErrorKind.rateLimited ||
+      kind == TvdbErrorKind.server;
 
   @override
   String toString() => message;
 }
 
-/// Client minimal de l'API TheTVDB v4.
+/// Entrée de cache : une valeur et l'instant où elle a été obtenue.
+class _Cached {
+  const _Cached(this.value, this.at);
+
+  final Object? value;
+  final DateTime at;
+}
+
+/// Client de l'API TheTVDB v4.
 ///
 /// Authentification : `POST /login` avec la clé projet renvoie un token JWT
-/// valable ~1 mois, mis en cache ici (re-login automatique s'il est périmé
-/// ou sur un 401). CORS ouvert côté TheTVDB → utilisable directement depuis
-/// le web comme depuis le natif.
+/// valable ~1 mois, mis en cache ici (re-login automatique s'il est périmé ou
+/// sur un 401).
+///
+/// Chaque appel est borné par un délai, réessayé un nombre fini de fois sur
+/// les échecs passagers, et mémorisé le temps d'une durée de vie propre à la
+/// ressource. Deux appels identiques lancés en même temps partagent la même
+/// requête, et un rafraîchissement raté ne fait jamais perdre ce qui était
+/// déjà connu.
 class TvdbClient {
-  TvdbClient(this.apiKey, {http.Client? client})
-      : _http = client ?? http.Client();
+  TvdbClient(
+    this.apiKey, {
+    http.Client? client,
+    Duration timeout = const Duration(seconds: 15),
+    int maxAttempts = 3,
+    Future<void> Function(Duration)? sleep,
+    DateTime Function()? now,
+  })  : _http = client ?? http.Client(),
+        _timeout = timeout,
+        _maxAttempts = maxAttempts < 1 ? 1 : maxAttempts,
+        _sleep = sleep ?? Future<void>.delayed,
+        _now = now ?? DateTime.now;
 
   /// Clé projet TheTVDB (v4).
   final String apiKey;
   final http.Client _http;
+
+  /// Délai au-delà duquel une requête est abandonnée. Sans lui, une connexion
+  /// qui n'aboutit jamais laisse un écran en chargement indéfiniment.
+  final Duration _timeout;
+
+  /// Nombre total de tentatives, réessais compris.
+  final int _maxAttempts;
+
+  /// Injectable : les tests ne doivent pas attendre réellement.
+  final Future<void> Function(Duration) _sleep;
+
+  /// Injectable : vérifier une durée de vie suppose de pouvoir avancer
+  /// l'horloge sans attendre des heures.
+  final DateTime Function() _now;
 
   static const _host = 'api4.thetvdb.com';
 
   String? _token;
   DateTime? _tokenAt;
 
+  final Map<String, _Cached> _cache = {};
+  final Map<String, Future<Object?>> _inFlight = {};
+
+  /// Durées de vie par nature de ressource. Une fiche bouge moins souvent
+  /// qu'une liste de découverte, une traduction encore moins.
+  static const _ttlSearch = Duration(minutes: 10);
+  static const _ttlDiscovery = Duration(hours: 6);
+  static const _ttlDetails = Duration(hours: 24);
+  static const _ttlEpisodes = Duration(hours: 6);
+  static const _ttlTranslation = Duration(days: 7);
+
+  /// Vide tout le cache mémoire. Le token reste valide.
+  @visibleForTesting
+  void clearCache() {
+    _cache.clear();
+    _inFlight.clear();
+  }
+
   bool get _tokenFresh =>
       _token != null &&
       _tokenAt != null &&
-      DateTime.now().difference(_tokenAt!) < const Duration(days: 20);
+      _now().difference(_tokenAt!) < const Duration(days: 20);
 
   Future<String> _ensureToken() async {
     if (_tokenFresh) return _token!;
     if (apiKey.isEmpty) {
-      throw const TvdbException('Ajoute ta clé TheTVDB dans ⚙️ Réglages.');
+      throw const TvdbException(
+        'Ajoute ta clé TheTVDB dans ⚙️ Réglages.',
+        kind: TvdbErrorKind.auth,
+      );
     }
-    final http.Response r;
-    try {
-      r = await _http.post(
+    final r = await _send(
+      () => _http.post(
         Uri.https(_host, '/v4/login'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'apikey': apiKey}),
-      );
-    } catch (e) {
-      throw TvdbException('Réseau indisponible ($e)');
-    }
+      ),
+    );
     if (r.statusCode != 200) {
-      throw TvdbException('TheTVDB ${r.statusCode} — vérifie ta clé.');
+      throw _errorFor(r, authMessage: 'Accès à TheTVDB refusé.');
     }
-    final data = (json.decode(r.body) as Map<String, dynamic>)['data'];
+    final data = _decode(r)['data'];
     final token = (data is Map ? data['token'] : null) as String?;
     if (token == null || token.isEmpty) {
-      throw const TvdbException('TheTVDB : token introuvable dans la réponse.');
+      throw const TvdbException(
+        'Réponse inattendue de TheTVDB.',
+        kind: TvdbErrorKind.malformed,
+      );
     }
     _token = token;
-    _tokenAt = DateTime.now();
+    _tokenAt = _now();
     return token;
+  }
+
+  /// Envoie une requête, bornée dans le temps, et traduit les pannes de
+  /// transport en erreurs typées.
+  Future<http.Response> _send(Future<http.Response> Function() run) async {
+    try {
+      return await run().timeout(_timeout);
+    } on TimeoutException {
+      throw const TvdbException(
+        'TheTVDB met trop de temps à répondre.',
+        kind: TvdbErrorKind.timeout,
+      );
+    } on TvdbException {
+      rethrow;
+    } catch (e) {
+      throw TvdbException(
+        'Pas de connexion. Vérifie ton réseau.',
+        kind: TvdbErrorKind.network,
+        detail: '$e',
+      );
+    }
+  }
+
+  TvdbException _errorFor(http.Response r, {String? authMessage}) {
+    final code = r.statusCode;
+    if (code == 401 || code == 403) {
+      return TvdbException(
+        authMessage ?? 'Accès à TheTVDB refusé.',
+        kind: TvdbErrorKind.auth,
+        status: code,
+      );
+    }
+    if (code == 404) {
+      return TvdbException(
+        'Introuvable sur TheTVDB.',
+        kind: TvdbErrorKind.notFound,
+        status: code,
+      );
+    }
+    if (code == 429) {
+      return TvdbException(
+        'TheTVDB limite les requêtes. Réessaie dans un instant.',
+        kind: TvdbErrorKind.rateLimited,
+        status: code,
+        detail: r.headers['retry-after'],
+      );
+    }
+    if (code >= 500) {
+      return TvdbException(
+        'TheTVDB est indisponible pour le moment.',
+        kind: TvdbErrorKind.server,
+        status: code,
+      );
+    }
+    return TvdbException(
+      'TheTVDB a refusé la demande.',
+      kind: TvdbErrorKind.http,
+      status: code,
+    );
+  }
+
+  Map<String, dynamic> _decode(http.Response r) {
+    try {
+      return json.decode(r.body) as Map<String, dynamic>;
+    } catch (e) {
+      throw TvdbException(
+        'Réponse inattendue de TheTVDB.',
+        kind: TvdbErrorKind.malformed,
+        detail: '$e',
+      );
+    }
+  }
+
+  /// Attente avant un nouvel essai : croissante, et respectant `Retry-After`
+  /// quand TheTVDB le donne.
+  Duration _backoff(int attempt, TvdbException e) {
+    final header = int.tryParse(e.detail ?? '');
+    if (e.kind == TvdbErrorKind.rateLimited && header != null) {
+      return Duration(seconds: header.clamp(1, 30));
+    }
+    return Duration(milliseconds: 300 * (1 << (attempt - 1)));
   }
 
   Future<Map<String, dynamic>> _get(
     String path, [
     Map<String, String> params = const {},
   ]) async {
+    for (var attempt = 1; ; attempt++) {
+      try {
+        return await _attempt(path, params);
+      } on TvdbException catch (e) {
+        if (!e.isTransient || attempt >= _maxAttempts) rethrow;
+        debugPrint('TheTVDB $path : $e — nouvel essai ($attempt).');
+        await _sleep(_backoff(attempt, e));
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> _attempt(
+    String path,
+    Map<String, String> params,
+  ) async {
     var token = await _ensureToken();
     final uri = Uri.https(_host, '/v4$path', params.isEmpty ? null : params);
-    http.Response r;
-    try {
-      r = await _http.get(uri, headers: {'Authorization': 'Bearer $token'});
-      // Token périmé côté serveur → on relogue une fois.
-      if (r.statusCode == 401) {
-        _token = null;
-        token = await _ensureToken();
-        r = await _http.get(uri, headers: {'Authorization': 'Bearer $token'});
+    var r = await _send(
+      () => _http.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
+    // Token périmé côté serveur → on relogue une fois avant d'abandonner.
+    if (r.statusCode == 401) {
+      _token = null;
+      token = await _ensureToken();
+      r = await _send(
+        () => _http.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      );
+    }
+    if (r.statusCode != 200) throw _errorFor(r);
+    return _decode(r);
+  }
+
+  /// Mémorise le résultat de [load] sous [key] pendant [ttl].
+  ///
+  /// Trois garanties :
+  /// - deux appels identiques lancés en même temps partagent la même requête ;
+  /// - [force] ignore la durée de vie, sans effacer ce qui est déjà là ;
+  /// - un rafraîchissement raté rend la version précédente plutôt qu'une
+  ///   erreur — sauf s'il était forcé, auquel cas l'appelant doit savoir que
+  ///   sa demande n'a pas abouti.
+  Future<T> _memo<T>(
+    String key,
+    Duration ttl,
+    Future<T> Function() load, {
+    bool force = false,
+  }) {
+    final hit = _cache[key];
+    if (!force && hit != null && _now().difference(hit.at) < ttl) {
+      return Future.value(hit.value as T);
+    }
+
+    var pending = _inFlight[key];
+    if (pending == null) {
+      pending = load().then((value) {
+        _cache[key] = _Cached(value, _now());
+        return value as Object?;
+      });
+      _inFlight[key] = pending;
+      pending
+          .whenComplete(() {
+            if (identical(_inFlight[key], pending)) _inFlight.remove(key);
+          })
+          .ignore();
+    }
+
+    // La politique de repli est propre à chaque appelant : un rafraîchissement
+    // forcé ne doit jamais réussir en silence sur d'anciennes données.
+    return pending.then((v) => v as T).onError<TvdbException>((e, _) {
+      final stale = _cache[key];
+      if (!force && stale != null) {
+        debugPrint('TheTVDB : « $key » non rafraîchi ($e), version conservée.');
+        return stale.value as T;
       }
-    } catch (e) {
-      throw TvdbException('Réseau indisponible ($e)');
-    }
-    if (r.statusCode != 200) {
-      throw TvdbException('TheTVDB ${r.statusCode}.');
-    }
-    return json.decode(r.body) as Map<String, dynamic>;
+      throw e;
+    });
   }
 
   /// Recherche séries + films. [type] : `'series'`, `'movie'` ou null (tous).
@@ -94,15 +342,21 @@ class TvdbClient {
   /// places. Sur « One Piece », six des vingt premiers résultats étaient des
   /// listes et l'anime original n'arrivait qu'en 38ᵉ position — donc jamais
   /// renvoyé. Le tri pertinent est fait ensuite, côté application.
-  Future<List<Map<String, dynamic>>> search(String query, {String? type}) async {
-    final j = await _get('/search', {
-      'query': query,
-      'limit': '50',
-      'type': ?type,
-    });
-    return ((j['data'] as List?) ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .toList();
+  Future<List<Map<String, dynamic>>> search(
+    String query, {
+    String? type,
+    bool force = false,
+  }) {
+    return _memo('search:${type ?? 'tout'}:$query', _ttlSearch, () async {
+      final j = await _get('/search', {
+        'query': query,
+        'limit': '50',
+        'type': ?type,
+      });
+      return ((j['data'] as List?) ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .toList();
+    }, force: force);
   }
 
   /// Séries ou films les mieux notés, pour l'écran de découverte.
@@ -111,41 +365,49 @@ class TvdbClient {
   /// sur le score est le seul signal de popularité disponible. Le sens du tri
   /// doit être passé en minuscules — `sortType=DESC` est silencieusement
   /// ignoré et renvoie les fiches vides, sans image ni score.
-  Future<List<Map<String, dynamic>>> mostPopular({required bool movies}) =>
-      _filter(movies: movies, sort: 'score');
+  Future<List<Map<String, dynamic>>> mostPopular({
+    required bool movies,
+    bool force = false,
+  }) => _filter(movies: movies, sort: 'score', force: force);
 
   /// Films dont la sortie est annoncée, du plus lointain au plus proche.
-  Future<List<Map<String, dynamic>>> upcomingReleases() =>
-      _filter(movies: true, sort: 'firstAired');
+  Future<List<Map<String, dynamic>>> upcomingReleases({bool force = false}) =>
+      _filter(movies: true, sort: 'firstAired', force: force);
 
   Future<List<Map<String, dynamic>>> _filter({
     required bool movies,
     required String sort,
-  }) async {
-    final j = await _get('/${movies ? 'movies' : 'series'}/filter', {
-      'sort': sort,
-      'sortType': 'desc',
-    });
-    return ((j['data'] as List?) ?? const [])
-        .whereType<Map<String, dynamic>>()
-        // Sans affiche, une carte de découverte n'a aucun intérêt.
-        .where((e) => (e['image'] as String?)?.isNotEmpty ?? false)
-        .toList();
+    bool force = false,
+  }) {
+    final kind = movies ? 'movies' : 'series';
+    return _memo('filter:$kind:$sort', _ttlDiscovery, () async {
+      final j = await _get('/$kind/filter', {
+        'sort': sort,
+        'sortType': 'desc',
+      });
+      return ((j['data'] as List?) ?? const [])
+          .whereType<Map<String, dynamic>>()
+          // Sans affiche, une carte de découverte n'a aucun intérêt.
+          .where((e) => (e['image'] as String?)?.isNotEmpty ?? false)
+          .toList();
+    }, force: force);
   }
 
   /// Détails étendus d'une série (saisons, genres, artworks, network…).
-  Future<Map<String, dynamic>> seriesExtended(int id) async {
-    final j = await _get('/series/$id/extended');
-    return (j['data'] as Map<String, dynamic>?) ?? const {};
+  Future<Map<String, dynamic>> seriesExtended(int id, {bool force = false}) {
+    return _memo('series:$id', _ttlDetails, () async {
+      final j = await _get('/series/$id/extended');
+      return (j['data'] as Map<String, dynamic>?) ?? const {};
+    }, force: force);
   }
 
   /// Détails étendus d'un film.
-  Future<Map<String, dynamic>> movieExtended(int id) async {
-    final j = await _get('/movies/$id/extended');
-    return (j['data'] as Map<String, dynamic>?) ?? const {};
+  Future<Map<String, dynamic>> movieExtended(int id, {bool force = false}) {
+    return _memo('movie:$id', _ttlDetails, () async {
+      final j = await _get('/movies/$id/extended');
+      return (j['data'] as Map<String, dynamic>?) ?? const {};
+    }, force: force);
   }
-
-  final Map<int, List<Map<String, dynamic>>> _episodesCache = {};
 
   /// Langue des textes demandés à TheTVDB. L'app est francophone.
   static const _lang = 'fra';
@@ -159,17 +421,19 @@ class TvdbClient {
   /// ギャンザック » plutôt que « Je suis Luffy ! Celui qui deviendra Roi des
   /// pirates ! ».
   ///
-  /// [force] vide l'entrée de cache avant l'appel : sans ça, un rafraîchissement
+  /// [force] ignore la durée de vie du cache : sans ça, un rafraîchissement
   /// manuel relirait la même liste en mémoire et ne verrait jamais les épisodes
-  /// ajoutés depuis.
+  /// ajoutés depuis. Un force qui échoue lève, plutôt que de rendre en silence
+  /// la liste précédente — l'appelant doit savoir que rien n'a été rafraîchi.
   Future<List<Map<String, dynamic>>> seriesEpisodes(
     int id, {
     bool force = false,
-  }) async {
-    if (force) _episodesCache.remove(id);
-    final cached = _episodesCache[id];
-    if (cached != null) return cached;
+  }) {
+    return _memo('episodes:$id', _ttlEpisodes, () => _loadEpisodes(id),
+        force: force);
+  }
 
+  Future<List<Map<String, dynamic>>> _loadEpisodes(int id) async {
     var out = <Map<String, dynamic>>[];
     try {
       out = await _episodePages(id, lang: _lang);
@@ -203,7 +467,6 @@ class TvdbClient {
       }
     }
 
-    _episodesCache[id] = out;
     return out;
   }
 
@@ -255,12 +518,19 @@ class TvdbClient {
   Future<Map<String, dynamic>> movieTranslation(int id, String lang) =>
       _translation('movies', id, lang);
 
+  /// Une traduction absente est un cas normal, pas une panne : on rend {}.
+  /// L'échec, lui, n'est pas mémorisé — sinon une coupure passagère priverait
+  /// la fiche de son titre français pendant une semaine.
   Future<Map<String, dynamic>> _translation(
       String kind, int id, String lang) async {
     try {
-      final j = await _get('/$kind/$id/translations/$lang');
-      return (j['data'] as Map<String, dynamic>?) ?? const {};
-    } catch (_) {
+      return await _memo('translation:$kind:$id:$lang', _ttlTranslation,
+          () async {
+        final j = await _get('/$kind/$id/translations/$lang');
+        return (j['data'] as Map<String, dynamic>?) ?? const {};
+      });
+    } on TvdbException catch (e) {
+      debugPrint('Traduction $kind/$id/$lang indisponible : $e');
       return const {};
     }
   }
