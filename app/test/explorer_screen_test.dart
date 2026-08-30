@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +33,7 @@ Future<void> _mount(
   AppDatabase db, {
   List<Map<String, dynamic>> series = const [],
   List<Map<String, dynamic>> movies = const [],
+  TvdbClient? tvdb,
 }) async {
   // Surface d'iPhone : la surface de test par défaut (800×600) donnerait des
   // cellules de grille démesurées, poussant les boutons hors de l'écran.
@@ -42,7 +45,7 @@ Future<void> _mount(
     ProviderScope(
       overrides: [
         databaseProvider.overrideWithValue(db),
-        tvdbClientProvider.overrideWithValue(_silentTvdb()),
+        tvdbClientProvider.overrideWithValue(tvdb ?? _silentTvdb()),
         popularSeriesProvider.overrideWith((ref) async => series),
         popularMoviesProvider.overrideWith((ref) async => movies),
         upcomingReleasesProvider.overrideWith((ref) async => const []),
@@ -65,9 +68,50 @@ Future<void> _mount(
 TvdbClient _silentTvdb() => TvdbClient(
   'test',
   client: MockClient(
-    (_) async => http.Response('{"data":{"token":"t"},"status":"success"}', 200),
+    (_) async =>
+        http.Response('{"data":{"token":"t"},"status":"success"}', 200),
   ),
 );
+
+/// Client renvoyant une réponse de recherche par requête, avec un délai
+/// optionnel pour simuler une réponse arrivant en retard.
+TvdbClient _searchTvdb(
+  Map<String, List<Map<String, dynamic>>> byQuery, {
+  Map<String, Duration> delays = const {},
+}) {
+  return TvdbClient(
+    'test',
+    client: MockClient((req) async {
+      if (req.url.path.endsWith('/login')) {
+        return http.Response('{"data":{"token":"t"},"status":"success"}', 200);
+      }
+      final q = req.url.queryParameters['query'] ?? '';
+      final wait = delays[q];
+      if (wait != null) await Future<void>.delayed(wait);
+      return http.Response(
+        jsonEncode({'data': byQuery[q] ?? const []}),
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+    }),
+  );
+}
+
+Map<String, dynamic> _hit(String type, String name, int id) => {
+  'type': type,
+  'name': name,
+  'tvdb_id': id,
+};
+
+/// Saisit une requête et laisse passer le debounce.
+Future<void> _type(WidgetTester tester, String q) async {
+  await tester.enterText(find.byType(TextField), q);
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+  for (var i = 0; i < 5; i++) {
+    await tester.pump(const Duration(milliseconds: 60));
+  }
+}
 
 void main() {
   testWidgets('sans recherche, l\'écran montre de quoi découvrir', (
@@ -146,6 +190,98 @@ void main() {
 
     expect(find.textContaining('regarde ce soir'), findsOneWidget);
     expect(find.text('Choisir pour moi'), findsOneWidget);
+
+    await _settle(tester);
+  });
+
+  testWidgets('les filtres restreignent par type de média', (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    final tvdb = _searchTvdb({
+      'one piece': [
+        _hit('series', 'One Piece', 81797),
+        _hit('movie', 'One Piece Film: Red', 318462),
+        // Les listes d'utilisateurs ne doivent jamais atteindre l'écran.
+        _hit('list', 'One Piece', 11),
+      ],
+    });
+
+    await _mount(tester, db, tvdb: tvdb);
+    await _type(tester, 'one piece');
+
+    // « Tout » : les deux médias, jamais la liste.
+    expect(find.text('One Piece'), findsOneWidget);
+    expect(find.text('One Piece Film: Red'), findsOneWidget);
+
+    await tester.tap(find.text('Séries'));
+    await tester.pump();
+    expect(find.text('One Piece'), findsOneWidget);
+    expect(find.text('One Piece Film: Red'), findsNothing);
+
+    await tester.tap(find.text('Films'));
+    await tester.pump();
+    expect(find.text('One Piece'), findsNothing);
+    expect(find.text('One Piece Film: Red'), findsOneWidget);
+
+    await _settle(tester);
+  });
+
+  testWidgets('une réponse tardive n\'écrase pas la recherche courante', (
+    tester,
+  ) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    final tvdb = _searchTvdb(
+      {
+        'one': [_hit('series', 'Résultat périmé', 1)],
+        'one piece': [_hit('series', 'One Piece', 81797)],
+      },
+      // « one » répond après « one piece ».
+      delays: {'one': const Duration(milliseconds: 900)},
+    );
+
+    await _mount(tester, db, tvdb: tvdb);
+    await _type(tester, 'one');
+    await _type(tester, 'one piece');
+
+    expect(find.text('One Piece'), findsOneWidget);
+
+    // Laisse la réponse retardataire arriver : elle doit être ignorée.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 1200)),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 60));
+    }
+
+    expect(find.text('Résultat périmé'), findsNothing);
+    expect(find.text('One Piece'), findsOneWidget);
+
+    await _settle(tester);
+  });
+
+  testWidgets('un anime sans affiche reste dans les résultats', (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    final tvdb = _searchTvdb({
+      'naruto': [
+        {
+          'type': 'series',
+          'name': 'NARUTO－ナルト－',
+          'tvdb_id': 78857,
+          'translations': {'eng': 'Naruto'},
+          // Aucune image : le résultat doit tout de même s'afficher.
+        },
+      ],
+    });
+
+    await _mount(tester, db, tvdb: tvdb);
+    await _type(tester, 'naruto');
+
+    expect(find.text('Naruto'), findsOneWidget);
 
     await _settle(tester);
   });

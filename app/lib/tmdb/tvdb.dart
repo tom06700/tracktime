@@ -88,10 +88,16 @@ class TvdbClient {
   }
 
   /// Recherche séries + films. [type] : `'series'`, `'movie'` ou null (tous).
+  ///
+  /// La limite est volontairement haute : `/search` mélange aux médias des
+  /// listes d'utilisateurs, des personnes et des sociétés, qui consomment des
+  /// places. Sur « One Piece », six des vingt premiers résultats étaient des
+  /// listes et l'anime original n'arrivait qu'en 38ᵉ position — donc jamais
+  /// renvoyé. Le tri pertinent est fait ensuite, côté application.
   Future<List<Map<String, dynamic>>> search(String query, {String? type}) async {
     final j = await _get('/search', {
       'query': query,
-      'limit': '20',
+      'limit': '50',
       'type': ?type,
     });
     return ((j['data'] as List?) ?? const [])

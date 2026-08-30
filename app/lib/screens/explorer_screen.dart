@@ -10,6 +10,7 @@ import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../tmdb/add.dart';
+import '../tmdb/search_result.dart';
 import '../tmdb/tvdb.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
@@ -33,11 +34,15 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   final _controller = TextEditingController();
   Timer? _debounce;
 
-  List<Map<String, dynamic>> _results = [];
+  List<MediaSearchResult> _results = const [];
   bool _loading = false;
   String? _error;
-  String _lastQuery = '';
   SearchFilter _filter = SearchFilter.all;
+
+  /// Jeton de la requête courante. Une réponse tardive portant un jeton
+  /// périmé est ignorée : taper « One » puis « One Piece » ne doit pas laisser
+  /// la première réponse écraser la seconde.
+  int _requestToken = 0;
 
   @override
   void dispose() {
@@ -54,31 +59,29 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
 
   Future<void> _search(String query) async {
     final q = query.trim();
+    final token = ++_requestToken;
+
     if (q.isEmpty) {
       setState(() {
-        _results = [];
+        _results = const [];
         _error = null;
         _loading = false;
       });
       return;
     }
-    _lastQuery = q;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final results = await ref.read(tvdbClientProvider).search(q);
-      if (!mounted || q != _lastQuery) return;
+      final raw = await ref.read(tvdbClientProvider).search(q);
+      if (!mounted || token != _requestToken) return;
       setState(() {
-        _results = results.where((r) {
-          final t = '${r['type'] ?? r['primary_type'] ?? ''}';
-          return t == 'series' || t == 'movie';
-        }).toList();
+        _results = rankSearchResults(parseSearchResults(raw), q);
         _loading = false;
       });
     } on TvdbException catch (e) {
-      if (!mounted || q != _lastQuery) return;
+      if (!mounted || token != _requestToken) return;
       setState(() {
         _error = '$e';
         _loading = false;
@@ -88,16 +91,12 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
 
   /// Le filtre s'applique localement : la requête a déjà tout ramené, inutile
   /// de rappeler l'API pour restreindre.
-  List<Map<String, dynamic>> get _filtered => switch (_filter) {
+  List<MediaSearchResult> get _filtered => switch (_filter) {
     SearchFilter.all => _results,
     SearchFilter.series =>
-      _results
-          .where((r) => '${r['type'] ?? r['primary_type'] ?? ''}' == 'series')
-          .toList(),
+      _results.where((r) => r.type == SearchMediaType.series).toList(),
     SearchFilter.movies =>
-      _results
-          .where((r) => '${r['type'] ?? r['primary_type'] ?? ''}' == 'movie')
-          .toList(),
+      _results.where((r) => r.type == SearchMediaType.movie).toList(),
   };
 
   @override
@@ -494,7 +493,7 @@ class _SearchResults extends StatelessWidget {
     required this.onRetry,
   });
 
-  final List<Map<String, dynamic>> results;
+  final List<MediaSearchResult> results;
   final bool loading;
   final String? error;
   final VoidCallback onRetry;
@@ -551,23 +550,20 @@ class _SearchResults extends StatelessWidget {
 class _ResultRow extends ConsumerWidget {
   const _ResultRow({required this.result});
 
-  final Map<String, dynamic> result;
+  final MediaSearchResult result;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final r = result;
-    final isSeries = '${r['type'] ?? r['primary_type'] ?? ''}' == 'series';
-    final id = TvdbClient.tvdbId(r);
-    final name = '${r['name'] ?? ''}';
-    final year = '${r['year'] ?? ''}';
+    final isSeries = r.type == SearchMediaType.series;
 
     final shows = ref.watch(showsProvider).value ?? const [];
     final movies = ref.watch(moviesProvider).value ?? const [];
     final already =
-        id != null &&
+        r.tvdbId != null &&
         (isSeries
-            ? shows.any((s) => s.show.id == id)
-            : movies.any((m) => m.id == id));
+            ? shows.any((s) => s.show.id == r.tvdbId)
+            : movies.any((m) => m.id == r.tvdbId));
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
@@ -579,8 +575,8 @@ class _ResultRow extends ConsumerWidget {
               width: 52,
               height: 78,
               child: MediaImage(
-                sources: [r['image_url'] as String?],
-                seed: name,
+                sources: [r.image],
+                seed: r.name,
                 icon: isSeries ? Icons.tv : Icons.movie_outlined,
               ),
             ),
@@ -592,7 +588,7 @@ class _ResultRow extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  name,
+                  r.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -604,16 +600,30 @@ class _ResultRow extends ConsumerWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${isSeries ? 'Série' : 'Film'}'
-                  '${year.isNotEmpty ? ' · $year' : ''}',
+                  [
+                    isSeries ? 'Série' : 'Film',
+                    ?r.year,
+                    // Titre d'origine en clair : beaucoup d'animés sont
+                    // catalogués sous leur nom japonais.
+                    ?r.originalName,
+                  ].join(' · '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 12.5, color: TtColors.dim),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          if (id != null)
-            AddButton(id: id, isSeries: isSeries, name: name, already: already),
+          // Sans identifiant exploitable la carte reste visible, seul l'ajout
+          // est indisponible.
+          if (r.canAdd)
+            AddButton(
+              id: r.tvdbId!,
+              isSeries: isSeries,
+              name: r.name,
+              already: already,
+            ),
         ],
       ),
     );
