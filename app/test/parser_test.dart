@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tracktime/backup/backup_format.dart';
 import 'package:tracktime/import/parser.dart';
 
 void main() {
@@ -101,15 +102,25 @@ Interstellar,
   });
 
   group('parseFile', () {
-    test('détecte le backup de la version web', () {
+    test('détecte une ancienne sauvegarde, sans lui faire confiance', () {
       const backup = '''
 {"shows":[{"id":1396,"name":"Breaking Bad","watched":{"S1E1":"2020-01-01T00:00:00Z"}}],
  "movies":[{"id":27205,"title":"Inception","watchedAt":null}],
  "key":"abc123"}
 ''';
       final result = parseFile(ParsedData(), backup);
-      expect(result, isA<WebBackupFile>());
-      expect((result as WebBackupFile).data['key'], 'abc123');
+      expect(result, isA<BackupFileFound>());
+      // Aucun fournisseur déclaré : ses identifiants devront être re-appariés.
+      expect((result as BackupFileFound).backup, isA<LegacyBackup>());
+    });
+
+    test('détecte une sauvegarde Nitrate versionnée', () {
+      const backup = '''
+{"schemaVersion":2,"app":"nitrate","metadataProvider":"thetvdb",
+ "shows":[{"id":81797,"name":"One Piece","watched":{}}],"movies":[]}
+''';
+      final result = parseFile(ParsedData(), backup);
+      expect((result as BackupFileFound).backup, isA<NitrateBackup>());
     });
 
     test('JSON invalide → non reconnu', () {

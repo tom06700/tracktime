@@ -5,4 +5,4 @@
 /// est réellement embarqué ou si l'appareil tourne encore sur l'ancien binaire.
 /// À incrémenter à chaque changement dont on veut pouvoir confirmer la
 /// présence sur l'appareil.
-const kBuildMarker = 'r6 · rattrapage des épisodes sautés';
+const kBuildMarker = 'r7 · sauvegardes et imports sécurisés';

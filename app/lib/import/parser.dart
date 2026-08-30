@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../backup/backup_format.dart';
+
 /// Parseur des exports TV Time (CSV/JSON) et du backup de la version web.
 /// Port fidèle du parseur JavaScript de `index.html` (racine du repo).
 
@@ -37,13 +39,6 @@ class ParsedData {
 
 bool looksLikeJson(String text) => RegExp(r'^\s*[\[{]').hasMatch(text);
 
-/// Le texte est-il un backup exporté par la version web de TrackTime ?
-/// (structure `{shows: [...], movies: [...], key: '...'}`)
-bool isWebBackup(Object? decoded) =>
-    decoded is Map &&
-    decoded['shows'] is List &&
-    (decoded['shows'] as List)
-        .every((s) => s is Map && s['id'] is num && s['watched'] is Map);
 
 String? cleanDate(Object? raw) {
   if (raw == null) return null;
@@ -214,10 +209,12 @@ sealed class FileParseResult {
 }
 
 /// Backup de la version web : à restaurer directement (pas besoin de TMDB).
-class WebBackupFile extends FileParseResult {
-  const WebBackupFile(this.data);
+/// Fichier reconnu comme sauvegarde. Le [BackupFile] dit s'il est restaurable
+/// directement ou s'il faut retrouver ses œuvres sur TheTVDB.
+class BackupFileFound extends FileParseResult {
+  const BackupFileFound(this.backup);
 
-  final Map<String, dynamic> data;
+  final BackupFile backup;
 }
 
 /// Entrées TV Time ajoutées à [ParsedData].
@@ -241,8 +238,10 @@ FileParseResult parseFile(ParsedData parsed, String text) {
     } catch (_) {
       return const UnrecognizedFile();
     }
-    if (isWebBackup(decoded)) {
-      return WebBackupFile((decoded as Map).cast<String, dynamic>());
+    // Une sauvegarde est reconnue avant les exports TV Time : elle seule
+    // porte des identifiants, et c'est là que se joue leur interprétation.
+    if (parseBackupFile(decoded) case final BackupFile b) {
+      return BackupFileFound(b);
     }
     if (!parseJsonInto(parsed, decoded)) return const UnrecognizedFile();
   } else {

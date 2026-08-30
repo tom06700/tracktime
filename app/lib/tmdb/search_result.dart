@@ -186,6 +186,10 @@ int _rank(MediaSearchResult r, String query) {
   return 6;
 }
 
+/// Rang d'un résultat, exposé pour juger de la fiabilité d'une correspondance.
+/// 0 = titre identique, 6 = aucun rapport visible.
+int rankOf(MediaSearchResult r, String query) => _rank(r, query);
+
 /// Reclasse les résultats : correspondances exactes d'abord, puis les débuts
 /// de titre, puis le reste dans l'ordre de l'API.
 ///

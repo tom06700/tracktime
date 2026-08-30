@@ -4,6 +4,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../backup/backup_format.dart';
+import '../backup/restore.dart';
 import '../import/importer.dart';
 import '../import/parser.dart';
 import '../providers.dart';
@@ -36,6 +38,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   final ParsedData _parsed = ParsedData();
   final List<String> _log = [];
   bool _importing = false;
+  bool _legacy = false;
   double _pct = 0;
 
   void _toast(String msg) {
@@ -54,7 +57,6 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     );
     if (result == null) return;
 
-    final db = ref.read(databaseProvider);
     for (final f in result.files) {
       final bytes = f.bytes;
       if (bytes == null) {
@@ -63,17 +65,54 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       }
       final text = utf8.decode(bytes, allowMalformed: true);
       switch (parseFile(_parsed, text)) {
-        case WebBackupFile(:final data):
-          final r = await importWebBackup(db, data);
-          _log.add(
-              '✅ ${f.name} : sauvegarde restaurée (${r.shows} séries, ${r.movies} films)');
+        case BackupFileFound(:final backup):
+          await _restore(f.name, backup);
         case EntriesAdded(:final count):
           _log.add('✅ ${f.name} : $count entrées détectées');
         case UnrecognizedFile():
           _log.add('⚠️ ${f.name} : format non reconnu');
       }
     }
-    setState(() {});
+    if (mounted) setState(() {});
+  }
+
+  /// Restaure une sauvegarde. Une sauvegarde Nitrate est rétablie telle quelle ;
+  /// une ancienne sauvegarde TrackTime doit d'abord retrouver ses œuvres sur
+  /// TheTVDB, ce qui prend un moment et passe donc par la barre de progression.
+  Future<void> _restore(String fileName, BackupFile backup) async {
+    final db = ref.read(databaseProvider);
+    switch (backup) {
+      case UnsupportedBackup(:final message):
+        _log.add('❌ $fileName : $message');
+      case NitrateBackup():
+        final report = await restoreNitrateBackup(db, backup);
+        _log
+          ..addAll(report.lines)
+          ..add('🎉 $fileName : ${report.summary}');
+      case LegacyBackup():
+        setState(() {
+          _legacy = true;
+          _importing = true;
+          _pct = 0;
+        });
+        final report = await restoreLegacyBackup(
+          db,
+          ref.read(tvdbClientProvider),
+          backup,
+          onProgress: (pct, line) {
+            if (!mounted) return;
+            setState(() {
+              _pct = pct;
+              if (line != null) _log.add(line);
+            });
+          },
+        );
+        if (!mounted) return;
+        setState(() {
+          _importing = false;
+          _log.add('🎉 $fileName : ${report.summary}');
+        });
+    }
   }
 
   Future<void> _runImport() async {
@@ -153,6 +192,55 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             ),
           ),
         ),
+        if (_legacy)
+          Card(
+            color: const Color(0xFF241D10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: TtColors.amber.withValues(alpha: 0.3)),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Ancienne sauvegarde TrackTime',
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  SizedBox(height: 6),
+                  Text(
+                    'Ses séries doivent être associées à leur fiche TheTVDB '
+                    'avant d\'être restaurées. C\'est un peu plus long, et '
+                    'les titres trop ambigus sont laissés de côté plutôt que '
+                    'rattachés à la mauvaise œuvre.',
+                    style: TextStyle(fontSize: 13, height: 1.55),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        if (_legacy && _importing)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                        value: _pct,
+                        minHeight: 8,
+                        backgroundColor: TtColors.surfaceHi),
+                  ),
+                  const SizedBox(height: 6),
+                  Text('Correspondance TheTVDB… ${(_pct * 100).round()} %',
+                      style:
+                          const TextStyle(fontSize: 13, color: TtColors.dim)),
+                ],
+              ),
+            ),
+          ),
         if (!_parsed.isEmpty)
           Card(
             child: Padding(
