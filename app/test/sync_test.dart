@@ -36,22 +36,22 @@ class _Api {
           if (path.contains('/episodes/')) {
             episodeCalls++;
             if (down) return http.Response('nope', 500);
-            // Une seule page : le client s'arrête sous 100 épisodes.
-            final page = int.tryParse(req.url.queryParameters['page'] ?? '0');
-            final eps = page == 0
-                ? [
-                    for (final (s, n) in episodes)
-                      {
-                        'seasonNumber': s,
-                        'number': n,
-                        'name': 'S${s}E$n',
-                        'aired': '2026-01-0$n',
-                      },
-                  ]
-                : const [];
+            // Textes complets : le client n'a alors pas besoin d'aller
+            // chercher la version d'origine pour combler des trous.
+            final eps = [
+              for (final (s, n) in episodes)
+                {
+                  'seasonNumber': s,
+                  'number': n,
+                  'name': 'S${s}E$n',
+                  'overview': 'Résumé de S${s}E$n',
+                  'aired': '2026-01-0$n',
+                },
+            ];
             return http.Response(
               jsonEncode({
                 'data': {'episodes': eps},
+                'links': {'next': null},
               }),
               200,
               headers: {'content-type': 'application/json; charset=utf-8'},
@@ -185,8 +185,7 @@ void main() {
     final api = _Api([(1, 1)]);
     final tvdb = api.client();
 
-    // La première série échoue, la seconde passe.
-    var first = true;
+    // La série 1 est injoignable quoi qu'on demande, la série 2 répond.
     final flaky = TvdbClient(
       'test-key',
       client: MockClient((req) async {
@@ -194,17 +193,23 @@ void main() {
           return http.Response('{"data":{"token":"t"}}', 200);
         }
         if (req.url.path.contains('/episodes/')) {
-          if (first) {
-            first = false;
+          if (req.url.path.contains('/series/1/')) {
             return http.Response('nope', 500);
           }
           return http.Response(
             jsonEncode({
               'data': {
                 'episodes': [
-                  {'seasonNumber': 1, 'number': 1, 'aired': '2026-01-01'},
+                  {
+                    'seasonNumber': 1,
+                    'number': 1,
+                    'name': 'S1E1',
+                    'overview': 'Résumé',
+                    'aired': '2026-01-01',
+                  },
                 ],
               },
+              'links': {'next': null},
             }),
             200,
             headers: {'content-type': 'application/json; charset=utf-8'},

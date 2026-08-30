@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 
 import '../db/database.dart';
+import '../tmdb/add.dart';
+import '../tmdb/search_result.dart';
 import '../tmdb/tvdb.dart';
 import 'parser.dart';
 
@@ -124,6 +126,28 @@ Future<ImportSummary> runTvTimeImport(
   return summary;
 }
 
+/// Meilleure correspondance pour un titre, avec le classement de la recherche
+/// d'Explorer.
+///
+/// L'ordre brut de TheTVDB ne convient pas : pour « One Piece » il place la
+/// série live-action de 2023 en tête et l'animé en huitième position. Prendre
+/// le premier résultat envoyait donc tout un historique sur la mauvaise série.
+Future<MediaSearchResult?> _bestMatch(
+  TvdbClient tvdb,
+  String title,
+  SearchMediaType type,
+) async {
+  final raw = await tvdb.search(
+    title,
+    type: type == SearchMediaType.series ? 'series' : 'movie',
+  );
+  final ranked = rankSearchResults(parseSearchResults(raw), title);
+  for (final r in ranked) {
+    if (r.type == type && r.tvdbId != null) return r;
+  }
+  return null;
+}
+
 Future<String?> _importShow(
   AppDatabase db,
   TvdbClient tvdb,
@@ -132,23 +156,15 @@ Future<String?> _importShow(
   ImportSummary summary,
 ) async {
   try {
-    final results = await tvdb.search(name, type: 'series');
-    final id = results.isEmpty ? null : TvdbClient.tvdbId(results.first);
+    final match = await _bestMatch(tvdb, name, SearchMediaType.series);
+    final id = match?.tvdbId;
     if (id == null) {
       summary.failed++;
       return '❓ Série introuvable sur TheTVDB : $name';
     }
-    if (await db.showById(id) == null) {
-      final d = await tvdb.seriesExtended(id);
-      await db.upsertShow(ShowsCompanion.insert(
-        id: Value(id),
-        name: '${d['name'] ?? name}',
-        poster: Value(TvdbClient.posterOf(d)),
-        runtime: Value((d['averageRuntime'] as num?)?.toInt() ?? 42),
-        status: Value(TvdbClient.statusOf(d)),
-        genres: Value(TvdbClient.genresOf(d)),
-      ));
-    }
+    // Passe par le même chemin que « Ajouter à ma liste » : nom français,
+    // affiche, saisons officielles.
+    await addShowFromTvdb(db, tvdb, id);
     for (final ep in episodes) {
       await db.setEpisodeWatched(id, ep.season, ep.episode,
           at: _dateOrNow(ep.date));
@@ -168,18 +184,19 @@ Future<String?> _importMovie(
   ImportSummary summary,
 ) async {
   try {
-    final results = await tvdb.search(m.title, type: 'movie');
-    final id = results.isEmpty ? null : TvdbClient.tvdbId(results.first);
+    final match = await _bestMatch(tvdb, m.title, SearchMediaType.movie);
+    final id = match?.tvdbId;
     if (id == null) {
       summary.failed++;
       return '❓ Film introuvable sur TheTVDB : ${m.title}';
     }
     if (await db.movieById(id) == null) {
-      final r = results.first;
+      // Pas addMovieFromTvdb ici : l'import doit poser la date de visionnage,
+      // alors que l'ajout manuel range le film dans la watchlist.
       await db.upsertMovie(MoviesCompanion.insert(
         id: Value(id),
-        title: '${r['name'] ?? m.title}',
-        poster: Value(r['image_url'] as String?),
+        title: match!.name,
+        poster: Value(match.image),
         watchedAt: Value(m.watched ? _dateOrNow(m.date) : null),
       ));
     }

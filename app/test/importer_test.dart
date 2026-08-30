@@ -150,6 +150,77 @@ Série Inconnue,1,1,
     expect((await db.movieById(496243))!.watchedAt, isNotNull);
   });
 
+  test('runTvTimeImport choisit la bonne série, pas la première réponse',
+      () async {
+    // Cas réel : pour « One Piece », TheTVDB place la série live-action de
+    // 2023 en tête et l'animé plus bas. Prendre results.first envoyait plus
+    // de mille épisodes vus sur une série de huit.
+    http.Response ok(Object? data) => http.Response(
+        json.encode({'status': 'success', 'data': data}), 200,
+        headers: {'content-type': 'application/json'});
+
+    final client = MockClient((request) async {
+      final path = request.url.path;
+      if (request.method == 'POST' && path == '/v4/login') {
+        return ok({'token': 'tok'});
+      }
+      if (path == '/v4/search') {
+        return ok([
+          {
+            'tvdb_id': '392276',
+            'name': 'ONE PIECE (2023)',
+            'type': 'series',
+            'year': '2023',
+          },
+          {
+            'tvdb_id': '424413',
+            'name': 'One Piece D&D',
+            'type': 'series',
+          },
+          {
+            'tvdb_id': '81797',
+            'name': 'ワンピース',
+            'type': 'series',
+            'translations': {'fra': 'One Piece', 'eng': 'One Piece'},
+          },
+        ]);
+      }
+      if (path == '/v4/series/81797/extended') {
+        return ok({
+          'name': 'ワンピース',
+          'averageRuntime': 25,
+          'status': {'name': 'Continuing'},
+        });
+      }
+      if (path == '/v4/series/81797/translations/fra') {
+        return ok({'name': 'One Piece'});
+      }
+      return http.Response('not found', 404);
+    });
+
+    final parsed = ParsedData();
+    parseCsvInto(parsed, '''
+tv_show_name,season,episode,watched_at
+One Piece,1,1,2019-12-01
+One Piece,1,2,2019-12-02
+''');
+
+    final summary = await runTvTimeImport(
+      db,
+      TvdbClient('test-key', client: client),
+      parsed,
+      onProgress: (_, _) {},
+    );
+
+    expect(summary.matched, 1);
+    expect(await db.showById(392276), isNull, reason: 'la live-action');
+    final anime = await db.showById(81797);
+    expect(anime, isNotNull);
+    // Et sous un nom lisible, pas sous son titre japonais.
+    expect(anime!.name, 'One Piece');
+    expect((await db.watchEpisodesOf(81797).first).length, 2);
+  });
+
   test('runTvTimeImport sans clé : tout échoue proprement', () async {
     final parsed = ParsedData();
     parseCsvInto(parsed, 'show,season,episode\nDark,1,1\n');

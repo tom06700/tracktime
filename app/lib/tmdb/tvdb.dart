@@ -147,9 +147,17 @@ class TvdbClient {
 
   final Map<int, List<Map<String, dynamic>>> _episodesCache = {};
 
+  /// Langue des textes demandés à TheTVDB. L'app est francophone.
+  static const _lang = 'fra';
+
   /// Épisodes officiels d'une série, normalisés et paginés puis mis en cache
   /// (le client est un singleton). Champs : season, episode, name, overview,
   /// image (URL complète), aired, runtime.
+  ///
+  /// Les textes sont demandés en français : l'endpoint sans langue rend les
+  /// titres d'origine, soit du japonais pour un animé — « ONE PIECE 倒せ!海賊
+  /// ギャンザック » plutôt que « Je suis Luffy ! Celui qui deviendra Roi des
+  /// pirates ! ».
   ///
   /// [force] vide l'entrée de cache avant l'appel : sans ça, un rafraîchissement
   /// manuel relirait la même liste en mémoire et ne verrait jamais les épisodes
@@ -161,9 +169,54 @@ class TvdbClient {
     if (force) _episodesCache.remove(id);
     final cached = _episodesCache[id];
     if (cached != null) return cached;
+
+    var out = <Map<String, dynamic>>[];
+    try {
+      out = await _episodePages(id, lang: _lang);
+    } on TvdbException {
+      out = <Map<String, dynamic>>[];
+    }
+
+    // Toutes les séries ne sont pas traduites : l'endpoint répond alors avec
+    // la bonne structure mais des textes nuls. On ne va chercher la liste
+    // d'origine que dans ce cas, pour combler les trous — une série
+    // entièrement traduite ne coûte qu'un seul aller.
+    final incomplete = out.any(
+      (e) => e['name'] == null || e['overview'] == null,
+    );
+    if (out.isEmpty || incomplete) {
+      final original = await _episodePages(id);
+      if (out.isEmpty) {
+        out = original;
+      } else {
+        final byKey = {
+          for (final e in original) '${e['season']}x${e['episode']}': e,
+        };
+        for (final e in out) {
+          final o = byKey['${e['season']}x${e['episode']}'];
+          if (o == null) continue;
+          for (final k in const ['name', 'overview', 'image', 'aired']) {
+            e[k] ??= o[k];
+          }
+          e['runtime'] ??= o['runtime'];
+        }
+      }
+    }
+
+    _episodesCache[id] = out;
+    return out;
+  }
+
+  /// Parcourt les pages de `/series/{id}/episodes/official[/{lang}]` et
+  /// normalise les épisodes. Les textes vides deviennent nuls, pour que la
+  /// retombée sur la version d'origine soit un simple `??=`.
+  Future<List<Map<String, dynamic>>> _episodePages(int id, {String? lang}) async {
+    final path = lang == null
+        ? '/series/$id/episodes/official'
+        : '/series/$id/episodes/official/$lang';
     final out = <Map<String, dynamic>>[];
     for (var page = 0; page < 30; page++) {
-      final j = await _get('/series/$id/episodes/official', {'page': '$page'});
+      final j = await _get(path, {'page': '$page'});
       final data = j['data'];
       final eps = (data is Map ? data['episodes'] : null) as List?;
       if (eps == null || eps.isEmpty) break;
@@ -174,17 +227,24 @@ class TvdbClient {
         out.add({
           'season': season,
           'episode': number,
-          'name': e['name'] as String?,
-          'overview': e['overview'] as String?,
-          'image': e['image'] as String?,
-          'aired': e['aired'] as String?,
+          'name': _text(e['name']),
+          'overview': _text(e['overview']),
+          'image': _text(e['image']),
+          'aired': _text(e['aired']),
           'runtime': (e['runtime'] as num?)?.toInt(),
         });
       }
-      if (eps.length < 100) break; // dernière page
+      // `links.next` dit exactement s'il reste une page ; la taille de page
+      // est un détail du serveur qu'on n'a pas à deviner.
+      final links = j['links'];
+      if (links is Map && links['next'] == null) break;
     }
-    _episodesCache[id] = out;
     return out;
+  }
+
+  static String? _text(Object? v) {
+    final s = v == null ? '' : '$v'.trim();
+    return s.isEmpty ? null : s;
   }
 
   /// Traduction (nom + résumé) d'une série dans [lang] (ex. « fra »).
