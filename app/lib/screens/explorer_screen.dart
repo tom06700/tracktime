@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../profile/sections.dart' show watchlistItems;
 import '../profile/tonight.dart';
@@ -16,6 +17,16 @@ import '../widgets/common.dart';
 import '../widgets/media_image.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/states.dart';
+
+/// Ouvre la fiche du média. La navigation porte l'identifiant TheTVDB choisi,
+/// jamais le titre : deux « One Piece » distincts doivent charger chacun le
+/// leur.
+void openMediaDetail(
+  BuildContext context, {
+  required int id,
+  required bool isSeries,
+  required String title,
+}) => context.push(isSeries ? '/show/$id' : '/movie/$id', extra: title);
 
 /// Filtre appliqué aux résultats de recherche.
 enum SearchFilter { all, series, movies }
@@ -430,15 +441,29 @@ class _DiscoveryCard extends ConsumerWidget {
         children: [
           Stack(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: 128,
-                  height: 192,
-                  child: MediaImage(
-                    sources: [poster],
-                    seed: name,
-                    icon: isSeries ? Icons.tv : Icons.movie_outlined,
+              Semantics(
+                button: true,
+                label: 'Ouvrir la fiche de $name',
+                child: GestureDetector(
+                  onTap: id == null
+                      ? null
+                      : () => openMediaDetail(
+                          context,
+                          id: id,
+                          isSeries: isSeries,
+                          title: name,
+                        ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: 128,
+                      height: 192,
+                      child: MediaImage(
+                        sources: [poster],
+                        seed: name,
+                        icon: isSeries ? Icons.tv : Icons.movie_outlined,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -565,55 +590,78 @@ class _ResultRow extends ConsumerWidget {
             ? shows.any((s) => s.show.id == r.tvdbId)
             : movies.any((m) => m.id == r.tvdbId));
 
+    // La zone média ouvre la fiche ; le bouton d'ajout vit à côté, hors de
+    // cette zone, pour qu'un tap dessus n'ouvre pas la fiche au passage.
+    final media = Semantics(
+      button: true,
+      label: 'Ouvrir la fiche de ${r.name}',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: r.tvdbId == null
+            ? null
+            : () => openMediaDetail(
+                context,
+                id: r.tvdbId!,
+                isSeries: isSeries,
+                title: r.name,
+              ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                width: 52,
+                height: 78,
+                child: MediaImage(
+                  sources: [r.image],
+                  seed: r.name,
+                  icon: isSeries ? Icons.tv : Icons.movie_outlined,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    r.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      height: 1.25,
+                      color: TtColors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    [
+                      isSeries ? 'Série' : 'Film',
+                      ?r.year,
+                      // Titre d'origine en clair : beaucoup d'animés sont
+                      // catalogués sous leur nom japonais.
+                      ?r.originalName,
+                    ].join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12.5, color: TtColors.dim),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: SizedBox(
-              width: 52,
-              height: 78,
-              child: MediaImage(
-                sources: [r.image],
-                seed: r.name,
-                icon: isSeries ? Icons.tv : Icons.movie_outlined,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  r.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    height: 1.25,
-                    color: TtColors.text,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  [
-                    isSeries ? 'Série' : 'Film',
-                    ?r.year,
-                    // Titre d'origine en clair : beaucoup d'animés sont
-                    // catalogués sous leur nom japonais.
-                    ?r.originalName,
-                  ].join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12.5, color: TtColors.dim),
-                ),
-              ],
-            ),
-          ),
+          Expanded(child: media),
           const SizedBox(width: 8),
           // Sans identifiant exploitable la carte reste visible, seul l'ajout
           // est indisponible.

@@ -189,6 +189,7 @@ class _LibraryGrid extends ConsumerWidget {
                   return MoviePosterCard(
                     movie: m,
                     metaLine: movieMeta(m),
+                    onTap: () => context.push('/movie/${m.id}', extra: m.title),
                     onAction: (a) => act(m, a),
                   );
                 }, childCount: library.length),

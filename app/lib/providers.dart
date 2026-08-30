@@ -6,6 +6,7 @@ import 'movies/feed.dart';
 import 'profile/profile.dart';
 import 'profile/universe.dart';
 import 'series/feed.dart';
+import 'tmdb/media_detail.dart';
 import 'settings/prefs.dart';
 
 /// Onglet courant de la coquille. Porté par un provider plutôt que par l'état
@@ -104,6 +105,39 @@ final upcomingReleasesProvider = FutureProvider<List<Map<String, dynamic>>>(
         (await ref.watch(tvdbClientProvider).upcomingReleases())
             .take(20)
             .toList());
+
+/// Fiche d'une série, chargée à la demande et mise en cache par le provider :
+/// les rebuilds ne relancent pas la requête, et `ref.invalidate` la rejoue
+/// pour le bouton « Réessayer ».
+///
+/// Volontairement limité à `/series/{id}/extended` : la liste des épisodes est
+/// une requête paginée séparée, qu'on ne déclenche pas pour un simple aperçu
+/// — One Piece en compte plus de mille.
+final seriesDetailProvider = FutureProvider.family<SeriesDetail, int>((
+  ref,
+  id,
+) async {
+  final tvdb = ref.watch(tvdbClientProvider);
+  final extended = await tvdb.seriesExtended(id);
+  final fra = await tvdb.seriesTranslation(id, 'fra');
+  return parseSeriesDetail(id, extended, translation: fra);
+});
+
+/// Fiche d'un film. `/movies/{id}/extended` ne porte pas de synopsis : il faut
+/// aller le chercher dans les traductions, en français puis en anglais.
+final movieDetailProvider = FutureProvider.family<MovieDetail, int>((
+  ref,
+  id,
+) async {
+  final tvdb = ref.watch(tvdbClientProvider);
+  final extended = await tvdb.movieExtended(id);
+  var translation = await tvdb.movieTranslation(id, 'fra');
+  if ('${translation['overview'] ?? ''}'.trim().isEmpty) {
+    final eng = await tvdb.movieTranslation(id, 'eng');
+    translation = {...eng, ...translation};
+  }
+  return parseMovieDetail(id, extended, translation: translation);
+});
 
 /// Historique complet des épisodes vus, du plus récent au plus ancien.
 final watchHistoryProvider = Provider<AsyncValue<List<WatchedEntry>>>((ref) {

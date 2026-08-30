@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../db/database.dart';
 import '../providers.dart';
@@ -59,7 +60,8 @@ class MovieHistoryScreen extends ConsumerWidget {
             return const EmptyPrompt(
               icon: Icons.check_circle_outline,
               title: 'Aucun film vu pour l\'instant',
-              message: 'Les films que tu marques comme vus '
+              message:
+                  'Les films que tu marques comme vus '
                   'apparaîtront ici.',
             );
           }
@@ -99,66 +101,72 @@ class _WatchedRow extends ConsumerWidget {
         'film vu',
         if (seenAt != null) 'le ${frenchDate(seenAt)}',
       ].join(', '),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 7, 8, 7),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: SizedBox(
-                width: 56,
-                height: 84,
-                child: MediaImage(
-                  sources: [movie.poster],
-                  seed: movie.title,
-                  icon: Icons.movie_outlined,
+      child: InkWell(
+        onTap: () => context.push('/movie/${movie.id}', extra: movie.title),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 7, 8, 7),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 56,
+                  height: 84,
+                  child: MediaImage(
+                    sources: [movie.poster],
+                    seed: movie.title,
+                    icon: Icons.movie_outlined,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    movie.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      height: 1.25,
-                      color: TtColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    movieMeta(movie),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12.5, color: TtColors.dim),
-                  ),
-                  if (seenAt != null) ...[
-                    const SizedBox(height: 2),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Text(
-                      'Vu le ${frenchDate(seenAt)}',
+                      movie.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        height: 1.25,
+                        color: TtColors.text,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      movieMeta(movie),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12.5,
                         color: TtColors.dim,
                       ),
                     ),
+                    if (seenAt != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Vu le ${frenchDate(seenAt)}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: TtColors.dim,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.replay, size: 19),
-              color: TtColors.dim,
-              tooltip: 'Remettre dans ma liste',
-              onPressed: () => _restore(context, ref),
-            ),
-          ],
+              IconButton(
+                icon: const Icon(Icons.replay, size: 19),
+                color: TtColors.dim,
+                tooltip: 'Remettre dans ma liste',
+                onPressed: () => _restore(context, ref),
+              ),
+            ],
+          ),
         ),
       ),
     );

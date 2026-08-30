@@ -15,12 +15,17 @@ class MoviePosterCard extends StatelessWidget {
     super.key,
     required this.movie,
     required this.onAction,
+    required this.onTap,
     this.metaLine,
     this.watched = false,
   });
 
   final Movie movie;
   final ValueChanged<MovieAction> onAction;
+
+  /// Ouverture de la fiche. Les boutons posés sur l'affiche restent hors de
+  /// cette zone, pour qu'un tap dessus ne navigue pas.
+  final VoidCallback onTap;
 
   /// Deuxième ligne sous le titre : durée, année, genre…
   final String? metaLine;
