@@ -302,6 +302,33 @@ class AppDatabase extends _$AppDatabase {
       watchEpisodesOf(showId).map((eps) =>
           {for (final e in eps) 'S${e.season}E${e.episode}'});
 
+  /// Marque plusieurs épisodes comme vus en une seule transaction.
+  ///
+  /// `insertOrIgnore` : un épisode déjà vu garde sa date de visionnage, et
+  /// rejouer l'opération ne crée pas de doublon. Un seul écrit pour toute la
+  /// liste, donc une seule émission des flux — pas N reconstructions.
+  Future<void> setEpisodesWatched(
+    int showId,
+    List<({int season, int episode})> eps, {
+    DateTime? at,
+  }) {
+    if (eps.isEmpty) return Future.value();
+    return batch((b) {
+      for (final e in eps) {
+        b.insert(
+          watchedEpisodes,
+          WatchedEpisodesCompanion.insert(
+            showId: showId,
+            season: e.season,
+            episode: e.episode,
+            watchedAt: at == null ? const Value.absent() : Value(at),
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+      }
+    });
+  }
+
   /// Coche/décoche toute une saison d'un coup à partir des numéros d'épisodes.
   Future<void> setSeasonWatched(
       int showId, int season, List<int> episodeNumbers, bool watched) {

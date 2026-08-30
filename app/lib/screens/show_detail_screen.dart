@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../db/database.dart';
 import '../providers.dart';
+import '../series/catch_up.dart';
+import '../series/widgets/catch_up_sheet.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../tmdb/tvdb.dart';
@@ -241,10 +243,32 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
     HapticFeedback.selectionClick();
     final db = ref.read(databaseProvider);
     if (watched) {
-      db.setEpisodeUnwatched(widget.showId, season, episode);
-    } else {
-      db.setEpisodeWatched(widget.showId, season, episode);
+      // Décocher ne propose jamais rien : on ne devine pas une régression.
+      await db.setEpisodeUnwatched(widget.showId, season, episode);
+      return;
     }
+
+    // Calculé avant l'écriture : le flux des épisodes vus est asynchrone, et
+    // la fenêtre ne dépend de toute façon que des épisodes antérieurs.
+    final missing = findMissingEpisodesBetween(
+      episodes: [
+        for (final entry in _episodesBySeason.entries)
+          for (final n in entry.value) (season: entry.key, episode: n),
+      ],
+      watchedKeys:
+          ref.read(watchedKeysProvider(widget.showId)).value ?? const {},
+      target: (season: season, episode: episode),
+    );
+
+    await db.setEpisodeWatched(widget.showId, season, episode);
+    if (missing.isEmpty || !mounted) return;
+
+    final all = await showCatchUpSheet(context, missing: missing);
+    if (all != true) return;
+    HapticFeedback.lightImpact();
+    // Une seule transaction, donc une seule émission des flux : les coches
+    // se mettent à jour ensemble plutôt qu'en cascade.
+    await db.setEpisodesWatched(widget.showId, missing);
   }
 
   Future<void> _setSeason(int season, List<int> eps, bool on) async {
