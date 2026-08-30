@@ -65,6 +65,7 @@ class _Content extends ConsumerWidget {
           poster: movie.poster,
           seed: movie.title,
           icon: Icons.movie_outlined,
+          heroId: movie.id,
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),

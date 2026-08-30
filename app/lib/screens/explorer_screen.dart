@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../profile/sections.dart' show watchlistItems;
 import '../profile/tonight.dart';
+import '../motion.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
@@ -131,14 +132,22 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
             onChanged: (f) => setState(() => _filter = f),
           ),
         Expanded(
-          child: searching
-              ? _SearchResults(
-                  results: _filtered,
-                  loading: _loading,
-                  error: _error,
-                  onRetry: () => _search(_controller.text),
-                )
-              : const _Discovery(),
+          // Passer de la découverte aux résultats ne doit pas remplacer
+          // l'écran d'un coup. Fondu seul : un glissement latéral suggérerait
+          // une navigation, alors qu'on reste au même endroit.
+          child: AnimatedSwitcher(
+            duration: motionOf(context, Motion.normal),
+            switchInCurve: Motion.enter,
+            child: searching
+                ? _SearchResults(
+                    key: const ValueKey('resultats'),
+                    results: _filtered,
+                    loading: _loading,
+                    error: _error,
+                    onRetry: () => _search(_controller.text),
+                  )
+                : const _Discovery(key: ValueKey('decouverte')),
+          ),
         ),
       ],
     );
@@ -244,7 +253,7 @@ class _FilterRow extends StatelessWidget {
 // ───────────────────────────── Découverte ─────────────────────────────
 
 class _Discovery extends ConsumerWidget {
-  const _Discovery();
+  const _Discovery({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -512,6 +521,7 @@ class _DiscoveryCard extends ConsumerWidget {
 
 class _SearchResults extends StatelessWidget {
   const _SearchResults({
+    super.key,
     required this.results,
     required this.loading,
     required this.error,

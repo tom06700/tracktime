@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../db/database.dart';
+import '../motion.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'universe.dart';
@@ -635,7 +636,13 @@ class SeriesPosterTile extends StatelessWidget {
 
     return GestureDetector(
       onTap: () => context.push('/show/${show.id}', extra: show.name),
-      child: ClipRRect(
+      // La grille est le point de départ du vol vers la fiche. Le carrousel
+      // « À l'affiche » du profil, lui, ne porte pas de Hero : la même série
+      // peut y figurer en même temps, et deux Hero de même tag lèveraient.
+      child: MediaPosterHero(
+        id: show.id,
+        isSeries: true,
+        child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: DecoratedBox(
           decoration: BoxDecoration(
@@ -712,6 +719,7 @@ class SeriesPosterTile extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

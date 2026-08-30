@@ -7,6 +7,7 @@ import '../db/database.dart';
 import '../movies/sync.dart';
 import '../movies/feed.dart';
 import '../movies/widgets/movie_poster_card.dart';
+import '../motion.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
@@ -186,11 +187,18 @@ class _LibraryGrid extends ConsumerWidget {
                 ),
                 delegate: SliverChildBuilderDelegate((context, i) {
                   final m = library[i];
-                  return MoviePosterCard(
-                    movie: m,
-                    metaLine: movieMeta(m),
-                    onTap: () => context.push('/movie/${m.id}', extra: m.title),
-                    onAction: (a) => act(m, a),
+                  // Apparition échelonnée sur les toutes premières affiches
+                  // seulement : au-delà, la cascade se verrait plus que la
+                  // grille. Le décalage total reste sous 150 ms.
+                  return EntranceFade(
+                    delay: Motion.staggerAt(i),
+                    child: MoviePosterCard(
+                      movie: m,
+                      metaLine: movieMeta(m),
+                      onTap: () =>
+                          context.push('/movie/${m.id}', extra: m.title),
+                      onAction: (a) => act(m, a),
+                    ),
                   );
                 }, childCount: library.length),
               ),

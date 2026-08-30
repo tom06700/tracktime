@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
+import '../../motion.dart';
 import '../../theme.dart';
 import '../../widgets/media_image.dart';
 
@@ -51,12 +52,16 @@ class MoviePosterCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: MediaImage(
-                    sources: [movie.poster],
-                    seed: movie.title,
-                    icon: Icons.movie_outlined,
+                MediaPosterHero(
+                  id: movie.id,
+                  isSeries: false,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: MediaImage(
+                      sources: [movie.poster],
+                      seed: movie.title,
+                      icon: Icons.movie_outlined,
+                    ),
                   ),
                 ),
                 Positioned(

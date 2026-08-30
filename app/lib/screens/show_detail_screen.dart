@@ -6,13 +6,17 @@ import 'package:go_router/go_router.dart';
 
 import '../db/database.dart';
 import '../providers.dart';
+import '../motion.dart';
 import '../series/catch_up.dart';
 import '../series/widgets/catch_up_sheet.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../tmdb/tvdb.dart';
 import 'media_detail_parts.dart';
+import 'movie_detail_screen.dart' show MediaDetailSkeleton;
 import '../widgets/common.dart';
+import '../widgets/media_image.dart';
+import '../widgets/skeleton.dart';
 
 class ShowDetailScreen extends ConsumerStatefulWidget {
   const ShowDetailScreen({
@@ -323,7 +327,9 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
       body: _error != null
           ? EmptyState(icon: Icons.error_outline, message: _error!)
           : _details == null
-          ? const Center(child: CircularProgressIndicator())
+          // La forme de la fiche plutôt qu'un rond qui tourne : la mise en
+          // page est connue d'avance, autant l'annoncer.
+          ? const MediaDetailSkeleton()
           : _buildContent(followed),
     );
   }
@@ -332,8 +338,10 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
     return Column(
       children: [
         _Header(
+          showId: widget.showId,
           name: _name,
           backdrop: _backdrop,
+          poster: TvdbClient.posterOf(_details!),
           episodeCount: _totalEpisodes(),
           network: _networkOf(_details!),
         ),
@@ -365,12 +373,7 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
                 onAdd: _addToLibrary,
               ),
               if (_loadingEpisodes)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: CircularProgressIndicator(color: TtColors.amber),
-                  ),
-                )
+                const _SeasonsSkeleton()
               else
                 _EpisodesTab(
                   showId: widget.showId,
@@ -436,14 +439,22 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
 
 class _Header extends StatelessWidget {
   const _Header({
+    required this.showId,
     required this.name,
     required this.backdrop,
+    required this.poster,
     required this.episodeCount,
     required this.network,
   });
 
+  final int showId;
   final String name;
   final String? backdrop;
+
+  /// Affiche verticale : c'est elle qui relie la carte touchée à cette fiche,
+  /// et elle donne au titre un ancrage visuel que le fond seul n'offrait pas.
+  final String? poster;
+
   final int? episodeCount;
   final String network;
 
@@ -487,31 +498,56 @@ class _Header extends StatelessWidget {
             left: 16,
             right: 16,
             bottom: 14,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    height: 1.1,
-                    color: Colors.white,
-                  ),
-                ),
-                if (meta.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    meta,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white70,
+                MediaPosterHero(
+                  id: showId,
+                  isSeries: true,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: 82,
+                      height: 123,
+                      child: MediaImage(
+                        sources: [poster, backdrop],
+                        seed: name,
+                        icon: Icons.tv,
+                      ),
                     ),
                   ),
-                ],
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
+                          color: Colors.white,
+                        ),
+                      ),
+                      if (meta.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          meta,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -665,6 +701,27 @@ class _EpisodesTab extends ConsumerWidget {
   }
 }
 
+/// Cartes de saison en attente : mêmes hauteurs, mêmes marges que les vraies,
+/// pour que rien ne bouge quand la liste arrive.
+class _SeasonsSkeleton extends StatelessWidget {
+  const _SeasonsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: EdgeInsets.fromLTRB(12, 12, 12, bottomNavInset(context)),
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        for (var i = 0; i < 5; i++)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: SkeletonBox(height: 92, radius: 12),
+          ),
+      ],
+    );
+  }
+}
+
 class _SeasonCard extends StatefulWidget {
   const _SeasonCard({
     super.key,
@@ -789,8 +846,16 @@ class _SeasonCardState extends State<_SeasonCard> {
   Widget _buildEpisodes(List<int>? eps) {
     if (_loading) {
       return const Padding(
-        padding: EdgeInsets.all(18),
-        child: Center(child: CircularProgressIndicator()),
+        padding: EdgeInsets.fromLTRB(14, 6, 14, 14),
+        child: Column(
+          children: [
+            SkeletonBox(height: 18, radius: 4),
+            SizedBox(height: 12),
+            SkeletonBox(height: 18, radius: 4),
+            SizedBox(height: 12),
+            SkeletonBox(width: 180, height: 18, radius: 4),
+          ],
+        ),
       );
     }
     if (_error != null) {
@@ -887,27 +952,43 @@ class _EpisodeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Cocher un épisode est le geste le plus fréquent de l'app : la coche se
+    // remplit et le titre s'estompe ensemble, en un seul mouvement court.
+    // Rien ne rebondit, rien ne grossit.
+    final duration = motionOf(context, Motion.normal);
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         child: Row(
           children: [
-            Icon(
-              watched ? Icons.check_circle : Icons.circle_outlined,
-              color: watched ? TtColors.amber : TtColors.dim,
-              size: 24,
+            AnimatedSwitcher(
+              duration: duration,
+              switchInCurve: Motion.enter,
+              // Un fondu croisé entre le cercle vide et la coche pleine ;
+              // pas de bascule sèche, pas de rebond.
+              child: Icon(
+                watched ? Icons.check_circle : Icons.circle_outlined,
+                key: ValueKey(watched),
+                color: watched ? TtColors.amber : TtColors.dim,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                '$number. $name',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              child: AnimatedDefaultTextStyle(
+                duration: duration,
+                curve: Motion.between,
                 style: TextStyle(
                   fontSize: 14,
                   color: watched ? TtColors.dim : TtColors.text,
                   decoration: watched ? TextDecoration.lineThrough : null,
+                  decorationColor: TtColors.dim,
+                ),
+                child: Text(
+                  '$number. $name',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
