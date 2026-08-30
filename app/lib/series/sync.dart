@@ -62,16 +62,25 @@ Future<void> syncShowEpisodes(
 DateTime? _parseDate(Object? raw) =>
     (raw is String && raw.isNotEmpty) ? DateTime.tryParse(raw) : null;
 
-/// Synchro en cours, s'il y en a une. Deux passes simultanées écriraient les
-/// mêmes lignes et doubleraient les appels réseau : un appel qui arrive pendant
-/// une passe s'enchaîne derrière elle au lieu de la doubler.
-Future<SyncOutcome>? _inFlight;
+/// Passes en cours, suivies séparément selon leur mode. Deux appels de même
+/// mode partagent la même opération : sérialiser ne suffisait pas, le second
+/// repartait pour un aller-retour réseau complet.
+Future<SyncOutcome>? _inFlightNormal;
+Future<SyncOutcome>? _inFlightForce;
 
 /// Synchronise les séries dont le cache est absent ou périmé (24 h par défaut).
 /// Ne lève jamais : les échecs sont comptés dans le [SyncOutcome] rendu.
 ///
 /// [force] ignore le TTL et le cache mémoire — c'est le mode du « tirer pour
 /// rafraîchir », qui doit réellement aller chercher les nouveautés.
+///
+/// Trois règles, dans cet ordre :
+/// - deux appels de même mode lancés ensemble partagent la même passe ;
+/// - une passe normale demandée pendant une passe forcée se raccroche à elle,
+///   qui fait déjà davantage ;
+/// - une passe forcée demandée pendant une passe normale s'exécute vraiment,
+///   mais après elle — un rafraîchissement manuel ne doit jamais être avalé
+///   par la synchro d'arrière-plan, ni écrire en même temps qu'elle.
 Future<SyncOutcome> syncStaleShows(
   AppDatabase db,
   TvdbClient tvdb, {
@@ -79,6 +88,10 @@ Future<SyncOutcome> syncStaleShows(
   bool force = false,
   Future<void> Function()? throttle,
 }) {
+  final sameMode = force ? _inFlightForce : _inFlightNormal;
+  if (sameMode != null) return sameMode;
+  if (!force && _inFlightForce != null) return _inFlightForce!;
+
   Future<SyncOutcome> run() => _syncStaleShows(
         db,
         tvdb,
@@ -87,20 +100,32 @@ Future<SyncOutcome> syncStaleShows(
         throttle: throttle,
       );
 
-  final pending = _inFlight;
-  final next = pending == null
+  final before = force ? _inFlightNormal : null;
+  final next = before == null
       ? run()
-      : pending.then((_) => run(), onError: (_) => run());
-  _inFlight = next;
+      : before.then((_) => run(), onError: (_) => run());
+
+  if (force) {
+    _inFlightForce = next;
+  } else {
+    _inFlightNormal = next;
+  }
   next.whenComplete(() {
-    if (identical(_inFlight, next)) _inFlight = null;
+    if (force) {
+      if (identical(_inFlightForce, next)) _inFlightForce = null;
+    } else if (identical(_inFlightNormal, next)) {
+      _inFlightNormal = null;
+    }
   });
   return next;
 }
 
-/// Remet le verrou à zéro entre deux tests (l'état est global au processus).
+/// Remet les verrous à zéro entre deux tests (l'état est global au processus).
 @visibleForTesting
-void resetSyncLock() => _inFlight = null;
+void resetSyncLock() {
+  _inFlightNormal = null;
+  _inFlightForce = null;
+}
 
 Future<SyncOutcome> _syncStaleShows(
   AppDatabase db,
@@ -111,7 +136,14 @@ Future<SyncOutcome> _syncStaleShows(
 }) async {
   if (tvdb.apiKey.isEmpty) return SyncOutcome.none;
   final now = DateTime.now();
-  final shows = await db.allShows();
+  final List<Show> shows;
+  try {
+    shows = await db.allShows();
+  } catch (e, st) {
+    // Cette fonction ne lève pas : ses appelants sont des gestes d'interface.
+    debugPrint('Synchro : lecture des séries impossible : $e\n$st');
+    return const SyncOutcome(synced: 0, failed: 1);
+  }
   var synced = 0, failed = 0;
   for (final show in shows) {
     final syncedAt = show.episodesSyncedAt;

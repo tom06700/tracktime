@@ -108,6 +108,31 @@ Future<void> _pump(
   }
 }
 
+/// Base de test avec les clés étrangères actives, comme sur l'appareil.
+AppDatabase _fkDb() => AppDatabase.forTesting(
+  NativeDatabase.memory(
+    setup: (raw) => raw.execute('PRAGMA foreign_keys = ON;'),
+  ),
+);
+
+Future<void> _frames(WidgetTester tester, [int n = 8]) async {
+  for (var i = 0; i < n; i++) {
+    await tester.pump(const Duration(milliseconds: 60));
+  }
+}
+
+Future<void> _tapAndSettle(WidgetTester tester, Finder f) async {
+  await tester.tap(f);
+  await _frames(tester);
+}
+
+/// Ouvre l'onglet Épisodes puis déplie la saison 1, seul moment où les
+/// contrôles de progression deviennent atteignables.
+Future<void> _openSeason(WidgetTester tester) async {
+  await _tapAndSettle(tester, find.text('Épisodes'));
+  await _tapAndSettle(tester, find.text('Saison 1'));
+}
+
 Future<void> _settle(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump(const Duration(seconds: 1));
@@ -250,6 +275,96 @@ void main() {
 
       expect(await db.showById(81797), isNotNull);
       expect(await db.select(db.episodes).get(), hasLength(2));
+
+      await _settle(tester);
+    },
+  );
+
+  testWidgets(
+    'cocher un épisode d\'une série non suivie ne l\'ajoute pas',
+    (tester) async {
+      final db = _fkDb();
+      addTearDown(db.close);
+      final api = _Api();
+
+      await _pump(
+        tester,
+        db,
+        api.client(series: _onePiece, episodes: const [(1, 1), (1, 2)]),
+        const ShowDetailScreen(showId: 81797, title: 'One Piece'),
+      );
+
+      await _openSeason(tester);
+      await _tapAndSettle(tester, find.textContaining('1. S1E1'));
+
+      // Rien n'est entré dans la bibliothèque, et l'utilisateur sait pourquoi.
+      expect(await db.showById(81797), isNull);
+      expect(await db.select(db.watchedEpisodes).get(), isEmpty);
+      expect(await db.select(db.episodes).get(), isEmpty);
+      expect(
+        find.textContaining('Ajoute d\'abord cette série'),
+        findsOneWidget,
+      );
+
+      await _settle(tester);
+    },
+  );
+
+  testWidgets(
+    'cocher une saison entière d\'une série non suivie ne l\'ajoute pas',
+    (tester) async {
+      final db = _fkDb();
+      addTearDown(db.close);
+      final api = _Api();
+
+      await _pump(
+        tester,
+        db,
+        api.client(series: _onePiece, episodes: const [(1, 1), (1, 2)]),
+        const ShowDetailScreen(showId: 81797, title: 'One Piece'),
+      );
+
+      await _openSeason(tester);
+      await _tapAndSettle(tester, find.byIcon(Icons.done_all));
+
+      expect(await db.showById(81797), isNull);
+      expect(await db.select(db.watchedEpisodes).get(), isEmpty);
+      expect(
+        find.textContaining('Ajoute d\'abord cette série'),
+        findsOneWidget,
+      );
+
+      await _settle(tester);
+    },
+  );
+
+  testWidgets(
+    'une fois la série ajoutée, les coches fonctionnent',
+    (tester) async {
+      final db = _fkDb();
+      addTearDown(db.close);
+      final api = _Api();
+
+      await _pump(
+        tester,
+        db,
+        api.client(series: _onePiece, episodes: const [(1, 1), (1, 2)]),
+        const ShowDetailScreen(showId: 81797, title: 'One Piece'),
+      );
+
+      await _tapAndSettle(tester, find.text('Ajouter à ma liste'));
+      expect(await db.showById(81797), isNotNull);
+
+      await _openSeason(tester);
+      await _tapAndSettle(tester, find.textContaining('1. S1E1'));
+
+      final watched = await db.select(db.watchedEpisodes).get();
+      expect(watched.map((w) => 'S${w.season}E${w.episode}'), ['S1E1']);
+
+      // Et la saison entière passe elle aussi.
+      await _tapAndSettle(tester, find.byIcon(Icons.done_all));
+      final all = await db.select(db.watchedEpisodes).get();
+      expect(all, hasLength(2));
 
       await _settle(tester);
     },

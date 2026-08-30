@@ -199,18 +199,32 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
   bool _followed(List<ShowWithProgress> shows) =>
       shows.any((s) => s.show.id == widget.showId);
 
-  /// Crée la ligne locale si elle manque, avant toute écriture qui la
-  /// référence — cocher un épisode d'une série non suivie doit rester possible.
-  Future<void> _ensureFollowed() async {
-    final db = ref.read(databaseProvider);
-    if (await db.showById(widget.showId) != null || _details == null) return;
-    await _upsertFromDetails(_details!, _name);
-    // La série existe désormais : les épisodes affichés peuvent être écrits.
-    if (_episodesRequested) await _loadEpisodes(refresh: true);
+  /// Garde de toute écriture de progression. Une série n'entre dans la
+  /// bibliothèque que par « Ajouter à ma liste » : cocher un épisode depuis
+  /// une fiche ouverte au hasard dans Explorer l'y ajoutait en douce, sans
+  /// que l'utilisateur ait rien demandé.
+  Future<bool> _requireFollowed() async {
+    if (await ref.read(databaseProvider).showById(widget.showId) != null) {
+      return true;
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Ajoute d\'abord cette série à ta liste '
+              'pour suivre tes épisodes.',
+            ),
+          ),
+        );
+    }
+    return false;
   }
 
   /// Ajoute la série à la bibliothèque puis récupère ses épisodes — c'est le
-  /// moment où leur téléchargement devient justifié.
+  /// moment où leur téléchargement devient justifié, et le seul endroit d'où
+  /// une série peut entrer dans la bibliothèque.
   Future<bool> _addToLibrary() async {
     final ok = await addSeriesToLibrary(ref, widget.showId);
     if (!ok) return false;
@@ -223,8 +237,8 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
       _episodesBySeason[season] ?? const [];
 
   Future<void> _toggleEpisode(int season, int episode, bool watched) async {
+    if (!await _requireFollowed()) return;
     HapticFeedback.selectionClick();
-    await _ensureFollowed();
     final db = ref.read(databaseProvider);
     if (watched) {
       db.setEpisodeUnwatched(widget.showId, season, episode);
@@ -234,8 +248,8 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
   }
 
   Future<void> _setSeason(int season, List<int> eps, bool on) async {
+    if (!await _requireFollowed()) return;
     HapticFeedback.lightImpact();
-    await _ensureFollowed();
     ref.read(databaseProvider).setSeasonWatched(widget.showId, season, eps, on);
   }
 

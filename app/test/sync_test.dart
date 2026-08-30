@@ -233,21 +233,109 @@ void main() {
     expect(out.synced, 0);
   });
 
-  test('deux synchros lancées ensemble ne se doublent pas', () async {
+  test('deux synchros normales lancées ensemble partagent la même passe',
+      () async {
     final db = _db();
     addTearDown(db.close);
     await _addShow(db);
     final api = _Api([(1, 1)]);
     final tvdb = api.client();
 
-    // La seconde s'enchaîne derrière la première ; quand elle démarre, la
-    // série vient d'être datée et se trouve donc à jour.
-    await Future.wait([
-      syncStaleShows(db, tvdb),
-      syncStaleShows(db, tvdb),
-    ]);
+    final a = syncStaleShows(db, tvdb);
+    final b = syncStaleShows(db, tvdb);
+    expect(identical(a, b), isTrue, reason: 'même opération, pas une file');
+
+    final outs = await Future.wait([a, b]);
+    expect(api.episodeCalls, 1);
+    expect(outs[0].synced, 1);
+    expect(outs[1].synced, 1);
+  });
+
+  test('deux rafraîchissements forcés simultanés = une seule passe réseau',
+      () async {
+    final db = _db();
+    addTearDown(db.close);
+    await _addShow(db);
+    final api = _Api([(1, 1)]);
+    final tvdb = api.client();
+
+    // Le cas qui coûtait deux allers-retours : forcées, les deux passes
+    // ignorent le TTL, donc rien ne rattrapait le doublon en aval.
+    final a = syncStaleShows(db, tvdb, force: true);
+    final b = syncStaleShows(db, tvdb, force: true);
+    final outs = await Future.wait([a, b]);
 
     expect(api.episodeCalls, 1);
+    expect(outs[0].synced, 1);
+    expect(outs[1].synced, outs[0].synced);
+    expect(await _episodesOf(db), hasLength(1));
+  });
+
+  test('une passe normale se raccroche à la passe forcée en cours', () async {
+    final db = _db();
+    addTearDown(db.close);
+    await _addShow(db);
+    final api = _Api([(1, 1)]);
+    final tvdb = api.client();
+
+    final forced = syncStaleShows(db, tvdb, force: true);
+    final normal = syncStaleShows(db, tvdb);
+    expect(identical(forced, normal), isTrue,
+        reason: 'la forcée fait déjà tout ce que la normale ferait');
+
+    await Future.wait([forced, normal]);
+    expect(api.episodeCalls, 1);
+  });
+
+  test('un rafraîchissement manuel n\'est pas avalé par la synchro de fond',
+      () async {
+    final db = _db();
+    addTearDown(db.close);
+    await _addShow(db);
+    final api = _Api([(1, 1)]);
+    final tvdb = api.client();
+
+    final auto = syncStaleShows(db, tvdb);
+    final manual = syncStaleShows(db, tvdb, force: true);
+    expect(identical(auto, manual), isFalse);
+
+    await Future.wait([auto, manual]);
+
+    // Deux passes : la manuelle repart vraiment chercher les épisodes,
+    // alors que le TTL venait d'être remis à neuf par la passe de fond.
+    expect(api.episodeCalls, 2);
+  });
+
+  test('le geste manuel voit les épisodes parus pendant la synchro de fond',
+      () async {
+    final db = _db();
+    addTearDown(db.close);
+    await _addShow(db);
+    final api = _Api([(1, 1)]);
+    final tvdb = api.client();
+
+    final auto = syncStaleShows(db, tvdb);
+    // Un épisode paraît pendant la passe de fond.
+    api.episodes = [(1, 1), (1, 2)];
+    final manual = syncStaleShows(db, tvdb, force: true);
+    await Future.wait([auto, manual]);
+
+    final eps = await _episodesOf(db)
+      ..sort((a, b) => a.episode.compareTo(b.episode));
+    expect(eps.map((e) => e.episode), [1, 2]);
+  });
+
+  test('les verrous se libèrent : une passe suivante repart', () async {
+    final db = _db();
+    addTearDown(db.close);
+    await _addShow(db);
+    final api = _Api([(1, 1)]);
+    final tvdb = api.client();
+
+    await syncStaleShows(db, tvdb, force: true);
+    await syncStaleShows(db, tvdb, force: true);
+
+    expect(api.episodeCalls, 2);
   });
 
   test('les spéciaux (saison 0) restent hors du cache', () async {
