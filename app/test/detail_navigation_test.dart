@@ -21,7 +21,10 @@ import 'package:tracktime/tmdb/tvdb.dart';
 class _Api {
   final List<String> calls = [];
 
-  TvdbClient client({Map<String, Object?> series = const {}}) => TvdbClient(
+  TvdbClient client({
+    Map<String, Object?> series = const {},
+    List<(int, int)> episodes = const [],
+  }) => TvdbClient(
     'test',
     client: MockClient((req) async {
       final path = req.url.path;
@@ -32,7 +35,15 @@ class _Api {
       } else if (path.contains('/series/') && path.endsWith('/extended')) {
         body = series;
       } else if (path.contains('/episodes/')) {
-        body = {'episodes': []};
+        final page = int.tryParse(req.url.queryParameters['page'] ?? '0');
+        body = {
+          'episodes': page != 0
+              ? const []
+              : [
+                  for (final (s, n) in episodes)
+                    {'seasonNumber': s, 'number': n, 'name': 'S${s}E$n'},
+                ],
+        };
       } else if (path.contains('/movies/') && path.endsWith('/extended')) {
         body = {
           'name': 'Dune',
@@ -168,6 +179,81 @@ void main() {
 
     await _settle(tester);
   });
+
+  testWidgets(
+    'consulter les épisodes d\'une série non suivie n\'écrit rien en base',
+    (tester) async {
+      // Clés étrangères actives, comme sur l'appareil : écrire un épisode
+      // rattaché à une série absente doit être impossible, pas silencieux.
+      final db = AppDatabase.forTesting(
+        NativeDatabase.memory(
+          setup: (raw) => raw.execute('PRAGMA foreign_keys = ON;'),
+        ),
+      );
+      addTearDown(db.close);
+      final api = _Api();
+
+      await _pump(
+        tester,
+        db,
+        api.client(series: _onePiece, episodes: const [(1, 1), (1, 2)]),
+        const ShowDetailScreen(showId: 81797, title: 'One Piece'),
+      );
+
+      await tester.tap(find.text('Épisodes'));
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+
+      expect(tester.takeException(), isNull);
+      expect(await db.select(db.episodes).get(), isEmpty);
+      expect(await db.showById(81797), isNull);
+
+      await _settle(tester);
+    },
+  );
+
+  testWidgets(
+    'ajouter la série persiste les épisodes déjà consultés',
+    (tester) async {
+      final db = AppDatabase.forTesting(
+        NativeDatabase.memory(
+          setup: (raw) => raw.execute('PRAGMA foreign_keys = ON;'),
+        ),
+      );
+      addTearDown(db.close);
+      final api = _Api();
+
+      await _pump(
+        tester,
+        db,
+        api.client(series: _onePiece, episodes: const [(1, 1), (1, 2)]),
+        const ShowDetailScreen(showId: 81797, title: 'One Piece'),
+      );
+
+      // On regarde les épisodes AVANT d'ajouter : rien n'est écrit.
+      await tester.tap(find.text('Épisodes'));
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+      expect(await db.select(db.episodes).get(), isEmpty);
+
+      // Puis on ajoute : le cache d'épisodes doit rattraper son retard.
+      await tester.tap(find.text('À propos'));
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+      await tester.tap(find.text('Ajouter à ma liste'));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+
+      expect(await db.showById(81797), isNotNull);
+      expect(await db.select(db.episodes).get(), hasLength(2));
+
+      await _settle(tester);
+    },
+  );
 
   testWidgets('la fiche film charge ses détails depuis TheTVDB', (
     tester,

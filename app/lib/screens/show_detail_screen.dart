@@ -105,8 +105,12 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
     return out.toList()..sort();
   }
 
-  Future<void> _loadEpisodes() async {
-    if (_episodesRequested) return;
+  /// Charge la liste des épisodes, et ne la persiste que si la série est
+  /// suivie. [refresh] rejoue le chargement alors qu'il a déjà eu lieu : c'est
+  /// ce qui persiste les épisodes déjà affichés au moment où la série entre
+  /// dans la bibliothèque (le client garde la liste en mémoire, pas de réseau).
+  Future<void> _loadEpisodes({bool refresh = false}) async {
+    if (_episodesRequested && !refresh) return;
     _episodesRequested = true;
     setState(() => _loadingEpisodes = true);
 
@@ -139,8 +143,12 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
       }
       final seasons = bySeason.keys.toList()..sort();
 
+      // Rien n'est persisté tant que la série n'est pas dans la bibliothèque :
+      // les épisodes la référencent par clé étrangère, et une simple
+      // consultation depuis Explorer laisserait sinon des lignes orphelines
+      // rattachées à une série absente.
       final followed = await db.showById(widget.showId) != null;
-      if (rows.isNotEmpty) await db.upsertEpisodes(rows);
+      if (followed && rows.isNotEmpty) await db.upsertEpisodes(rows);
       if (followed && bySeason.isNotEmpty) {
         await _upsertFromDetails(_details!, _name);
         final total = bySeason.values.fold<int>(0, (s, l) => s + l.length);
@@ -195,9 +203,10 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
   /// référence — cocher un épisode d'une série non suivie doit rester possible.
   Future<void> _ensureFollowed() async {
     final db = ref.read(databaseProvider);
-    if (await db.showById(widget.showId) == null && _details != null) {
-      await _upsertFromDetails(_details!, _name);
-    }
+    if (await db.showById(widget.showId) != null || _details == null) return;
+    await _upsertFromDetails(_details!, _name);
+    // La série existe désormais : les épisodes affichés peuvent être écrits.
+    if (_episodesRequested) await _loadEpisodes(refresh: true);
   }
 
   /// Ajoute la série à la bibliothèque puis récupère ses épisodes — c'est le
@@ -206,7 +215,7 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
     final ok = await addSeriesToLibrary(ref, widget.showId);
     if (!ok) return false;
     if (_details != null) await _upsertFromDetails(_details!, _name);
-    await _loadEpisodes();
+    await _loadEpisodes(refresh: true);
     return true;
   }
 

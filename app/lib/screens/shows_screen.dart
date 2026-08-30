@@ -22,11 +22,29 @@ class ShowsScreen extends ConsumerStatefulWidget {
 }
 
 /// Synchronise les métadonnées TheTVDB des séries en retard.
-Future<void> _sync(WidgetRef ref) => syncStaleShows(
-  ref.read(databaseProvider),
-  ref.read(tvdbClientProvider),
-  throttle: () => Future.delayed(const Duration(milliseconds: 120)),
-);
+Future<SyncOutcome> _sync(WidgetRef ref, {bool force = false}) =>
+    syncStaleShows(
+      ref.read(databaseProvider),
+      ref.read(tvdbClientProvider),
+      force: force,
+      throttle: () => Future.delayed(const Duration(milliseconds: 120)),
+    );
+
+/// Geste « tirer pour rafraîchir » : on force la synchro, sinon le TTL et le
+/// cache mémoire du client renverraient exactement ce qui est déjà affiché.
+///
+/// Aucune invalidation de provider : les listes viennent de flux drift, qui
+/// réémettent d'eux-mêmes dès que la synchro écrit. Les invalider ferait
+/// clignoter le squelette pour rien.
+Future<void> _refresh(BuildContext context, WidgetRef ref) async {
+  final outcome = await _sync(ref, force: true);
+  if (!context.mounted || !outcome.hasFailures) return;
+  ScaffoldMessenger.of(context)
+    ..clearSnackBars()
+    ..showSnackBar(
+      const SnackBar(content: Text('Actualisation impossible pour le moment.')),
+    );
+}
 
 void _openShow(BuildContext context, int id, String name) =>
     context.push('/show/$id', extra: name);
@@ -144,10 +162,7 @@ class _ToWatchFeed extends ConsumerWidget {
     return RefreshIndicator(
       color: TtColors.amber,
       backgroundColor: TtColors.surface,
-      onRefresh: () async {
-        await _sync(ref);
-        ref.invalidate(showsProvider);
-      },
+      onRefresh: () => _refresh(context, ref),
       child: ListView(
         padding: EdgeInsets.only(top: 12, bottom: bottomNavInset(context)),
         children: [
@@ -354,21 +369,28 @@ class _UpcomingTab extends ConsumerWidget {
 
         final now = DateTime.now();
         final groups = groupUpcoming(list, now);
-        return ListView.builder(
-          padding: EdgeInsets.only(top: 16, bottom: bottomNavInset(context)),
-          itemCount: groups.length,
-          itemBuilder: (context, gi) {
-            final group = groups[gi];
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (gi > 0) const SizedBox(height: 26),
-                _SectionHeader(group.bucket.label),
-                for (final u in group.episodes)
-                  _UpcomingRow(upcoming: u, now: now),
-              ],
-            );
-          },
+        // Les dates de diffusion bougent : c'est l'onglet où le geste de
+        // rafraîchissement a le plus de sens.
+        return RefreshIndicator(
+          color: TtColors.amber,
+          backgroundColor: TtColors.surface,
+          onRefresh: () => _refresh(context, ref),
+          child: ListView.builder(
+            padding: EdgeInsets.only(top: 16, bottom: bottomNavInset(context)),
+            itemCount: groups.length,
+            itemBuilder: (context, gi) {
+              final group = groups[gi];
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (gi > 0) const SizedBox(height: 26),
+                  _SectionHeader(group.bucket.label),
+                  for (final u in group.episodes)
+                    _UpcomingRow(upcoming: u, now: now),
+                ],
+              );
+            },
+          ),
         );
       },
     );

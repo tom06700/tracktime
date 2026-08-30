@@ -159,8 +159,7 @@ void main() {
   });
 
   group('buildUpcoming', () {
-    test('prochain épisode futur par série, trié du plus proche au plus loin',
-        () {
+    test('tous les épisodes à venir, du plus proche au plus loin', () {
       final a = _show(1, 'A');
       final b = _show(2, 'B');
       final list = buildUpcoming(
@@ -172,26 +171,41 @@ void main() {
         ],
         now: now,
       );
-      expect(list.map((u) => u.show.name), ['B', 'A']); // B dans 3 j avant A
-      expect(list.first.episode, 5);
+      // Une série qui a deux rendez-vous annoncés en montre deux : on ne
+      // masque plus tout ce qui suit le prochain épisode.
+      expect(
+        list.map((u) => '${u.show.name} ${u.code}'),
+        ['B S01 | E05', 'A S02 | E01', 'A S02 | E02'],
+      );
       expect(list.first.daysFrom(now), 3);
-      // Pour A, on garde le plus proche (E1 à 10 j), pas E2 à 17 j.
-      expect(list[1].episode, 1);
-      expect(list[1].daysFrom(now), 10);
     });
 
-    test('exclut les épisodes déjà diffusés', () {
+    test('hier exclu, aujourd\'hui inclus', () {
       final a = _show(1, 'A');
       final list = buildUpcoming(
         shows: [_swp(a, 1)],
         episodes: [
-          _ep(1, 1, 1, air: now.subtract(const Duration(days: 2))),
-          _ep(1, 1, 2, air: now.add(const Duration(days: 5))),
+          _ep(1, 1, 1, air: now.subtract(const Duration(days: 1))),
+          _ep(1, 1, 2, air: now),
+          _ep(1, 1, 3, air: now.add(const Duration(days: 5))),
         ],
         now: now,
       );
+      expect(list.map((u) => u.episode), [2, 3]);
+    });
+
+    test('l\'épisode du jour reste affiché en fin de journée', () {
+      final a = _show(1, 'A');
+      // Le cas qui faisait disparaître l'épisode : TheTVDB le date à minuit,
+      // donc dès 00 h 01 il était « passé » au sens d'une comparaison
+      // d'instants, alors qu'il n'est pas encore diffusé.
+      final list = buildUpcoming(
+        shows: [_swp(a, 0)],
+        episodes: [_ep(1, 1, 1, air: DateTime(2026, 7, 6))],
+        now: DateTime(2026, 7, 6, 23, 30),
+      );
       expect(list, hasLength(1));
-      expect(list.single.episode, 2);
+      expect(list.single.daysFrom(DateTime(2026, 7, 6, 23, 30)), 0);
     });
 
     test('daysFrom en jours calendaires', () {
@@ -205,6 +219,144 @@ void main() {
       );
       expect(list.single.daysFrom(DateTime(2026, 7, 6, 23)), 1);
     });
+
+    test('une série hebdomadaire montre ses prochaines dates', () {
+      // Cas One Piece : un épisode aujourd'hui, un dans une semaine, un dans
+      // deux — les trois doivent apparaître.
+      final op = _show(81797, 'One Piece');
+      final list = buildUpcoming(
+        shows: [_swp(op, 1000)],
+        episodes: [
+          _ep(81797, 21, 1120, air: now),
+          _ep(81797, 21, 1121, air: now.add(const Duration(days: 7))),
+          _ep(81797, 21, 1122, air: now.add(const Duration(days: 14))),
+        ],
+        now: now,
+      );
+      expect(list.map((u) => u.episode), [1120, 1121, 1122]);
+      expect(list.map((u) => u.daysFrom(now)), [0, 7, 14]);
+    });
+
+    test('fenêtre de trois mois : au-delà, les dates ne sont pas fiables', () {
+      final a = _show(1, 'A');
+      final list = buildUpcoming(
+        shows: [_swp(a, 0)],
+        episodes: [
+          _ep(1, 1, 1, air: now.add(const Duration(days: 89))),
+          _ep(1, 1, 2, air: now.add(const Duration(days: 120))),
+        ],
+        now: now,
+      );
+      expect(list.map((u) => u.episode), [1]);
+    });
+
+    test('ordre déterministe entre deux épisodes du même jour', () {
+      final z = _show(1, 'Zulu');
+      final a = _show(2, 'Alpha');
+      final day = now.add(const Duration(days: 2));
+      final list = buildUpcoming(
+        shows: [_swp(z, 0), _swp(a, 0)],
+        episodes: [_ep(1, 1, 1, air: day), _ep(2, 3, 4, air: day)],
+        now: now,
+      );
+      expect(list.map((u) => u.show.name), ['Alpha', 'Zulu']);
+    });
+
+    test('ignore les épisodes d\'une série non suivie', () {
+      final a = _show(1, 'A');
+      final list = buildUpcoming(
+        shows: [_swp(a, 0)],
+        episodes: [
+          _ep(1, 1, 1, air: now.add(const Duration(days: 2))),
+          _ep(99, 1, 1, air: now.add(const Duration(days: 1))),
+        ],
+        now: now,
+      );
+      expect(list.map((u) => u.show.id), [1]);
+    });
+  });
+
+  group('groupUpcoming', () {
+    test('répartit aujourd\'hui, demain, cette semaine, plus tard', () {
+      final a = _show(1, 'A');
+      final list = buildUpcoming(
+        shows: [_swp(a, 0)],
+        episodes: [
+          _ep(1, 1, 1, air: now),
+          _ep(1, 1, 2, air: now.add(const Duration(days: 1))),
+          _ep(1, 1, 3, air: now.add(const Duration(days: 4))),
+          _ep(1, 1, 4, air: now.add(const Duration(days: 30))),
+        ],
+        now: now,
+      );
+      final groups = groupUpcoming(list, now);
+      expect(groups.map((g) => g.bucket), [
+        UpcomingBucket.today,
+        UpcomingBucket.tomorrow,
+        UpcomingBucket.thisWeek,
+        UpcomingBucket.later,
+      ]);
+      expect(groups.first.episodes.single.episode, 1);
+    });
+
+    test('« Plus tard » plafonné par série, tranches proches complètes', () {
+      final op = _show(1, 'Quotidienne');
+      final list = buildUpcoming(
+        shows: [_swp(op, 0)],
+        episodes: [
+          for (var i = 0; i < 20; i++)
+            _ep(1, 1, i + 1, air: now.add(Duration(days: i))),
+        ],
+        now: now,
+      );
+      expect(list, hasLength(20));
+      final groups = {
+        for (final g in groupUpcoming(list, now)) g.bucket: g.episodes,
+      };
+      // Jours 0 à 7 : rien n'est masqué.
+      expect(groups[UpcomingBucket.today], hasLength(1));
+      expect(groups[UpcomingBucket.tomorrow], hasLength(1));
+      expect(groups[UpcomingBucket.thisWeek], hasLength(6)); // j+2 à j+7
+      // Jours 8 à 19 : seulement les trois premiers.
+      expect(groups[UpcomingBucket.later], hasLength(3));
+      expect(
+        groups[UpcomingBucket.later]!.map((u) => u.daysFrom(now)),
+        [8, 9, 10],
+      );
+    });
+  });
+
+  group('hasAiredByDay', () {
+    final ref = DateTime(2026, 7, 6, 14);
+
+    test('hier oui, aujourd\'hui oui, demain non', () {
+      expect(hasAiredByDay(DateTime(2026, 7, 5), ref), isTrue);
+      expect(hasAiredByDay(DateTime(2026, 7, 6), ref), isTrue);
+      expect(hasAiredByDay(DateTime(2026, 7, 6, 23), ref), isTrue);
+      expect(hasAiredByDay(DateTime(2026, 7, 7), ref), isFalse);
+    });
+
+    test('date inconnue : considérée diffusée', () {
+      expect(hasAiredByDay(null, ref), isTrue);
+    });
+  });
+
+  test('l\'épisode diffusé aujourd\'hui entre dans « à voir »', () {
+    final show = _show(1, 'Andor', total: 3);
+    final feed = buildSeriesFeed(
+      shows: [_swp(show, 1)],
+      episodes: [
+        _ep(1, 1, 1, air: past),
+        _ep(1, 1, 2, air: DateTime(2026, 7, 6), name: 'Aujourd\'hui'),
+        _ep(1, 1, 3, air: DateTime(2026, 7, 7)), // demain
+      ],
+      watched: [_w(1, 1, 1, DateTime(2026, 7, 4))],
+      now: DateTime(2026, 7, 6, 9), // 9 h du matin, l'épisode est daté minuit
+    );
+    final n = feed.toWatch.single;
+    expect(n.episode, 2);
+    expect(n.episodeName, 'Aujourd\'hui');
+    expect(n.remaining, 0, reason: 'celui de demain ne compte pas');
   });
 
   test('historique limité et trié par date décroissante', () {

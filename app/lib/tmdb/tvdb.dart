@@ -150,7 +150,15 @@ class TvdbClient {
   /// Épisodes officiels d'une série, normalisés et paginés puis mis en cache
   /// (le client est un singleton). Champs : season, episode, name, overview,
   /// image (URL complète), aired, runtime.
-  Future<List<Map<String, dynamic>>> seriesEpisodes(int id) async {
+  ///
+  /// [force] vide l'entrée de cache avant l'appel : sans ça, un rafraîchissement
+  /// manuel relirait la même liste en mémoire et ne verrait jamais les épisodes
+  /// ajoutés depuis.
+  Future<List<Map<String, dynamic>>> seriesEpisodes(
+    int id, {
+    bool force = false,
+  }) async {
+    if (force) _episodesCache.remove(id);
     final cached = _episodesCache[id];
     if (cached != null) return cached;
     final out = <Map<String, dynamic>>[];

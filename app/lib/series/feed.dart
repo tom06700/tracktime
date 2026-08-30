@@ -100,40 +100,73 @@ class UpcomingEpisode {
       'S${season.toString().padLeft(2, '0')} | E${episode.toString().padLeft(2, '0')}';
 
   /// Nombre de jours (calendaires) avant diffusion.
-  int daysFrom(DateTime now) {
-    final a = DateTime(airDate.year, airDate.month, airDate.day);
-    final n = DateTime(now.year, now.month, now.day);
-    return a.difference(n).inDays;
-  }
+  int daysFrom(DateTime now) =>
+      calendarDay(airDate).difference(calendarDay(now)).inDays;
 }
 
-/// Pour chaque série suivie, le prochain épisode à diffuser (le plus proche),
-/// trié du plus proche au plus loin. Pur et déterministe.
+/// Jour calendaire d'un instant, heure remise à zéro.
+///
+/// Toutes les comparaisons de diffusion passent par là : TheTVDB date ses
+/// épisodes à la journée (minuit), donc comparer des instants ferait
+/// disparaître l'épisode du jour dès 00 h 01 — il serait « passé » alors qu'il
+/// n'est pas encore diffusé.
+DateTime calendarDay(DateTime d) => DateTime(d.year, d.month, d.day);
+
+/// Un épisode est considéré diffusé dès que son jour de diffusion est atteint.
+/// Hier → oui, aujourd'hui → oui, demain → non. Une date inconnue est traitée
+/// comme diffusée, pour ne pas bloquer le fil « à voir ».
+bool hasAiredByDay(DateTime? airDate, DateTime now) =>
+    airDate == null || !calendarDay(airDate).isAfter(calendarDay(now));
+
+/// Fenêtre par défaut de l'onglet « À venir ». Au-delà, les dates annoncées par
+/// TheTVDB sont trop mouvantes pour être affichées comme un rendez-vous.
+const kUpcomingWindow = Duration(days: 90);
+
+/// Tous les épisodes à diffuser des séries suivies, du plus proche au plus
+/// loin. Pur et déterministe.
+///
+/// Contrairement à la version précédente, on ne garde pas qu'un seul épisode
+/// par série : une série qui diffuse deux fois par semaine doit montrer ses
+/// deux rendez-vous. L'épisode du jour est inclus (« Aujourd'hui »), celui
+/// d'hier non.
 List<UpcomingEpisode> buildUpcoming({
   required List<ShowWithProgress> shows,
   required List<Episode> episodes,
   required DateTime now,
+  Duration window = kUpcomingWindow,
 }) {
   final showById = {for (final s in shows) s.show.id: s.show};
-  final soonest = <int, Episode>{};
+  final today = calendarDay(now);
+  final last = today.add(window);
+
+  final list = <UpcomingEpisode>[];
   for (final e in episodes) {
     final air = e.airDate;
-    if (air == null || !air.isAfter(now)) continue; // futurs seulement
-    if (!showById.containsKey(e.showId)) continue;
-    final cur = soonest[e.showId];
-    if (cur == null || air.isBefore(cur.airDate!)) soonest[e.showId] = e;
+    if (air == null) continue;
+    final show = showById[e.showId];
+    if (show == null) continue;
+    final day = calendarDay(air);
+    if (day.isBefore(today) || day.isAfter(last)) continue;
+    list.add(UpcomingEpisode(
+      show: show,
+      season: e.season,
+      episode: e.episode,
+      airDate: air,
+      name: e.name,
+      still: e.still,
+    ));
   }
-  final list = [
-    for (final e in soonest.values)
-      UpcomingEpisode(
-        show: showById[e.showId]!,
-        season: e.season,
-        episode: e.episode,
-        airDate: e.airDate!,
-        name: e.name,
-        still: e.still,
-      ),
-  ]..sort((a, b) => a.airDate.compareTo(b.airDate));
+
+  // Ordre total : deux épisodes du même jour ne doivent pas changer de place
+  // d'un rebuild à l'autre.
+  list.sort((a, b) {
+    final d = a.airDate.compareTo(b.airDate);
+    if (d != 0) return d;
+    final n = a.show.name.compareTo(b.show.name);
+    if (n != 0) return n;
+    final s = a.season.compareTo(b.season);
+    return s != 0 ? s : a.episode.compareTo(b.episode);
+  });
   return list;
 }
 
@@ -164,7 +197,7 @@ SeriesFeed buildSeriesFeed({
 
   final showById = {for (final s in shows) s.show.id: s.show};
 
-  bool aired(Episode e) => e.airDate == null || !e.airDate!.isAfter(now);
+  bool aired(Episode e) => hasAiredByDay(e.airDate, now);
   String key(int s, int e) => 'S${s}E$e';
 
   // ---- Historique : derniers épisodes vus, plus récents d'abord ----
@@ -334,11 +367,18 @@ extension UpcomingBucketLabel on UpcomingBucket {
 /// Répartit les épisodes à venir par proximité, en conservant l'ordre
 /// chronologique à l'intérieur de chaque tranche. Les tranches vides sont
 /// omises. Pur et déterministe.
+///
+/// « Plus tard » couvre trois mois : une série quotidienne y déverserait des
+/// dizaines de lignes et noierait les autres. On n'en garde donc que les
+/// [laterPerShowLimit] premiers épisodes par série — les tranches proches, elles,
+/// restent complètes.
 List<({UpcomingBucket bucket, List<UpcomingEpisode> episodes})> groupUpcoming(
   List<UpcomingEpisode> list,
-  DateTime now,
-) {
+  DateTime now, {
+  int laterPerShowLimit = 3,
+}) {
   final byBucket = <UpcomingBucket, List<UpcomingEpisode>>{};
+  final laterCount = <int, int>{};
   for (final u in list) {
     final days = u.daysFrom(now);
     final bucket = switch (days) {
@@ -347,6 +387,11 @@ List<({UpcomingBucket bucket, List<UpcomingEpisode> episodes})> groupUpcoming(
       <= 7 => UpcomingBucket.thisWeek,
       _ => UpcomingBucket.later,
     };
+    if (bucket == UpcomingBucket.later) {
+      final seen = laterCount[u.show.id] ?? 0;
+      if (seen >= laterPerShowLimit) continue;
+      laterCount[u.show.id] = seen + 1;
+    }
     (byBucket[bucket] ??= []).add(u);
   }
   return [
