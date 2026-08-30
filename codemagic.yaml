@@ -44,10 +44,11 @@ workflows:
         script: flutter analyze
 
       - name: Tests unitaires
-        # ignore_failure : le paquet sqlite3 télécharge une lib native au
-        # premier run ; un aléa réseau ne doit pas bloquer la livraison.
+        # Bloquant : une build qui casse les tests ne part pas en TestFlight.
+        # Le téléchargement de la bibliothèque SQLite par le paquet sqlite3
+        # justifiait autrefois un ignore_failure ; masquer un vrai échec de
+        # test pour ça coûtait bien plus cher qu'un run à relancer.
         script: flutter test
-        ignore_failure: true
 
       - name: Installer les pods
         script: find . -name "Podfile" -execdir pod install \;

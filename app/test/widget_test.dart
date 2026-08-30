@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tracktime/db/database.dart';
 import 'package:tracktime/main.dart';
 import 'package:tracktime/providers.dart';
+import 'package:tracktime/settings/prefs.dart';
+import 'package:tracktime/tmdb/tvdb.dart';
 
 void main() {
   testWidgets('affiche la coquille avec les 4 onglets', (tester) async {
@@ -15,7 +17,12 @@ void main() {
     addTearDown(db.close);
 
     await tester.pumpWidget(ProviderScope(
-      overrides: [databaseProvider.overrideWithValue(db)],
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        // Client sans clé : il refuse de partir en réseau. Aucun test ne doit
+        // dépendre du vrai TheTVDB.
+        tvdbClientProvider.overrideWithValue(TvdbClient('')),
+      ],
       child: const NitrateApp(),
     ));
     // Pas de pumpAndSettle : le battement des squelettes de chargement est

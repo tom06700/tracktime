@@ -1,0 +1,69 @@
+# Garde-fou sur l'application Flutter.
+#
+# Vercel ne construit plus rien de ce dépôt : sans cette CI, un commit
+# n'affichait aucun signal sur l'état réel du code. Analyse et tests sont
+# bloquants, sans aucun `continue-on-error` — un rouge ici veut dire que
+# quelque chose est cassé.
+name: Flutter CI
+
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - '.github/workflows/flutter-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/flutter-ci.yml'
+
+# Un seul run par référence : les pushs rapprochés annulent le précédent.
+concurrency:
+  group: flutter-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyse-et-tests:
+    name: analyse + tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        # L'app vit dans app/, pas à la racine du dépôt.
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Même canal que Codemagic, qui construit l'IPA avec `flutter: stable`.
+      # Le projet ne fige pas de version : figer ici créerait justement l'écart
+      # qu'on cherche à éviter entre la CI et ce qui part en TestFlight.
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Paquets pub, et la bibliothèque SQLite que le hook de `package:sqlite3`
+      # télécharge une fois : sans ce cache, chaque run la retéléchargerait
+      # depuis les artefacts de release GitHub.
+      - name: Cache pub et bibliothèque SQLite
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            app/.dart_tool/hooks_runner/shared
+          key: pub-${{ runner.os }}-${{ hashFiles('app/pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
+
+      - name: Récupérer les paquets
+        run: flutter pub get
+
+      - name: Analyse statique
+        run: flutter analyze
+
+      # Les tests n'appellent jamais le vrai TheTVDB : chaque client est
+      # construit avec un MockClient, ou sans clé — auquel cas il refuse de
+      # partir en réseau. La CI ne dépend donc d'aucun service tiers.
+      - name: Tests
+        run: flutter test
