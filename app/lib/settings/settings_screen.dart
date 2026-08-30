@@ -3,12 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../backup/backup.dart';
 import '../build_info.dart';
+import '../db/database.dart';
 import '../providers.dart';
 import '../theme.dart';
 
 class SettingsScreen extends ConsumerWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.exportData = exportBackup});
+
+  /// Point d'injection pour les tests : la feuille de partage native n'existe
+  /// pas dans un test widget. En production, c'est [exportBackup].
+  final Future<void> Function(AppDatabase db) exportData;
 
   Future<void> _open(String url) async {
     final uri = Uri.tryParse(url);
@@ -55,14 +61,20 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
+          // Sauvegarder, puis restaurer, puis effacer : l'ordre du parcours.
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
-            child: Text('IMPORT / RESTAURATION',
+            child: Text('DONNÉES',
                 style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.5,
                     color: TtColors.dim)),
+          ),
+          Card(
+            child: _ExportTile(
+              onExport: () => exportData(ref.read(databaseProvider)),
+            ),
           ),
           Card(
             child: ListTile(
@@ -71,7 +83,7 @@ class SettingsScreen extends ConsumerWidget {
                   style:
                       TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
               subtitle: const Text(
-                  'Sauvegarde JSON ou export TV Time (CSV/JSON)',
+                  'Sauvegarde Nitrate ou export TV Time',
                   style: TextStyle(fontSize: 12.5, color: TtColors.dim)),
               trailing: const Icon(Icons.chevron_right, color: TtColors.dim),
               onTap: () => context.push('/import'),
@@ -151,6 +163,65 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Ligne « Exporter mes données ».
+///
+/// Stateful pour son seul état d'attente : la feuille de partage met un
+/// instant à s'ouvrir, et deux taps ne doivent pas produire deux fichiers.
+class _ExportTile extends StatefulWidget {
+  const _ExportTile({required this.onExport});
+
+  final Future<void> Function() onExport;
+
+  @override
+  State<_ExportTile> createState() => _ExportTileState();
+}
+
+class _ExportTileState extends State<_ExportTile> {
+  bool _busy = false;
+
+  Future<void> _run() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await widget.onExport();
+      // Pas de message de succès : la feuille de partage peut être annulée,
+      // annoncer « sauvegarde enregistrée » serait mentir.
+    } catch (e, st) {
+      debugPrint('Export de sauvegarde impossible : $e\n$st');
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(const SnackBar(
+              content: Text('Impossible de créer la sauvegarde. Réessaie.')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      enabled: !_busy,
+      leading: const Icon(Icons.ios_share_outlined, color: TtColors.amber),
+      title: const Text('Exporter mes données',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+      subtitle: const Text(
+          'Crée une sauvegarde Nitrate de tes séries, films et visionnages',
+          style: TextStyle(fontSize: 12.5, color: TtColors.dim)),
+      trailing: _busy
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: TtColors.amber),
+            )
+          : const Icon(Icons.chevron_right, color: TtColors.dim),
+      onTap: _run,
     );
   }
 }
