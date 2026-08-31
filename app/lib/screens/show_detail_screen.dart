@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../db/database.dart';
 import '../providers.dart';
+import '../media/cinematic.dart';
+import '../media/palette.dart';
 import '../motion.dart';
 import '../series/catch_up.dart';
 import '../series/widgets/catch_up_sheet.dart';
@@ -15,7 +17,6 @@ import '../tmdb/tvdb.dart';
 import 'media_detail_parts.dart';
 import 'movie_detail_screen.dart' show MediaDetailSkeleton;
 import '../widgets/common.dart';
-import '../widgets/media_image.dart';
 import '../widgets/skeleton.dart';
 
 class ShowDetailScreen extends ConsumerStatefulWidget {
@@ -310,20 +311,10 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
     final shows = ref.watch(showsProvider).value ?? const [];
     final followed = _followed(shows);
 
+    // Le noir Nitrate sous tout : le fond ambiant se peint par-dessus une
+    // fois la fiche chargée, et l'attente n'est jamais transparente.
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          if (followed)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              tooltip: 'Retirer',
-              onPressed: _confirmDelete,
-            ),
-        ],
-      ),
+      backgroundColor: TtColors.bg,
       body: _error != null
           ? EmptyState(icon: Icons.error_outline, message: _error!)
           : _details == null
@@ -335,58 +326,112 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
   }
 
   Widget _buildContent(bool followed) {
-    return MediaEntrance(
-      child: Column(
+    final poster = TvdbClient.posterOf(_details!);
+    final meta = [
+      _yearOf(_details!),
+      if (_totalEpisodes() case final n?) '$n épisodes',
+      if (_networkOf(_details!) case final n when n.isNotEmpty) n,
+      ..._genresOf(_details!).take(2),
+    ].where((s) => s.isNotEmpty).join(' · ');
+
+    return CinematicDetailShell(
+      media: MediaRef(id: widget.showId, isSeries: true),
+      seed: _name,
+      backdrop: _backdrop,
+      poster: poster,
+      builder: (context, scope) => Stack(
         children: [
-          _Header(
-            showId: widget.showId,
-            name: _name,
-            backdrop: _backdrop,
-            poster: TvdbClient.posterOf(_details!),
-            episodeCount: _totalEpisodes(),
-            network: _networkOf(_details!),
-          ),
-          TabBar(
-            controller: _tabs,
-            labelColor: TtColors.amber,
-            unselectedLabelColor: TtColors.dim,
-            indicatorColor: TtColors.amber,
-            indicatorSize: TabBarIndicatorSize.label,
-            labelStyle: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1,
-            ),
-            tabs: const [
-              Tab(text: 'À propos'),
-              Tab(text: 'Épisodes'),
+          // Le fond défile avec le contenu, les onglets prennent ensuite le
+          // relais : c'est le rôle de NestedScrollView, qui accorde un
+          // défilement extérieur à des listes intérieures.
+          NestedScrollView(
+            headerSliverBuilder: (context, _) => [
+              CinematicBackdrop(
+                title: _name,
+                image: scope.image,
+                seed: _name,
+                icon: Icons.tv,
+                palette: scope.palette,
+              ),
             ],
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabs,
+            body: Column(
               children: [
-                _AboutTab(
-                  overview: _overview,
-                  genres: _genresOf(_details!),
-                  year: _yearOf(_details!),
-                  followed: followed,
-                  onAdd: _addToLibrary,
-                ),
-                if (_loadingEpisodes)
-                  const _SeasonsSkeleton()
-                else
-                  _EpisodesTab(
-                    showId: widget.showId,
-                    seasonNumbers: _seasonNumbers,
-                    loadSeason: _loadSeason,
-                    episodeName: (s, e) => _episodeNames[s]?[e] ?? 'Épisode $e',
-                    onToggle: _toggleEpisode,
-                    onSetSeason: _setSeason,
+                TabBar(
+                  controller: _tabs,
+                  labelColor: scope.palette.accent,
+                  unselectedLabelColor: TtColors.dim,
+                  indicatorColor: scope.palette.accent,
+                  indicatorSize: TabBarIndicatorSize.label,
+                  labelStyle: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1,
                   ),
+                  tabs: const [
+                    Tab(text: 'À propos'),
+                    Tab(text: 'Épisodes'),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabs,
+                    children: [
+                      _AboutTab(
+                        metaLine: meta,
+                        overview: _overview,
+                        followed: followed,
+                        accent: scope.palette.accent,
+                        onAdd: _addToLibrary,
+                      ),
+                      if (_loadingEpisodes)
+                        _SeasonsSkeleton(tint: scope.palette.surface)
+                      else
+                        _EpisodesTab(
+                          showId: widget.showId,
+                          seasonNumbers: _seasonNumbers,
+                          loadSeason: _loadSeason,
+                          episodeName: (s, e) =>
+                              _episodeNames[s]?[e] ?? 'Épisode $e',
+                          onToggle: _toggleEpisode,
+                          onSetSeason: _setSeason,
+                        ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
+          if (followed)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 6, 10, 0),
+                  child: Semantics(
+                    button: true,
+                    label: 'Retirer de ma liste',
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Material(
+                        color: Colors.black.withValues(alpha: 0.42),
+                        shape: const CircleBorder(),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: _confirmDelete,
+                          child: const Icon(
+                            Icons.delete_outline,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -439,144 +484,40 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
 
 // ------------------------------------------------------------------ Header
 
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.showId,
-    required this.name,
-    required this.backdrop,
-    required this.poster,
-    required this.episodeCount,
-    required this.network,
-  });
-
-  final int showId;
-  final String name;
-  final String? backdrop;
-
-  /// Affiche verticale : c'est elle qui relie la carte touchée à cette fiche,
-  /// et elle donne au titre un ancrage visuel que le fond seul n'offrait pas.
-  final String? poster;
-
-  final int? episodeCount;
-  final String network;
-
-  @override
-  Widget build(BuildContext context) {
-    final meta = [
-      if (episodeCount != null) '$episodeCount épisodes',
-      if (network.isNotEmpty) network,
-    ].join(' · ');
-
-    return SizedBox(
-      height: 250,
-      width: double.infinity,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (backdrop != null)
-            Image.network(
-              backdrop!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) =>
-                  const ColoredBox(color: TtColors.surface),
-            )
-          else
-            const ColoredBox(color: TtColors.surface),
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0x33000000),
-                  Color(0x00000000),
-                  Color(0xE6000000),
-                ],
-                stops: [0, 0.45, 1],
-              ),
-            ),
-          ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 14,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    width: 82,
-                    height: 123,
-                    child: MediaImage(
-                      sources: [poster, backdrop],
-                      seed: name,
-                      icon: Icons.tv,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        name,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          height: 1.15,
-                          color: Colors.white,
-                        ),
-                      ),
-                      if (meta.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          meta,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // --------------------------------------------------------------- À propos
 
 class _AboutTab extends StatelessWidget {
   const _AboutTab({
+    required this.metaLine,
     required this.overview,
-    required this.genres,
-    required this.year,
     required this.followed,
+    required this.accent,
     required this.onAdd,
   });
 
+  final String metaLine;
   final String overview;
-  final List<String> genres;
-  final String year;
   final bool followed;
+  final Color accent;
   final Future<bool> Function() onAdd;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, bottomNavInset(context)),
+      padding: EdgeInsets.fromLTRB(20, 18, 20, bottomNavInset(context)),
       children: [
+        // Le titre vit sur le fond ; ici ne restent que ses informations.
+        if (metaLine.isNotEmpty) ...[
+          Text(
+            metaLine,
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: TtColors.dim,
+            ),
+          ),
+          const SizedBox(height: 18),
+        ],
         Align(
           alignment: Alignment.centerLeft,
           child: AddToListButton(
@@ -588,68 +529,16 @@ class _AboutTab extends StatelessWidget {
                 'Réessaie dans un instant.',
           ),
         ),
-        const SizedBox(height: 20),
-        _SectionTitle('Infos'),
+        const SizedBox(height: 26),
+        const MediaSectionTitle('Synopsis'),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 16,
-          runSpacing: 6,
-          children: [
-            if (year.isNotEmpty)
-              _MetaItem(icon: Icons.event_outlined, text: year),
-            if (genres.isNotEmpty)
-              _MetaItem(
-                icon: Icons.local_offer_outlined,
-                text: genres.join(', '),
-              ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Text(
-          overview.isEmpty ? 'Pas de résumé disponible.' : overview,
-          style: TextStyle(
-            fontSize: 14.5,
-            height: 1.6,
-            color: overview.isEmpty ? TtColors.dim : TtColors.text,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-  final String text;
-  @override
-  Widget build(BuildContext context) => Text(
-    text.toUpperCase(),
-    style: const TextStyle(
-      fontSize: 12,
-      fontWeight: FontWeight.w800,
-      letterSpacing: 1,
-      color: TtColors.amber,
-    ),
-  );
-}
-
-class _MetaItem extends StatelessWidget {
-  const _MetaItem({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: TtColors.dim),
-        const SizedBox(width: 5),
-        Flexible(
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 13, color: TtColors.text),
-          ),
-        ),
+        if (overview.isEmpty)
+          const Text(
+            'Synopsis indisponible.',
+            style: TextStyle(fontSize: 14.5, height: 1.6, color: TtColors.dim),
+          )
+        else
+          ExpandableSynopsis(text: overview, accent: accent),
       ],
     );
   }
@@ -702,7 +591,10 @@ class _EpisodesTab extends ConsumerWidget {
 /// Cartes de saison en attente : mêmes hauteurs, mêmes marges que les vraies,
 /// pour que rien ne bouge quand la liste arrive.
 class _SeasonsSkeleton extends StatelessWidget {
-  const _SeasonsSkeleton();
+  const _SeasonsSkeleton({this.tint});
+
+  /// Teinte de l'ambiance : l'attente s'accorde à la fiche sans s'éclaircir.
+  final Color? tint;
 
   @override
   Widget build(BuildContext context) {
@@ -711,9 +603,9 @@ class _SeasonsSkeleton extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       children: [
         for (var i = 0; i < 5; i++)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(bottom: 12),
-            child: SkeletonBox(height: 92, radius: 12),
+            child: SkeletonBox(height: 92, radius: 12, tint: tint),
           ),
       ],
     );

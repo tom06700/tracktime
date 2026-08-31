@@ -5,4 +5,4 @@
 /// est réellement embarqué ou si l'appareil tourne encore sur l'ancien binaire.
 /// À incrémenter à chaque changement dont on veut pouvoir confirmer la
 /// présence sur l'appareil.
-const kBuildMarker = 'r9.1 · navigation cinématique';
+const kBuildMarker = 'r10 · fiches cinématiques';

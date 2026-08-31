@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../motion.dart';
+import '../media/cinematic.dart';
+import '../media/palette.dart';
 import '../providers.dart';
 import '../theme.dart';
 import '../tmdb/media_detail.dart';
@@ -23,9 +24,11 @@ class MovieDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(movieDetailProvider(movieId));
 
+    // Ni AppBar ni titre collant : le fond occupe le haut de l'écran et le
+    // retour flotte par-dessus, posé par la coquille. Le noir Nitrate sert de
+    // socle, pour que l'attente ne soit jamais transparente.
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+      backgroundColor: TtColors.bg,
       body: detail.when(
         loading: () => const MediaDetailSkeleton(),
         error: (e, st) {
@@ -58,25 +61,29 @@ class _Content extends ConsumerWidget {
       ...movie.genres.take(2),
     ];
 
-    return MediaEntrance(
-      child: ListView(
-        padding: EdgeInsets.only(bottom: bottomNavInset(context)),
-        children: [
-          MediaDetailHeader(
-            backdrop: movie.backdrop,
-            poster: movie.poster,
+    return CinematicDetailShell(
+      media: MediaRef(id: movie.id, isSeries: false),
+      seed: movie.title,
+      backdrop: movie.backdrop,
+      poster: movie.poster,
+      builder: (context, scope) => CustomScrollView(
+        slivers: [
+          CinematicBackdrop(
+            title: movie.title,
+            image: scope.image,
             seed: movie.title,
             icon: Icons.movie_outlined,
+            palette: scope.palette,
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(20, 2, 20, bottomNavInset(context)),
+            sliver: SliverList.list(
               children: [
-                MediaDetailTitle(
-                  title: movie.title,
-                  originalTitle: movie.originalTitle,
+                // Le titre n'est pas repris ici : il vit sur le fond. Ne
+                // restent que les informations qui l'accompagnaient.
+                MediaDetailMeta(
                   metaLine: meta.join(' · '),
+                  originalTitle: movie.originalTitle,
                 ),
                 const SizedBox(height: 18),
                 AddToListButton(
@@ -90,14 +97,17 @@ class _Content extends ConsumerWidget {
                 const SizedBox(height: 26),
                 const MediaSectionTitle('Synopsis'),
                 const SizedBox(height: 8),
-                Text(
-                  movie.overview ?? 'Synopsis indisponible.',
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    height: 1.65,
-                    color: TtColors.text,
+                if (movie.overview case final text?)
+                  ExpandableSynopsis(text: text, accent: scope.palette.accent)
+                else
+                  const Text(
+                    'Synopsis indisponible.',
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      height: 1.6,
+                      color: TtColors.dim,
+                    ),
                   ),
-                ),
                 if (movie.releaseDate != null) ...[
                   const SizedBox(height: 22),
                   MediaFactRow(

@@ -12,12 +12,17 @@ class SkeletonBox extends StatefulWidget {
     this.height,
     this.radius = 12,
     this.margin,
+    this.tint,
   });
 
   final double? width;
   final double? height;
   final double radius;
   final EdgeInsetsGeometry? margin;
+
+  /// Teinte du bloc. Sert à accorder l'attente à l'ambiance de la fiche —
+  /// discrètement : un squelette reste sombre, il n'annonce pas une couleur.
+  final Color? tint;
 
   @override
   State<SkeletonBox> createState() => _SkeletonBoxState();
@@ -61,7 +66,7 @@ class _SkeletonBoxState extends State<SkeletonBox>
           width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
-            color: TtColors.surfaceHi,
+            color: widget.tint ?? TtColors.surfaceHi,
             borderRadius: BorderRadius.circular(widget.radius),
           ),
         ),

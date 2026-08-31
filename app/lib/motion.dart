@@ -17,6 +17,11 @@ abstract final class Motion {
   /// Surface qui change en entier.
   static const slow = Duration(milliseconds: 320);
 
+  /// Changement d'ambiance : le fond d'une fiche qui prend les couleurs de son
+  /// image. Plus lent que le reste, parce que c'est un décor qui s'installe et
+  /// non une réponse à un geste — et une seule fois, jamais en boucle.
+  static const ambient = Duration(milliseconds: 620);
+
   /// Entrée : décélère jusqu'à sa place, sans dépassement.
   static const enter = Curves.easeOutCubic;
 

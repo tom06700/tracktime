@@ -6,7 +6,6 @@ import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../tmdb/add.dart';
-import '../widgets/media_image.dart';
 
 /// Ajoute une série et renvoie false si TheTVDB refuse.
 Future<bool> addSeriesToLibrary(WidgetRef ref, int id) async {
@@ -38,64 +37,21 @@ Future<bool> addMovieToLibrary(WidgetRef ref, int id) async {
 }
 
 /// En-tête d'une fiche : fond horizontal, voile, et affiche posée dessus.
-class MediaDetailHeader extends StatelessWidget {
-  const MediaDetailHeader({
+/// Ligne d'informations sous le fond d'une fiche : titre d'origine s'il
+/// diffère, puis année, durée et genres.
+///
+/// Le titre principal n'y figure pas : il est posé sur le fond, et le répéter
+/// juste en dessous ferait doublon.
+class MediaDetailMeta extends StatelessWidget {
+  const MediaDetailMeta({
     super.key,
-    required this.seed,
-    required this.icon,
-    this.backdrop,
-    this.poster,
-  });
-
-  final String? backdrop;
-  final String? poster;
-  final String seed;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 250,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Le fond horizontal d'abord ; à défaut l'affiche, puis un dégradé.
-          MediaImage(sources: [backdrop, poster], seed: seed, icon: icon),
-          const MediaScrim(height: 0.85),
-          Positioned(
-            left: 20,
-            bottom: 16,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: SizedBox(
-                width: 96,
-                height: 144,
-                child: MediaImage(
-                  sources: [poster, backdrop],
-                  seed: seed,
-                  icon: icon,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class MediaDetailTitle extends StatelessWidget {
-  const MediaDetailTitle({
-    super.key,
-    required this.title,
     required this.metaLine,
     this.originalTitle,
   });
 
-  final String title;
   final String metaLine;
 
-  /// Titre d'origine, affiché en second uniquement s'il diffère.
+  /// Titre d'origine, affiché uniquement s'il diffère du titre affiché.
   final String? originalTitle;
 
   @override
@@ -103,27 +59,20 @@ class MediaDetailTitle extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            height: 1.15,
-            color: TtColors.text,
-          ),
-        ),
-        if (originalTitle != null) ...[
-          const SizedBox(height: 3),
+        if (originalTitle != null)
           Text(
             originalTitle!,
             style: const TextStyle(fontSize: 13.5, color: TtColors.dim),
           ),
-        ],
         if (metaLine.isNotEmpty) ...[
-          const SizedBox(height: 7),
+          if (originalTitle != null) const SizedBox(height: 4),
           Text(
             metaLine,
-            style: const TextStyle(fontSize: 13.5, color: TtColors.dim),
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: TtColors.dim,
+            ),
           ),
         ],
       ],
@@ -246,7 +195,9 @@ class _AddToListButtonState extends ConsumerState<AddToListButton> {
             color: done ? Colors.transparent : TtColors.amber,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: done ? TtColors.amber.withValues(alpha: 0.55) : TtColors.amber,
+              color: done
+                  ? TtColors.amber.withValues(alpha: 0.55)
+                  : TtColors.amber,
             ),
           ),
           child: Row(
