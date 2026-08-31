@@ -335,58 +335,60 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
   }
 
   Widget _buildContent(bool followed) {
-    return Column(
-      children: [
-        _Header(
-          showId: widget.showId,
-          name: _name,
-          backdrop: _backdrop,
-          poster: TvdbClient.posterOf(_details!),
-          episodeCount: _totalEpisodes(),
-          network: _networkOf(_details!),
-        ),
-        TabBar(
-          controller: _tabs,
-          labelColor: TtColors.amber,
-          unselectedLabelColor: TtColors.dim,
-          indicatorColor: TtColors.amber,
-          indicatorSize: TabBarIndicatorSize.label,
-          labelStyle: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1,
+    return MediaEntrance(
+      child: Column(
+        children: [
+          _Header(
+            showId: widget.showId,
+            name: _name,
+            backdrop: _backdrop,
+            poster: TvdbClient.posterOf(_details!),
+            episodeCount: _totalEpisodes(),
+            network: _networkOf(_details!),
           ),
-          tabs: const [
-            Tab(text: 'À propos'),
-            Tab(text: 'Épisodes'),
-          ],
-        ),
-        Expanded(
-          child: TabBarView(
+          TabBar(
             controller: _tabs,
-            children: [
-              _AboutTab(
-                overview: _overview,
-                genres: _genresOf(_details!),
-                year: _yearOf(_details!),
-                followed: followed,
-                onAdd: _addToLibrary,
-              ),
-              if (_loadingEpisodes)
-                const _SeasonsSkeleton()
-              else
-                _EpisodesTab(
-                  showId: widget.showId,
-                  seasonNumbers: _seasonNumbers,
-                  loadSeason: _loadSeason,
-                  episodeName: (s, e) => _episodeNames[s]?[e] ?? 'Épisode $e',
-                  onToggle: _toggleEpisode,
-                  onSetSeason: _setSeason,
-                ),
+            labelColor: TtColors.amber,
+            unselectedLabelColor: TtColors.dim,
+            indicatorColor: TtColors.amber,
+            indicatorSize: TabBarIndicatorSize.label,
+            labelStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1,
+            ),
+            tabs: const [
+              Tab(text: 'À propos'),
+              Tab(text: 'Épisodes'),
             ],
           ),
-        ),
-      ],
+          Expanded(
+            child: TabBarView(
+              controller: _tabs,
+              children: [
+                _AboutTab(
+                  overview: _overview,
+                  genres: _genresOf(_details!),
+                  year: _yearOf(_details!),
+                  followed: followed,
+                  onAdd: _addToLibrary,
+                ),
+                if (_loadingEpisodes)
+                  const _SeasonsSkeleton()
+                else
+                  _EpisodesTab(
+                    showId: widget.showId,
+                    seasonNumbers: _seasonNumbers,
+                    loadSeason: _loadSeason,
+                    episodeName: (s, e) => _episodeNames[s]?[e] ?? 'Épisode $e',
+                    onToggle: _toggleEpisode,
+                    onSetSeason: _setSeason,
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -501,19 +503,15 @@ class _Header extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                MediaPosterHero(
-                  id: showId,
-                  isSeries: true,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: 82,
-                      height: 123,
-                      child: MediaImage(
-                        sources: [poster, backdrop],
-                        seed: name,
-                        icon: Icons.tv,
-                      ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    width: 82,
+                    height: 123,
+                    child: MediaImage(
+                      sources: [poster, backdrop],
+                      seed: name,
+                      icon: Icons.tv,
                     ),
                   ),
                 ),

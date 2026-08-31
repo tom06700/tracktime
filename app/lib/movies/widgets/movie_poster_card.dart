@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
-import '../../motion.dart';
 import '../../theme.dart';
 import '../../widgets/media_image.dart';
 
@@ -43,19 +42,22 @@ class MoviePosterCard extends StatelessWidget {
         ?metaLine,
         watched ? 'déjà vu' : 'dans ta liste',
       ].join(', '),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AspectRatio(
-            aspectRatio: 2 / 3,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                MediaPosterHero(
-                  id: movie.id,
-                  isSeries: false,
-                  child: ClipRRect(
+      // Toute la carte ouvre la fiche. Les deux boutons posés sur l'affiche
+      // sont plus profonds dans l'arbre : leur détecteur remporte l'arène
+      // avant celui-ci, donc un tap dessus n'ouvre pas la fiche.
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AspectRatio(
+              aspectRatio: 2 / 3,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ClipRRect(
                     borderRadius: BorderRadius.circular(14),
                     child: MediaImage(
                       sources: [movie.poster],
@@ -63,52 +65,52 @@ class MoviePosterCard extends StatelessWidget {
                       icon: Icons.movie_outlined,
                     ),
                   ),
-                ),
-                Positioned(
-                  top: 2,
-                  right: 2,
-                  child: _ActionMenu(
-                    watched: watched,
-                    title: movie.title,
-                    onAction: onAction,
-                  ),
-                ),
-                if (!watched)
                   Positioned(
-                    left: 6,
-                    bottom: 6,
-                    child: _MarkWatchedButton(
+                    top: 2,
+                    right: 2,
+                    child: _ActionMenu(
+                      watched: watched,
                       title: movie.title,
-                      onConfirmed: () => onAction(MovieAction.markWatched),
+                      onAction: onAction,
                     ),
                   ),
-              ],
+                  if (!watched)
+                    Positioned(
+                      left: 6,
+                      bottom: 6,
+                      child: _MarkWatchedButton(
+                        title: movie.title,
+                        onConfirmed: () => onAction(MovieAction.markWatched),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            movie.title,
-            // Deux lignes : un titre long ne doit pas être tronqué dès que
-            // l'utilisateur agrandit le texte.
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w700,
-              height: 1.25,
-              color: TtColors.text,
-            ),
-          ),
-          if (metaLine != null) ...[
-            const SizedBox(height: 2),
+            const SizedBox(height: 8),
             Text(
-              metaLine!,
-              maxLines: 1,
+              movie.title,
+              // Deux lignes : un titre long ne doit pas être tronqué dès que
+              // l'utilisateur agrandit le texte.
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12.5, color: TtColors.dim),
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+                height: 1.25,
+                color: TtColors.text,
+              ),
             ),
+            if (metaLine != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                metaLine!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12.5, color: TtColors.dim),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

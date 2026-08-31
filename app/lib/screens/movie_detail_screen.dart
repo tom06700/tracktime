@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../motion.dart';
 import '../providers.dart';
 import '../theme.dart';
 import '../tmdb/media_detail.dart';
@@ -57,65 +58,67 @@ class _Content extends ConsumerWidget {
       ...movie.genres.take(2),
     ];
 
-    return ListView(
-      padding: EdgeInsets.only(bottom: bottomNavInset(context)),
-      children: [
-        MediaDetailHeader(
-          backdrop: movie.backdrop,
-          poster: movie.poster,
-          seed: movie.title,
-          icon: Icons.movie_outlined,
-          heroId: movie.id,
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              MediaDetailTitle(
-                title: movie.title,
-                originalTitle: movie.originalTitle,
-                metaLine: meta.join(' · '),
-              ),
-              const SizedBox(height: 18),
-              AddToListButton(
-                label: 'Ajouter à ma liste',
-                inLibrary: inLibrary,
-                onAdd: () => addMovieToLibrary(ref, movie.id),
-                failureMessage: 'Impossible d\'ajouter ce film.\n'
-                    'Réessaie dans un instant.',
-              ),
-              const SizedBox(height: 26),
-              const MediaSectionTitle('Synopsis'),
-              const SizedBox(height: 8),
-              Text(
-                movie.overview ?? 'Synopsis indisponible.',
-                style: const TextStyle(
-                  fontSize: 14.5,
-                  height: 1.65,
-                  color: TtColors.text,
-                ),
-              ),
-              if (movie.releaseDate != null) ...[
-                const SizedBox(height: 22),
-                MediaFactRow(
-                  label: 'Sortie',
-                  value: frenchDate(movie.releaseDate!),
-                ),
-              ],
-              if (movie.director != null)
-                MediaFactRow(label: 'Réalisation', value: movie.director!),
-              if (movie.studio != null)
-                MediaFactRow(label: 'Studio', value: movie.studio!),
-              if (movie.cast.isNotEmpty)
-                MediaFactRow(
-                  label: 'Avec',
-                  value: movie.cast.take(4).join(', '),
-                ),
-            ],
+    return MediaEntrance(
+      child: ListView(
+        padding: EdgeInsets.only(bottom: bottomNavInset(context)),
+        children: [
+          MediaDetailHeader(
+            backdrop: movie.backdrop,
+            poster: movie.poster,
+            seed: movie.title,
+            icon: Icons.movie_outlined,
           ),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                MediaDetailTitle(
+                  title: movie.title,
+                  originalTitle: movie.originalTitle,
+                  metaLine: meta.join(' · '),
+                ),
+                const SizedBox(height: 18),
+                AddToListButton(
+                  label: 'Ajouter à ma liste',
+                  inLibrary: inLibrary,
+                  onAdd: () => addMovieToLibrary(ref, movie.id),
+                  failureMessage:
+                      'Impossible d\'ajouter ce film.\n'
+                      'Réessaie dans un instant.',
+                ),
+                const SizedBox(height: 26),
+                const MediaSectionTitle('Synopsis'),
+                const SizedBox(height: 8),
+                Text(
+                  movie.overview ?? 'Synopsis indisponible.',
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    height: 1.65,
+                    color: TtColors.text,
+                  ),
+                ),
+                if (movie.releaseDate != null) ...[
+                  const SizedBox(height: 22),
+                  MediaFactRow(
+                    label: 'Sortie',
+                    value: frenchDate(movie.releaseDate!),
+                  ),
+                ],
+                if (movie.director != null)
+                  MediaFactRow(label: 'Réalisation', value: movie.director!),
+                if (movie.studio != null)
+                  MediaFactRow(label: 'Studio', value: movie.studio!),
+                if (movie.cast.isNotEmpty)
+                  MediaFactRow(
+                    label: 'Avec',
+                    value: movie.cast.take(4).join(', '),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

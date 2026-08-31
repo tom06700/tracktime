@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../motion.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
@@ -46,19 +45,12 @@ class MediaDetailHeader extends StatelessWidget {
     required this.icon,
     this.backdrop,
     this.poster,
-    this.heroId,
-    this.heroIsSeries = false,
   });
 
   final String? backdrop;
   final String? poster;
   final String seed;
   final IconData icon;
-
-  /// Identifiant de l'œuvre : l'affiche devient alors l'arrivée du vol depuis
-  /// la carte touchée. Null = pas de liaison.
-  final int? heroId;
-  final bool heroIsSeries;
 
   @override
   Widget build(BuildContext context) {
@@ -73,20 +65,15 @@ class MediaDetailHeader extends StatelessWidget {
           Positioned(
             left: 20,
             bottom: 16,
-            child: MediaPosterHero(
-              id: heroId ?? 0,
-              isSeries: heroIsSeries,
-              enabled: heroId != null,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: SizedBox(
-                  width: 96,
-                  height: 144,
-                  child: MediaImage(
-                    sources: [poster, backdrop],
-                    seed: seed,
-                    icon: icon,
-                  ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                width: 96,
+                height: 144,
+                child: MediaImage(
+                  sources: [poster, backdrop],
+                  seed: seed,
+                  icon: icon,
                 ),
               ),
             ),

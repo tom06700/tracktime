@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../db/database.dart';
-import '../motion.dart';
 import '../providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -108,19 +107,15 @@ class _WatchedRow extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 7, 8, 7),
           child: Row(
             children: [
-              MediaPosterHero(
-                id: movie.id,
-                isSeries: false,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: SizedBox(
-                    width: 56,
-                    height: 84,
-                    child: MediaImage(
-                      sources: [movie.poster],
-                      seed: movie.title,
-                      icon: Icons.movie_outlined,
-                    ),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 56,
+                  height: 84,
+                  child: MediaImage(
+                    sources: [movie.poster],
+                    seed: movie.title,
+                    icon: Icons.movie_outlined,
                   ),
                 ),
               ),

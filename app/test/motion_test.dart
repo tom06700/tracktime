@@ -1,25 +1,17 @@
-import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
-import 'package:tracktime/db/database.dart';
 import 'package:tracktime/motion.dart';
-import 'package:tracktime/movies/widgets/movie_poster_card.dart';
-import 'package:tracktime/providers.dart';
 import 'package:tracktime/theme.dart';
 
 Widget _app(Widget home, {bool reduceMotion = false}) => MaterialApp(
-  theme: buildTheme(),
+  // L'entrée de fiche est calée sur le glissement latéral d'iOS.
+  theme: buildTheme().copyWith(platform: TargetPlatform.iOS),
   builder: (context, child) => MediaQuery(
     data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
     child: child!,
   ),
   home: home,
 );
-
-Movie _movie(int id, String title) =>
-    Movie(id: id, title: title, runtime: 110, addedAt: DateTime(2026, 1, 1));
 
 void main() {
   group('conventions', () {
@@ -126,107 +118,77 @@ void main() {
     });
   });
 
-  group('liaison affiche → fiche', () {
-    testWidgets('une affiche porte un Hero, unique sur l\'écran', (
-      tester,
-    ) async {
-      final db = AppDatabase.forTesting(NativeDatabase.memory());
-      addTearDown(db.close);
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [databaseProvider.overrideWithValue(db)],
-          child: _app(
-            Scaffold(
-              body: Column(
-                children: [
-                  SizedBox(
-                    width: 120,
-                    child: MoviePosterCard(
-                      movie: _movie(1406, 'Dune'),
-                      onAction: (_) {},
-                      onTap: () {},
-                    ),
-                  ),
-                  SizedBox(
-                    width: 120,
-                    child: MoviePosterCard(
-                      movie: _movie(27205, 'Inception'),
-                      onAction: (_) {},
-                      onTap: () {},
-                    ),
-                  ),
-                ],
-              ),
-            ),
+  group('entrée d\'une fiche', () {
+    Widget opener() => Builder(
+      builder: (context) => TextButton(
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                const Scaffold(body: MediaEntrance(child: Text('Fiche'))),
           ),
         ),
-      );
-      await tester.pump();
+        child: const Text('ouvrir'),
+      ),
+    );
 
-      final tags = tester
-          .widgetList<Hero>(find.byType(Hero))
-          .map((h) => h.tag)
-          .toList();
-      expect(tags, containsAll(['movie-1406', 'movie-27205']));
-      // Aucun doublon : deux Hero de même tag lèveraient à la navigation.
-      expect(tags.toSet().length, tags.length);
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(seconds: 1));
-    });
-
-    testWidgets('naviguer depuis l\'affiche ne provoque aucun conflit', (
-      tester,
-    ) async {
-      final db = AppDatabase.forTesting(NativeDatabase.memory());
-      addTearDown(db.close);
-
-      final router = GoRouter(
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, _) => Scaffold(
-              body: SizedBox(
-                width: 120,
-                child: MoviePosterCard(
-                  movie: _movie(1406, 'Dune'),
-                  onAction: (_) {},
-                  onTap: () => context.push('/cible'),
-                ),
-              ),
-            ),
-          ),
-          GoRoute(
-            path: '/cible',
-            builder: (_, _) => Scaffold(
-              body: Hero(
-                tag: MediaPosterHero.tagFor(id: 1406, isSeries: false),
-                child: const SizedBox(width: 96, height: 144),
-              ),
-            ),
-          ),
-        ],
-      );
-      addTearDown(router.dispose);
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [databaseProvider.overrideWithValue(db)],
-          child: MaterialApp.router(theme: buildTheme(), routerConfig: router),
+    double? entranceScale(WidgetTester tester) {
+      final transforms = tester.widgetList<Transform>(
+        find.descendant(
+          of: find.byKey(MediaEntrance.key_),
+          matching: find.byType(Transform),
         ),
       );
-      await tester.pump();
-      await tester.tap(find.byType(MoviePosterCard));
+      return transforms.isEmpty
+          ? null
+          : transforms.first.transform.getMaxScaleOnAxis();
+    }
 
-      // Le vol se déroule : c'est là qu'un tag dupliqué exploserait.
+    testWidgets('avec les animations réduites, rien n\'enveloppe le contenu', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_app(opener(), reduceMotion: true));
+      await tester.tap(find.text('ouvrir'));
       for (var i = 0; i < 8; i++) {
         await tester.pump(const Duration(milliseconds: 60));
       }
-      expect(tester.takeException(), isNull);
 
-      await tester.pumpWidget(const SizedBox.shrink());
+      expect(find.text('Fiche'), findsOneWidget);
+      expect(find.byKey(MediaEntrance.key_), findsNothing);
+    });
+
+    testWidgets('la fiche arrive d\'un très léger zoom, puis se pose', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_app(opener()));
+      await tester.tap(find.text('ouvrir'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+
+      final midFlight = entranceScale(tester);
+      expect(midFlight, isNotNull);
+      expect(midFlight, greaterThan(1.0));
+      // Discret : le zoom reste sous les 5 %, sinon il se remarquerait.
+      expect(midFlight, lessThan(1.05));
+
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+      expect(entranceScale(tester), closeTo(1.0, 0.001));
+      expect(find.text('Fiche'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('quitter la fiche en cours d\'entrée ne lève rien', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_app(opener()));
+      await tester.tap(find.text('ouvrir'));
+      await tester.pump(const Duration(milliseconds: 60));
+
+      await tester.pumpWidget(_app(const SizedBox()));
       await tester.pump(const Duration(seconds: 1));
+
+      expect(tester.takeException(), isNull);
     });
   });
 }

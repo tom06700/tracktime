@@ -111,15 +111,17 @@ class _EntranceFadeState extends State<EntranceFade> {
   }
 }
 
-/// Relie l'affiche touchée à celle de sa fiche.
+/// Relie une affiche d'un écran à l'autre.
 ///
 /// Le tag ne dépend que du type et de l'identifiant, jamais du titre — qui
 /// change avec la langue et n'identifie rien.
 ///
-/// Une même œuvre ne doit porter ce tag qu'une fois par écran, sinon Flutter
-/// lève « multiple heroes share the same tag ». Les rangées de découverte
-/// passent donc [enabled] à false : un même film peut figurer à la fois dans
-/// les populaires et dans les sorties à venir.
+/// N'est plus employé pour ouvrir une fiche : c'est la transition de route qui
+/// porte l'ouverture, et une affiche qui vole par-dessus lui volerait la
+/// vedette. Le helper reste disponible pour des liaisons ponctuelles, avec
+/// deux règles : une œuvre ne porte ce tag qu'une fois par écran — sinon
+/// Flutter lève « multiple heroes share the same tag » — d'où [enabled], que
+/// les listes susceptibles de répéter une œuvre laissent à false.
 class MediaPosterHero extends StatelessWidget {
   const MediaPosterHero({
     super.key,
@@ -143,6 +145,61 @@ class MediaPosterHero extends StatelessWidget {
     return Hero(
       tag: tagFor(id: id, isSeries: isSeries),
       child: child,
+    );
+  }
+}
+
+/// Entrée d'une fiche média, calée sur l'animation de la route qui l'ouvre.
+///
+/// Le fond se pose d'un très léger zoom pendant que la page arrive, puis le
+/// contenu se révèle en fondu — un seul mouvement, pas deux. Rien n'est piloté
+/// par un contrôleur propre : tout suit l'animation de la route, ce qui évite
+/// qu'une animation interne rejoue par-dessus la transition.
+///
+/// Réservé aux plateformes dont la transition de page est un glissement
+/// latéral, c'est-à-dire iOS et macOS. Ailleurs, la transition de route fait
+/// déjà zoom et fondu : s'y ajouter produirait le double mouvement qu'on
+/// cherche précisément à éviter.
+///
+/// Hors d'une route animée — un test, un aperçu — l'enfant est rendu tel quel.
+class MediaEntrance extends StatelessWidget {
+  const MediaEntrance({super.key, required this.child});
+
+  final Widget child;
+
+  /// Zoom de départ. Assez pour donner de la profondeur, trop peu pour se
+  /// remarquer comme un effet.
+  static const _from = 1.03;
+
+  /// Repère de l'enveloppe animée. Absente de l'arbre quand il n'y a rien à
+  /// animer, ce qui rend le repli vérifiable.
+  static const key_ = ValueKey<String>('entree-fiche');
+
+  @override
+  Widget build(BuildContext context) {
+    final platform = Theme.of(context).platform;
+    final slides =
+        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+    final animation = ModalRoute.of(context)?.animation;
+    if (!slides || animation == null || reduceMotionOf(context)) return child;
+
+    return AnimatedBuilder(
+      key: key_,
+      animation: animation,
+      // L'enfant est construit une fois : seules l'échelle et l'opacité
+      // varient, deux opérations qui ne déclenchent aucune mise en page.
+      child: child,
+      builder: (context, child) {
+        final t = Curves.easeOutCubic.transform(animation.value.clamp(0, 1));
+        return Opacity(
+          opacity: t,
+          child: Transform.scale(
+            scale: _from + (1 - _from) * t,
+            filterQuality: FilterQuality.low,
+            child: child,
+          ),
+        );
+      },
     );
   }
 }
