@@ -86,13 +86,16 @@ class _Content extends ConsumerWidget {
                   originalTitle: movie.originalTitle,
                 ),
                 const SizedBox(height: 18),
-                AddToListButton(
-                  label: 'Ajouter à ma liste',
-                  inLibrary: inLibrary,
-                  onAdd: () => addMovieToLibrary(ref, movie.id),
-                  failureMessage:
-                      'Impossible d\'ajouter ce film.\n'
-                      'Réessaie dans un instant.',
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: AddToListButton(
+                    label: 'Ajouter à ma liste',
+                    inLibrary: inLibrary,
+                    onAdd: () => addMovieToLibrary(ref, movie.id),
+                    failureMessage:
+                        'Impossible d\'ajouter ce film.\n'
+                        'Réessaie dans un instant.',
+                  ),
                 ),
                 const SizedBox(height: 26),
                 const MediaSectionTitle('Synopsis'),

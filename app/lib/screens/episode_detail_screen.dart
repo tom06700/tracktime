@@ -10,6 +10,7 @@ import '../settings/prefs.dart';
 import '../theme.dart';
 import '../tmdb/tvdb.dart';
 import '../widgets/common.dart';
+import '../widgets/media_image.dart';
 import '../widgets/glass.dart';
 
 /// Feuille modale glissable (remonte du bas) contenant un carrousel : on glisse
@@ -43,9 +44,9 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
 
   // Fermeture interactive : la feuille suit le doigt.
   double _dragOffset = 0;
-  late final AnimationController _drag =
-      AnimationController.unbounded(vsync: this)
-        ..addListener(() => setState(() => _dragOffset = _drag.value));
+  late final AnimationController _drag = AnimationController.unbounded(
+    vsync: this,
+  )..addListener(() => setState(() => _dragOffset = _drag.value));
 
   @override
   void initState() {
@@ -75,39 +76,47 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
     _drag.value = _dragOffset;
     if (dismiss) {
       _drag
-          .animateTo(h,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeIn)
+          .animateTo(
+            h,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeIn,
+          )
           .whenComplete(() {
-        if (mounted) context.pop();
-      });
+            if (mounted) context.pop();
+          });
     } else {
-      _drag.animateTo(0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic);
+      _drag.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
     }
   }
 
   Future<void> _loadSeason() async {
     var numbers = <int>[widget.initialEpisode];
     try {
-      final all =
-          await ref.read(tvdbClientProvider).seriesEpisodes(widget.showId);
-      final eps =
-          all.where((e) => (e['season'] as int) == widget.season).toList();
+      final all = await ref
+          .read(tvdbClientProvider)
+          .seriesEpisodes(widget.showId);
+      final eps = all
+          .where((e) => (e['season'] as int) == widget.season)
+          .toList();
       final rows = <EpisodesCompanion>[];
       final nums = <int>[];
       for (final e in eps) {
         final n = e['episode'] as int;
         nums.add(n);
-        rows.add(EpisodesCompanion.insert(
-          showId: widget.showId,
-          season: widget.season,
-          episode: n,
-          name: Value(e['name'] as String?),
-          still: Value(e['image'] as String?),
-          airDate: Value(DateTime.tryParse('${e['aired'] ?? ''}')),
-        ));
+        rows.add(
+          EpisodesCompanion.insert(
+            showId: widget.showId,
+            season: widget.season,
+            episode: n,
+            name: Value(e['name'] as String?),
+            still: Value(e['image'] as String?),
+            airDate: Value(DateTime.tryParse('${e['aired'] ?? ''}')),
+          ),
+        );
       }
       if (rows.isNotEmpty) {
         await ref.read(databaseProvider).upsertEpisodes(rows);
@@ -117,7 +126,9 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
       /* on garde l'épisode seul */
     }
     if (!mounted) return;
-    final index = numbers.indexOf(widget.initialEpisode).clamp(0, numbers.length - 1);
+    final index = numbers
+        .indexOf(widget.initialEpisode)
+        .clamp(0, numbers.length - 1);
     setState(() {
       _episodes = numbers;
       _current = index;
@@ -148,41 +159,43 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
           Transform.translate(
             offset: Offset(0, _dragOffset),
             child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
-            // Material : fournit le style de texte (sinon soulignés jaunes) et
-            // la surface de la carte.
-            child: Material(
-              color: TtColors.bg,
-              child: SizedBox(
-                height: height * 0.9,
-                // L'image démarre tout en haut (coins arrondis), pas de bande.
-                child: _controller == null
-                    ? const Center(child: CircularProgressIndicator())
-                    : PageView.builder(
-                        controller: _controller,
-                        onPageChanged: (i) {
-                          HapticFeedback.selectionClick();
-                          setState(() => _current = i);
-                        },
-                        itemCount: _episodes.length,
-                        itemBuilder: (_, i) => _EpisodePage(
-                          showId: widget.showId,
-                          showName: widget.showName,
-                          season: widget.season,
-                          episode: _episodes[i],
-                          posterPath: widget.posterPath,
-                          position: '${i + 1} sur ${_episodes.length}',
-                          onDragStart: _onDragStart,
-                          onDragUpdate: _onDragUpdate,
-                          onDragEnd: _onDragEnd,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(26),
+              ),
+              // Material : fournit le style de texte (sinon soulignés jaunes) et
+              // la surface de la carte.
+              child: Material(
+                color: TtColors.bg,
+                child: SizedBox(
+                  height: height * 0.9,
+                  // L'image démarre tout en haut (coins arrondis), pas de bande.
+                  child: _controller == null
+                      ? const Center(child: CircularProgressIndicator())
+                      : PageView.builder(
+                          controller: _controller,
+                          onPageChanged: (i) {
+                            HapticFeedback.selectionClick();
+                            setState(() => _current = i);
+                          },
+                          itemCount: _episodes.length,
+                          itemBuilder: (_, i) => _EpisodePage(
+                            showId: widget.showId,
+                            showName: widget.showName,
+                            season: widget.season,
+                            episode: _episodes[i],
+                            posterPath: widget.posterPath,
+                            position: '${i + 1} sur ${_episodes.length}',
+                            onDragStart: _onDragStart,
+                            onDragUpdate: _onDragUpdate,
+                            onDragEnd: _onDragEnd,
+                          ),
                         ),
-                      ),
+                ),
               ),
             ),
           ),
-          ),
         ],
-        ),
+      ),
     );
   }
 }
@@ -199,14 +212,13 @@ class _DotsIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final start =
-        count <= _window ? 0 : (index - _window ~/ 2).clamp(0, count - _window);
+    final start = count <= _window
+        ? 0
+        : (index - _window ~/ 2).clamp(0, count - _window);
     final end = count <= _window ? count : start + _window;
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var i = start; i < end; i++) _dot(i, start, end),
-      ],
+      children: [for (var i = start; i < end; i++) _dot(i, start, end)],
     );
   }
 
@@ -274,8 +286,9 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
 
   Future<void> _load() async {
     try {
-      final all =
-          await ref.read(tvdbClientProvider).seriesEpisodes(widget.showId);
+      final all = await ref
+          .read(tvdbClientProvider)
+          .seriesEpisodes(widget.showId);
       final e = all.firstWhere(
         (x) =>
             (x['season'] as int) == widget.season &&
@@ -313,8 +326,11 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
         .read(databaseProvider)
         .markWatchedUpTo(widget.showId, widget.season, widget.episode);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Épisodes précédents marqués comme vus ✓')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Épisodes précédents marqués comme vus ✓'),
+        ),
+      );
     }
   }
 
@@ -328,7 +344,7 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
     final ref0 = (
       showId: widget.showId,
       season: widget.season,
-      episode: widget.episode
+      episode: widget.episode,
     );
     final watchedRow = ref.watch(watchedEpisodeProvider(ref0)).value;
 
@@ -384,103 +400,123 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-              if (vote > 0) ...[
-                Row(
-                  children: [
-                    _Stars(rating: vote),
-                    const SizedBox(width: 8),
-                    Text(vote.toStringAsFixed(1),
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w700)),
-                    if (voteCount > 0) ...[
-                      const SizedBox(width: 6),
-                      Text('($voteCount votes)',
+                  if (vote > 0) ...[
+                    Row(
+                      children: [
+                        _Stars(rating: vote),
+                        const SizedBox(width: 8),
+                        Text(
+                          vote.toStringAsFixed(1),
                           style: const TextStyle(
-                              fontSize: 12.5, color: TtColors.dim)),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 12),
-              ],
-              Wrap(
-                spacing: 16,
-                runSpacing: 6,
-                children: [
-                  if (air != null)
-                    _Meta(icon: Icons.event_outlined, text: frenchDate(air)),
-                  if (runtime != null && runtime > 0)
-                    _Meta(icon: Icons.schedule, text: fmtTime(runtime)),
-                  _Meta(icon: Icons.tag, text: widget.position),
-                ],
-              ),
-              if (watched && watchedAt != null) ...[
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Icon(Icons.check_circle,
-                        size: 16, color: TtColors.teal),
-                    const SizedBox(width: 6),
-                    Text('Vu le ${frenchDate(watchedAt)}',
-                        style:
-                            const TextStyle(fontSize: 13, color: TtColors.teal)),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: watched
-                        ? ProminentGlassButton(
-                            color: TtColors.teal,
-                            icon: Icons.check,
-                            onPressed: () => _toggleWatched(true),
-                            child: const Text('Épisode vu'),
-                          )
-                        : ProminentGlassButton(
-                            icon: Icons.remove_red_eye_outlined,
-                            onPressed: () => _toggleWatched(false),
-                            child: const Text('Marquer comme vu'),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
                           ),
+                        ),
+                        if (voteCount > 0) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            '($voteCount votes)',
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: TtColors.dim,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 6,
+                    children: [
+                      if (air != null)
+                        _Meta(
+                          icon: Icons.event_outlined,
+                          text: frenchDate(air),
+                        ),
+                      if (runtime != null && runtime > 0)
+                        _Meta(icon: Icons.schedule, text: fmtTime(runtime)),
+                      _Meta(icon: Icons.tag, text: widget.position),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  GlassButton(
-                    icon: Icons.playlist_add_check,
-                    onPressed: _markUpTo,
-                    child: const Text('Jusqu\'ici'),
+                  if (watched && watchedAt != null) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.check_circle,
+                          size: 16,
+                          color: TtColors.teal,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Vu le ${frenchDate(watchedAt)}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: TtColors.teal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: watched
+                            ? ProminentGlassButton(
+                                color: TtColors.teal,
+                                icon: Icons.check,
+                                onPressed: () => _toggleWatched(true),
+                                child: const Text('Épisode vu'),
+                              )
+                            : ProminentGlassButton(
+                                icon: Icons.remove_red_eye_outlined,
+                                onPressed: () => _toggleWatched(false),
+                                child: const Text('Marquer comme vu'),
+                              ),
+                      ),
+                      const SizedBox(width: 8),
+                      GlassButton(
+                        icon: Icons.playlist_add_check,
+                        onPressed: _markUpTo,
+                        child: const Text('Jusqu\'ici'),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 20),
+                  Text(
+                    overview.isEmpty ? 'Pas de résumé disponible.' : overview,
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      height: 1.6,
+                      color: overview.isEmpty ? TtColors.dim : TtColors.text,
+                    ),
+                  ),
+                  if (director != null || writer != null) ...[
+                    const SizedBox(height: 16),
+                    if (director != null)
+                      _CrewLine(role: 'Réalisation', name: director),
+                    if (writer != null)
+                      _CrewLine(role: 'Scénario', name: writer),
+                  ],
+                  if (guests.isNotEmpty) ...[
+                    const SizedBox(height: 22),
+                    const _SectionTitle('Avec'),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 128,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: guests.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 12),
+                        itemBuilder: (_, i) => _GuestStar(guests[i]),
+                      ),
+                    ),
+                  ],
                 ],
               ),
-              const SizedBox(height: 20),
-              Text(
-                overview.isEmpty ? 'Pas de résumé disponible.' : overview,
-                style: TextStyle(
-                    fontSize: 14.5,
-                    height: 1.6,
-                    color: overview.isEmpty ? TtColors.dim : TtColors.text),
-              ),
-              if (director != null || writer != null) ...[
-                const SizedBox(height: 16),
-                if (director != null)
-                  _CrewLine(role: 'Réalisation', name: director),
-                if (writer != null) _CrewLine(role: 'Scénario', name: writer),
-              ],
-              if (guests.isNotEmpty) ...[
-                const SizedBox(height: 22),
-                const _SectionTitle('Avec'),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 128,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: guests.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 12),
-                    itemBuilder: (_, i) => _GuestStar(guests[i]),
-                  ),
-                ),
-              ],
-            ],
-          ),
             ],
           ),
         ),
@@ -526,31 +562,17 @@ class _Hero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hue =
-        (seed.codeUnits.fold<int>(0, (a, c) => a * 31 + c) % 360).toDouble();
-    final placeholder = DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            HSLColor.fromAHSL(1, hue, 0.5, 0.4).toColor(),
-            HSLColor.fromAHSL(1, (hue + 40) % 360, 0.55, 0.24).toColor(),
-          ],
-        ),
-      ),
-    );
     return SizedBox(
       height: 232,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (stillPath != null && stillPath!.isNotEmpty)
-            Image.network(stillPath!,
-                fit: BoxFit.cover, errorBuilder: (_, _, _) => placeholder)
-          else
-            placeholder,
+          // Même image que partout ailleurs : le dégradé dérivé du titre tient
+          // la place dès la première image, l'still se révèle par-dessus, et
+          // un échec retombe proprement dessus — plus de case vide le temps
+          // que le réseau réponde.
+          MediaImage(sources: [stillPath], seed: seed, icon: Icons.tv),
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -559,7 +581,7 @@ class _Hero extends StatelessWidget {
                 colors: [
                   Color(0x59000000),
                   Color(0x00000000),
-                  Color(0xE6000000)
+                  Color(0xE6000000),
                 ],
                 stops: [0, 0.35, 1],
               ),
@@ -579,8 +601,9 @@ class _Hero extends StatelessWidget {
                   borderRadius: BorderRadius.circular(2),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 4),
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                    ),
                   ],
                 ),
               ),
@@ -595,13 +618,15 @@ class _Hero extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(9),
-                  border:
-                      Border.all(color: Colors.white.withValues(alpha: 0.85)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3)),
+                      color: Colors.black.withValues(alpha: 0.45),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
                   ],
                 ),
                 child: ClipRRect(
@@ -611,15 +636,23 @@ class _Hero extends StatelessWidget {
                           width: 42,
                           height: 62,
                           color: TtColors.surfaceHi,
-                          child: const Icon(Icons.tv,
-                              color: TtColors.dim, size: 18))
+                          child: const Icon(
+                            Icons.tv,
+                            color: TtColors.dim,
+                            size: 18,
+                          ),
+                        )
                       : Image.network(
                           posterPath!,
                           width: 42,
                           height: 62,
                           fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => Container(
-                              width: 42, height: 62, color: TtColors.surfaceHi)),
+                            width: 42,
+                            height: 62,
+                            color: TtColors.surfaceHi,
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -634,10 +667,11 @@ class _Hero extends StatelessWidget {
                 Text(
                   'SAISON $season · ÉPISODE $episode',
                   style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1,
-                      color: TtColors.amber),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1,
+                    color: TtColors.amber,
+                  ),
                 ),
                 const SizedBox(height: 5),
                 Text(
@@ -645,10 +679,11 @@ class _Hero extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontSize: 23,
-                      fontWeight: FontWeight.w800,
-                      height: 1.15,
-                      color: Colors.white),
+                    fontSize: 23,
+                    fontWeight: FontWeight.w800,
+                    height: 1.15,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
@@ -673,8 +708,8 @@ class _Stars extends StatelessWidget {
             stars >= i + 1
                 ? Icons.star_rounded
                 : stars >= i + 0.5
-                    ? Icons.star_half_rounded
-                    : Icons.star_border_rounded,
+                ? Icons.star_half_rounded
+                : Icons.star_border_rounded,
             size: 20,
             color: TtColors.amber,
           ),
@@ -708,15 +743,24 @@ class _CrewLine extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
-      child: Text.rich(TextSpan(children: [
+      child: Text.rich(
         TextSpan(
-            text: '$role : ',
-            style: const TextStyle(
-                fontSize: 13, color: TtColors.dim, fontWeight: FontWeight.w600)),
-        TextSpan(
-            text: name,
-            style: const TextStyle(fontSize: 13, color: TtColors.text)),
-      ])),
+          children: [
+            TextSpan(
+              text: '$role : ',
+              style: const TextStyle(
+                fontSize: 13,
+                color: TtColors.dim,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            TextSpan(
+              text: name,
+              style: const TextStyle(fontSize: 13, color: TtColors.text),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -726,13 +770,14 @@ class _SectionTitle extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Text(
-        text.toUpperCase(),
-        style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1,
-            color: TtColors.amber),
-      );
+    text.toUpperCase(),
+    style: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 1,
+      color: TtColors.amber,
+    ),
+  );
 }
 
 class _GuestStar extends StatelessWidget {
@@ -757,18 +802,21 @@ class _GuestStar extends StatelessWidget {
                 : null,
           ),
           const SizedBox(height: 6),
-          Text(name,
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+          ),
+          if (character.isNotEmpty)
+            Text(
+              character,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style:
-                  const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
-          if (character.isNotEmpty)
-            Text(character,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 10.5, color: TtColors.dim)),
+              style: const TextStyle(fontSize: 10.5, color: TtColors.dim),
+            ),
         ],
       ),
     );

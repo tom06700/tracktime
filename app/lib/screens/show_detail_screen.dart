@@ -361,6 +361,9 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
                   labelColor: scope.palette.accent,
                   unselectedLabelColor: TtColors.dim,
                   indicatorColor: scope.palette.accent,
+                  // Pas de trait sous les onglets : ce serait une ligne de
+                  // coupe entre le fond et le contenu.
+                  dividerColor: Colors.transparent,
                   indicatorSize: TabBarIndicatorSize.label,
                   labelStyle: const TextStyle(
                     fontSize: 13,

@@ -56,17 +56,27 @@ class MediaImage extends StatelessWidget {
     return Image.network(
       url,
       fit: fit,
-      // Pas de saut de mise en page pendant le chargement : le dégradé occupe
-      // déjà la place définitive.
-      loadingBuilder: (context, child, progress) =>
-          progress == null ? child : _fallback,
       frameBuilder: (context, child, frame, wasSync) {
-        if (wasSync || reduceMotion) return child;
-        return AnimatedOpacity(
-          opacity: frame == null ? 0 : 1,
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOut,
-          child: frame == null ? _fallback : child,
+        // Déjà en cache : rien à attendre, rien à fondre.
+        if (wasSync) return child;
+        // Le dégradé occupe la place dès la première image, avant même le
+        // premier octet, et l'image se révèle par-dessus. Sans cette couche
+        // de fond, la case restait vide le temps que le réseau réponde, puis
+        // clignotait : vide, dégradé, image.
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            _fallback,
+            if (reduceMotion)
+              child
+            else
+              AnimatedOpacity(
+                opacity: frame == null ? 0 : 1,
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                child: child,
+              ),
+          ],
         );
       },
       errorBuilder: (_, _, _) => _fallback,

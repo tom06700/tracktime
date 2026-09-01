@@ -191,6 +191,10 @@ class _LibraryGrid extends ConsumerWidget {
                   // seulement : au-delà, la cascade se verrait plus que la
                   // grille. Le décalage total reste sous 150 ms.
                   return EntranceFade(
+                    // La clé lie la carte au film, pas à sa position : quand
+                    // un film vu quitte la grille, le suivant prend sa place
+                    // sans hériter de l'état de son bouton « vu ».
+                    key: ValueKey(m.id),
                     delay: Motion.staggerAt(i),
                     child: MoviePosterCard(
                       movie: m,
