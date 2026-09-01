@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import 'artwork.dart';
+
 /// Nature d'un échec TheTVDB.
 ///
 /// Sert à deux décisions qu'on ne peut pas prendre sur un simple message :
@@ -387,8 +389,11 @@ class TvdbClient {
       });
       return ((j['data'] as List?) ?? const [])
           .whereType<Map<String, dynamic>>()
+          // Le filtre films renvoie des chemins relatifs, celui des séries
+          // des URLs complètes : tout ressort ici sous forme chargeable.
+          .map((e) => {...e, 'image': absoluteArtwork(e['image'] as String?)})
           // Sans affiche, une carte de découverte n'a aucun intérêt.
-          .where((e) => (e['image'] as String?)?.isNotEmpty ?? false)
+          .where((e) => e['image'] != null)
           .toList();
     }, force: force);
   }
@@ -492,7 +497,7 @@ class TvdbClient {
           'episode': number,
           'name': _text(e['name']),
           'overview': _text(e['overview']),
-          'image': _text(e['image']),
+          'image': absoluteArtwork(_text(e['image'])),
           'aired': _text(e['aired']),
           'runtime': (e['runtime'] as num?)?.toInt(),
         });

@@ -87,6 +87,68 @@ void main() {
     });
   });
 
+  group('MediaImage — chemins TheTVDB', () {
+    testWidgets(
+      'un still relatif enregistré en base devient une URL chargeable',
+      (tester) async {
+        debugNetworkImageHttpClientProvider = _Silent.new;
+
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: SizedBox(
+              width: 200,
+              height: 120,
+              child: MediaImage(
+                sources: ['/banners/v4/episode/1/screencap/a.jpg'],
+                seed: 'One Piece',
+                icon: Icons.tv,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final image = tester.widget<Image>(find.byType(Image));
+        expect(
+          (image.image as NetworkImage).url,
+          'https://artworks.thetvdb.com/banners/v4/episode/1/screencap/a.jpg',
+        );
+
+        debugNetworkImageHttpClientProvider = null;
+      },
+    );
+  });
+
+  group('MediaScrim', () {
+    /// Opacité du voile à une hauteur donnée, 0 en bas, 1 en haut, par
+    /// interpolation linéaire entre les paliers du dégradé.
+    double alphaAt(MediaScrim scrim, double y) {
+      final g = (scrim.build(_NoContext()) as DecoratedBox).decoration;
+      final grad = (g as BoxDecoration).gradient as LinearGradient;
+      final stops = grad.stops!;
+      final colors = grad.colors;
+      if (y >= stops.last) return colors.last.a;
+      for (var i = 1; i < stops.length; i++) {
+        if (y <= stops[i]) {
+          final t = (y - stops[i - 1]) / (stops[i] - stops[i - 1]);
+          return colors[i - 1].a + (colors[i].a - colors[i - 1].a) * t;
+        }
+      }
+      return colors.first.a;
+    }
+
+    test('sur toute la hauteur, un titre à mi-carte reste lisible', () {
+      // La carte « À voir » écrit trois lignes et un bouton dans sa moitié
+      // basse : sur un still clair, l'ancien profil ne posait qu'un tiers
+      // d'opacité sous le titre.
+      const scrim = MediaScrim(height: 1);
+      expect(alphaAt(scrim, 0.57), greaterThanOrEqualTo(0.6));
+      expect(alphaAt(scrim, 0.1), greaterThanOrEqualTo(0.9));
+      // …et l'image reste nue en haut.
+      expect(alphaAt(scrim, 0.95), lessThan(0.15));
+    });
+  });
+
   group('grille Films', () {
     testWidgets('marquer un film vu ne colore pas le bouton du suivant', (
       tester,
@@ -145,3 +207,6 @@ void main() {
     });
   });
 }
+
+/// Contexte factice : MediaScrim ne lit rien dedans.
+class _NoContext extends Fake implements BuildContext {}

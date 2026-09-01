@@ -27,8 +27,25 @@ class ImportPage extends StatelessWidget {
   }
 }
 
+/// Fin de l'export de données chez TV Time.
+final kTvTimeExportDeadline = DateTime(2026, 7, 15);
+
+/// Ce que l'écran d'import dit de TV Time, selon la date.
+///
+/// Avant l'échéance : presser l'utilisateur d'exporter. Après : ne plus
+/// afficher un compte à rebours périmé — l'app se retrouvait à demander
+/// d'exporter « avant le 15 juillet » en septembre.
+String tvTimeNotice(DateTime now) => now.isBefore(kTvTimeExportDeadline)
+    ? '⏳ Exporte tes données TV Time avant le 15 juillet 2026 sur '
+          'gdpr.tvtime.com — après, tout est supprimé définitivement.'
+    : 'TV Time a cessé de fournir ses exports le 15 juillet 2026. Si tu as '
+          'gardé tes fichiers CSV ou JSON, ils s\'importent toujours ici.';
+
 class ImportScreen extends ConsumerStatefulWidget {
-  const ImportScreen({super.key});
+  const ImportScreen({super.key, this.now});
+
+  /// Date de référence, injectable pour les tests.
+  final DateTime? now;
 
   @override
   ConsumerState<ImportScreen> createState() => _ImportScreenState();
@@ -153,12 +170,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: TtColors.amber.withValues(alpha: 0.3)),
           ),
-          child: const Padding(
-            padding: EdgeInsets.all(14),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
             child: Text(
-              '⏳ Exporte tes données TV Time avant le 15 juillet 2026 sur '
-              'gdpr.tvtime.com — après, tout est supprimé définitivement.',
-              style: TextStyle(fontSize: 13, height: 1.55),
+              tvTimeNotice(widget.now ?? DateTime.now()),
+              style: const TextStyle(fontSize: 13, height: 1.55),
             ),
           ),
         ),

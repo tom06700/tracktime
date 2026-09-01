@@ -127,6 +127,40 @@ void main() {
       expect(d.overview, 'Paul Atreides rejoint Arrakis.');
     });
 
+    test('lit le studio dans `companies` groupé par rôle, forme réelle des '
+        'films', () {
+      // Sur l'API réelle, un film renvoie `companies` en objet — studio,
+      // production, distributeur… — et non en liste comme une série. Le cast
+      // en liste faisait échouer toutes les fiches film.
+      final d = parseMovieDetail(231, {
+        'name': 'Titanic',
+        'companies': {
+          'studio': [
+            {'name': '20th Century Studios'},
+          ],
+          'network': null,
+          'production': [
+            {'name': 'Lightstorm Entertainment'},
+          ],
+          'distributor': [],
+          'special_effects': [],
+        },
+      });
+      expect(d.studio, '20th Century Studios');
+
+      // Sans studio, la production prend le relais.
+      final prod = parseMovieDetail(1, {
+        'name': 'X',
+        'companies': {
+          'studio': [],
+          'production': [
+            {'name': 'A24'},
+          ],
+        },
+      });
+      expect(prod.studio, 'A24');
+    });
+
     test('retient le fond horizontal, type 15 pour un film', () {
       final d = parseMovieDetail(1406, duneExtended);
       expect(d.backdrop, 'wide.jpg');

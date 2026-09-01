@@ -31,6 +31,21 @@ String? backdropOf(Map<String, dynamic> d, {required bool movie}) {
   return null;
 }
 
+/// Sociétés d'une fiche, dans l'ordre où elles méritent d'être citées.
+///
+/// Liste plate (séries) : telle quelle. Objet par rôle (films) : le studio
+/// d'abord, puis la production, puis le reste — jamais une exception.
+List<Object?> _companiesOf(Object? raw) {
+  if (raw is List) return raw;
+  if (raw is Map) {
+    return [
+      for (final key in ['studio', 'production', 'network', 'distributor'])
+        ...?(raw[key] as List?),
+    ];
+  }
+  return const [];
+}
+
 List<String> _genresOf(Map<String, dynamic> d) => [
   for (final g in (d['genres'] as List?) ?? const [])
     if (g is Map && '${g['name'] ?? ''}'.isNotEmpty) '${g['name']}',
@@ -201,11 +216,13 @@ MovieDetail parseMovieDetail(
     }
   }
 
-  final companies = (extended['companies'] as List?) ?? const [];
+  // Sur un film, `companies` est un objet groupé par rôle — studio,
+  // production, distributeur… — là où une série renvoie une liste plate. Le
+  // cast en liste faisait échouer toutes les fiches film sur l'API réelle.
   final studio = preferredText([
     for (final s in (extended['studios'] as List?) ?? const [])
       if (s is Map) '${s['name'] ?? ''}',
-    for (final c in companies.take(1))
+    for (final c in _companiesOf(extended['companies']).take(1))
       if (c is Map) '${c['name'] ?? ''}',
   ]);
 

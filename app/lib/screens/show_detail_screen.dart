@@ -15,7 +15,7 @@ import '../settings/prefs.dart';
 import '../theme.dart';
 import '../tmdb/tvdb.dart';
 import 'media_detail_parts.dart';
-import 'movie_detail_screen.dart' show MediaDetailSkeleton;
+import 'movie_detail_screen.dart' show DetailWithBack, MediaDetailSkeleton;
 import '../widgets/common.dart';
 import '../widgets/skeleton.dart';
 
@@ -316,11 +316,13 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
     return Scaffold(
       backgroundColor: TtColors.bg,
       body: _error != null
-          ? EmptyState(icon: Icons.error_outline, message: _error!)
+          ? DetailWithBack(
+              child: EmptyState(icon: Icons.error_outline, message: _error!),
+            )
           : _details == null
           // La forme de la fiche plutôt qu'un rond qui tourne : la mise en
           // page est connue d'avance, autant l'annoncer.
-          ? const MediaDetailSkeleton()
+          ? const DetailWithBack(child: MediaDetailSkeleton())
           : _buildContent(followed),
     );
   }

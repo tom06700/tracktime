@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import '../tmdb/artwork.dart';
 
 /// Dégradé stable dérivé d'un titre : deux séries différentes n'ont jamais la
 /// même teinte, et une même série garde la sienne d'un écran à l'autre.
@@ -46,10 +47,12 @@ class MediaImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final url = sources.firstWhere(
-      (s) => s != null && s.isNotEmpty,
-      orElse: () => null,
-    );
+    // Les bases déjà remplies gardent des stills relatifs (`/banners/...`)
+    // enregistrés avant que le client ne les complète : la résolution se fait
+    // aussi ici, au dernier moment, pour que ces images s'affichent enfin.
+    final url = sources
+        .map(absoluteArtwork)
+        .firstWhere((s) => s != null, orElse: () => null);
     if (url == null) return _fallback;
 
     final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
@@ -112,12 +115,18 @@ class MediaScrim extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
+          // Quatre paliers plutôt que trois : le voile reste franc là où le
+          // texte s'écrit, jusqu'aux deux tiers de sa hauteur, et ne s'efface
+          // que sur le dernier tiers. Avec l'ancien profil, un titre posé à
+          // mi-hauteur ne recevait qu'un tiers d'opacité — illisible sur un
+          // still clair, ce que les dégradés de repli n'avaient jamais montré.
           colors: [
-            TtColors.bg.withValues(alpha: 0.94),
-            TtColors.bg.withValues(alpha: 0.72),
+            TtColors.bg.withValues(alpha: 0.96),
+            TtColors.bg.withValues(alpha: 0.84),
+            TtColors.bg.withValues(alpha: 0.42),
             Colors.transparent,
           ],
-          stops: [0, height * 0.5, height],
+          stops: [0, height * 0.4, height * 0.75, height],
         ),
       ),
     );

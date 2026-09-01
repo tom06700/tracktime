@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart' hide isNull, isNotNull, Column;
@@ -389,6 +390,66 @@ void main() {
     expect(find.textContaining('2 h 35'), findsOneWidget);
     expect(find.text('Ajouter à ma liste'), findsOneWidget);
 
+    await _settle(tester);
+  });
+
+  testWidgets('une fiche film qui échoue garde un bouton retour', (
+    tester,
+  ) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    final tvdb = TvdbClient(
+      'test',
+      sleep: (_) async {},
+      client: MockClient((req) async {
+        if (req.url.path.endsWith('/login')) {
+          return http.Response('{"data":{"token":"t"}}', 200);
+        }
+        return http.Response('nope', 404);
+      }),
+    );
+
+    await _pump(
+      tester,
+      db,
+      tvdb,
+      const MovieDetailScreen(movieId: 1406, title: 'Dune'),
+    );
+
+    expect(find.text('Impossible de charger ce film'), findsOneWidget);
+    // Sans la coquille cinématique, le retour doit quand même être là.
+    expect(find.bySemanticsLabel('Retour'), findsOneWidget);
+
+    await _settle(tester);
+  });
+
+  testWidgets('une fiche film en attente garde un bouton retour', (
+    tester,
+  ) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    final never = Completer<http.Response>();
+    final tvdb = TvdbClient(
+      'test',
+      client: MockClient((req) async {
+        if (req.url.path.endsWith('/login')) {
+          return http.Response('{"data":{"token":"t"}}', 200);
+        }
+        return never.future;
+      }),
+    );
+
+    await _pump(
+      tester,
+      db,
+      tvdb,
+      const MovieDetailScreen(movieId: 1406, title: 'Dune'),
+    );
+
+    expect(find.byType(MediaDetailSkeleton), findsOneWidget);
+    expect(find.bySemanticsLabel('Retour'), findsOneWidget);
+
+    never.complete(http.Response('nope', 404));
     await _settle(tester);
   });
 

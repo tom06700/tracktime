@@ -50,6 +50,44 @@ class _Clock {
 }
 
 void main() {
+  group('images de découverte', () {
+    test('le filtre films rend ses affiches relatives chargeables', () async {
+      // `/movies/filter` renvoie `/banners/...` là où `/series/filter` renvoie
+      // des URLs complètes : « Films populaires » et « Sorties annoncées »
+      // n'affichaient que des dégradés sur l'app réelle.
+      final server = _Server([
+        _ok([
+          {'id': 63, 'name': 'Harry Potter', 'image': '/banners/movies/63/p.jpg'},
+          {'id': 1, 'name': 'Sans affiche', 'image': ''},
+          {'id': 2, 'name': 'Sans affiche non plus'},
+        ]),
+      ]);
+      final tvdb = TvdbClient('k', client: server.client);
+
+      final list = await tvdb.mostPopular(movies: true);
+
+      expect(list.map((e) => e['name']), ['Harry Potter']);
+      expect(
+        list.single['image'],
+        'https://artworks.thetvdb.com/banners/movies/63/p.jpg',
+      );
+    });
+
+    test('une URL complète du filtre séries reste telle quelle', () async {
+      const u = 'https://artworks.thetvdb.com/banners/posters/305288-4.jpg';
+      final server = _Server([
+        _ok([
+          {'id': 305288, 'name': 'Stranger Things', 'image': u},
+        ]),
+      ]);
+      final tvdb = TvdbClient('k', client: server.client);
+
+      final list = await tvdb.mostPopular(movies: false);
+
+      expect(list.single['image'], u);
+    });
+  });
+
   group('erreurs typées', () {
     Future<TvdbException> failureFor(http.Response r) async {
       final server = _Server([r]);

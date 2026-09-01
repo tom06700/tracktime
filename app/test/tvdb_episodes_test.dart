@@ -63,6 +63,17 @@ class _Eps {
 }
 
 void main() {
+  test('les stills relatifs de l\'API deviennent des URLs chargeables',
+      () async {
+    // `/series/{id}/episodes` renvoie `/banners/...`, pas une URL : passé tel
+    // quel à Image.network, chaque carte d'accueil restait sur son dégradé.
+    final api = _Eps(original: [(1, 7, 'Combat acharné', null)]);
+
+    final eps = await api.client().seriesEpisodes(81797);
+
+    expect(eps.single['image'], 'https://artworks.thetvdb.com/still-1x7.jpg');
+  });
+
   test('les titres arrivent en français, pas dans la langue d\'origine',
       () async {
     // One Piece : sans langue, TheTVDB rend les titres japonais.

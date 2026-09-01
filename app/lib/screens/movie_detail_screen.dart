@@ -30,17 +30,50 @@ class MovieDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: TtColors.bg,
       body: detail.when(
-        loading: () => const MediaDetailSkeleton(),
+        // Un rechargement après erreur garde l'erreur affichée plutôt que de
+        // faire réapparaître le squelette.
+        skipLoadingOnReload: true,
+        loading: () => const DetailWithBack(child: MediaDetailSkeleton()),
         error: (e, st) {
           debugPrint('Fiche film $movieId — chargement impossible : $e\n$st');
-          return ErrorRetry(
-            title: 'Impossible de charger ce film',
-            message: 'Vérifie ta connexion et réessaie.',
-            onRetry: () => ref.invalidate(movieDetailProvider(movieId)),
+          return DetailWithBack(
+            child: ErrorRetry(
+              title: 'Impossible de charger ce film',
+              message: 'Vérifie ta connexion et réessaie.',
+              onRetry: () => ref.invalidate(movieDetailProvider(movieId)),
+            ),
           );
         },
         data: (m) => _Content(movie: m),
       ),
+    );
+  }
+}
+
+/// Attente ou erreur d'une fiche, avec le retour flottant de la coquille.
+///
+/// Seule la coquille cinématique posait le bouton retour : tant que la fiche
+/// n'était pas chargée — ou quand elle ne se chargeait pas — l'écran n'offrait
+/// aucune issue visible. Sur Android le geste système suffit ; sur iOS, seul
+/// le balayage depuis le bord restait, et rien ne l'indiquait.
+class DetailWithBack extends StatelessWidget {
+  const DetailWithBack({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(child: child),
+        Positioned(
+          top: 0,
+          left: 0,
+          child: CinematicBackButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+        ),
+      ],
     );
   }
 }

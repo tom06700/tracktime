@@ -83,7 +83,10 @@ class _ContinueWatchingHeroState extends State<ContinueWatchingHero> {
                     seed: n.show.name,
                     icon: Icons.tv,
                   ),
-                  const MediaScrim(),
+                  // Trois lignes et un bouton occupent la moitié basse de la
+                  // carte : le voile monte jusqu'en haut, franc sous le texte,
+                  // et ne laisse l'image nue que sur son quart supérieur.
+                  const MediaScrim(height: 1),
                   Positioned(
                     left: 18,
                     right: 18,
