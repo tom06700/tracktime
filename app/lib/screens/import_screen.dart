@@ -138,6 +138,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       _importing = true;
       _pct = 0;
     });
+    try {
     final summary = await runTvTimeImport(
       ref.read(databaseProvider),
       ref.read(tvdbClientProvider),
@@ -158,6 +159,14 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       _parsed.clear();
     });
     _toast('Import terminé 🎉');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _importing = false;
+        _log.add('Import interrompu. Tu peux réessayer.');
+      });
+      _toast('Import impossible. Vérifie ta connexion et réessaie.');
+    }
   }
 
   @override

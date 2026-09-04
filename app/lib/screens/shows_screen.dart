@@ -132,6 +132,16 @@ class _ToWatchTab extends ConsumerWidget {
       },
       data: (feed) {
         if (feed.isEmpty) {
+          final hasShows = (ref.watch(showsProvider).value ?? const []).isNotEmpty;
+          if (hasShows) {
+            return EmptyPrompt(
+              icon: Icons.check_circle_outline,
+              title: 'Tu es à jour',
+              message: 'Retrouve tes séries dans la bibliothèque ou consulte les prochaines diffusions.',
+              actionLabel: 'Mes séries',
+              onAction: () => context.push('/series'),
+            );
+          }
           return EmptyPrompt(
             icon: Icons.tv_outlined,
             title: 'Ta liste est vide',
@@ -164,6 +174,7 @@ class _ToWatchFeed extends ConsumerWidget {
       backgroundColor: TtColors.surface,
       onRefresh: () => _refresh(context, ref),
       child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(top: 12, bottom: bottomNavInset(context)),
         children: [
           if (hero != null)
@@ -365,7 +376,9 @@ class _UpcomingTabState extends ConsumerState<_UpcomingTab> {
       },
       data: (list) {
         if (list.isEmpty) {
-          return const EmptyPrompt(
+          return EmptyPrompt(
+            actionLabel: 'Actualiser les dates',
+            onAction: () => _refresh(context, ref),
             icon: Icons.event_outlined,
             title: 'Rien d\'annoncé',
             message:

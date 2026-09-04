@@ -13,6 +13,8 @@ import '../tmdb/add.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
 import '../widgets/glass.dart';
+import '../widgets/states.dart';
+import '../series/sync.dart';
 
 /// Feuille modale glissable (remonte du bas) contenant un carrousel : on glisse
 /// horizontalement pour changer d'épisode, vers le bas pour fermer. Ouverte via
@@ -335,23 +337,35 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
         await db.setEpisodeWatched(widget.showId, widget.season, widget.episode);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Impossible de modifier cet épisode. Réessaie.')),
-      );
+        );
+      }
     }
   }
 
   Future<void> _markUpTo() async {
     HapticFeedback.mediumImpact();
-    await ref
-        .read(databaseProvider)
-        .markWatchedUpTo(widget.showId, widget.season, widget.episode);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Épisodes précédents marqués comme vus ✓'),
-        ),
-      );
+    final db = ref.read(databaseProvider);
+    final tvdb = ref.read(tvdbClientProvider);
+    try {
+      await addShowFromTvdb(db, tvdb, widget.showId, preferredName: widget.showName);
+      final show = await db.showById(widget.showId);
+      if (show == null) return;
+      await syncShowEpisodes(db, tvdb, show);
+      await db.markWatchedUpTo(widget.showId, widget.season, widget.episode);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Épisodes précédents marqués comme vus ✓')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible de mettre à jour la progression. Réessaie.')),
+        );
+      }
     }
   }
 
@@ -370,7 +384,14 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
     final watchedRow = ref.watch(watchedEpisodeProvider(ref0)).value;
 
     if (_error != null) {
-      return EmptyState(icon: Icons.error_outline, message: _error!);
+      return ErrorRetry(
+        title: 'Épisode indisponible',
+        message: 'Vérifie ta connexion pour retrouver sa fiche.',
+        onRetry: () {
+          setState(() => _error = null);
+          _load();
+        },
+      );
     }
     if (_data == null) {
       return const Center(child: CircularProgressIndicator());

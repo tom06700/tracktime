@@ -157,6 +157,7 @@ class _LibraryGrid extends ConsumerWidget {
         ref.invalidate(moviesProvider);
       },
       child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           if (library.isEmpty)
             const SliverToBoxAdapter(

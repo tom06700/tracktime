@@ -187,10 +187,12 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
       debugPrint('Épisodes de ${widget.showId} indisponibles : $e');
       // La fiche reste consultable : seul l'onglet Épisodes restera vide.
       _episodesRequested = false;
-      if (mounted) setState(() {
-        _loadingEpisodes = false;
-        _episodesError = '$e';
-      });
+      if (mounted) {
+        setState(() {
+          _loadingEpisodes = false;
+          _episodesError = '$e';
+        });
+      }
     }
   }
 
