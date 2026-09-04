@@ -18,6 +18,7 @@ import 'media_detail_parts.dart';
 import 'movie_detail_screen.dart' show DetailWithBack, MediaDetailSkeleton;
 import '../widgets/common.dart';
 import '../widgets/skeleton.dart';
+import '../widgets/states.dart';
 
 class ShowDetailScreen extends ConsumerStatefulWidget {
   const ShowDetailScreen({
@@ -45,6 +46,7 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
 
   bool _episodesRequested = false;
   bool _loadingEpisodes = false;
+  String? _episodesError;
 
   Map<String, dynamic>? _details;
   String _name = '';
@@ -119,7 +121,11 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
   Future<void> _loadEpisodes({bool refresh = false}) async {
     if (_episodesRequested && !refresh) return;
     _episodesRequested = true;
-    setState(() => _loadingEpisodes = true);
+    if (!mounted) return;
+    setState(() {
+      _loadingEpisodes = true;
+      _episodesError = null;
+    });
 
     final tvdb = ref.read(tvdbClientProvider);
     final db = ref.read(databaseProvider);
@@ -181,7 +187,10 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
       debugPrint('Épisodes de ${widget.showId} indisponibles : $e');
       // La fiche reste consultable : seul l'onglet Épisodes restera vide.
       _episodesRequested = false;
-      if (mounted) setState(() => _loadingEpisodes = false);
+      if (mounted) setState(() {
+        _loadingEpisodes = false;
+        _episodesError = '$e';
+      });
     }
   }
 
@@ -390,9 +399,16 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
                       ),
                       if (_loadingEpisodes)
                         _SeasonsSkeleton(tint: scope.palette.surface)
+                      else if (_episodesError != null)
+                        ErrorRetry(
+                          title: 'Épisodes indisponibles',
+                          message: 'Vérifie ta connexion pour charger les saisons.',
+                          onRetry: () => _loadEpisodes(refresh: true),
+                        )
                       else
                         _EpisodesTab(
                           showId: widget.showId,
+                          showName: _name,
                           seasonNumbers: _seasonNumbers,
                           loadSeason: _loadSeason,
                           episodeName: (s, e) =>
@@ -554,6 +570,7 @@ class _AboutTab extends StatelessWidget {
 class _EpisodesTab extends ConsumerWidget {
   const _EpisodesTab({
     required this.showId,
+    required this.showName,
     required this.seasonNumbers,
     required this.loadSeason,
     required this.episodeName,
@@ -562,6 +579,7 @@ class _EpisodesTab extends ConsumerWidget {
   });
 
   final int showId;
+  final String showName;
   final List<int> seasonNumbers;
   final Future<List<int>> Function(int season) loadSeason;
   final String Function(int season, int episode) episodeName;
@@ -585,6 +603,8 @@ class _EpisodesTab extends ConsumerWidget {
             watchedKeys: watched,
             loadEpisodes: () => loadSeason(n),
             episodeName: (e) => episodeName(n, e),
+            onOpen: (e) => context.push(
+              '/episode/$showId/$n/$e', extra: {'name': showName}),
             onToggle: (e, w) => onToggle(n, e, w),
             onSetSeason: (eps, on) => onSetSeason(n, eps, on),
           ),
@@ -623,6 +643,7 @@ class _SeasonCard extends StatefulWidget {
     required this.season,
     required this.watchedKeys,
     required this.loadEpisodes,
+    required this.onOpen,
     required this.episodeName,
     required this.onToggle,
     required this.onSetSeason,
@@ -631,6 +652,7 @@ class _SeasonCard extends StatefulWidget {
   final int season;
   final Set<String> watchedKeys;
   final Future<List<int>> Function() loadEpisodes;
+  final void Function(int episode) onOpen;
   final String Function(int episode) episodeName;
   final Future<void> Function(int episode, bool watched) onToggle;
   final Future<void> Function(List<int> eps, bool on) onSetSeason;
@@ -777,6 +799,7 @@ class _SeasonCardState extends State<_SeasonCard> {
         for (final e in eps)
           _EpisodeRow(
             number: e,
+            onOpen: () => widget.onOpen(e),
             name: widget.episodeName(e),
             watched: widget.watchedKeys.contains('S${widget.season}E$e'),
             onTap: () => widget.onToggle(
@@ -835,12 +858,14 @@ class _SeasonCheck extends StatelessWidget {
 class _EpisodeRow extends StatelessWidget {
   const _EpisodeRow({
     required this.number,
+    required this.onOpen,
     required this.name,
     required this.watched,
     required this.onTap,
   });
 
   final int number;
+  final VoidCallback onOpen;
   final String name;
   final bool watched;
   final VoidCallback onTap;
@@ -852,7 +877,7 @@ class _EpisodeRow extends StatelessWidget {
     // Rien ne rebondit, rien ne grossit.
     final duration = motionOf(context, Motion.normal);
     return InkWell(
-      onTap: onTap,
+      onTap: onOpen,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         child: Row(
@@ -862,11 +887,15 @@ class _EpisodeRow extends StatelessWidget {
               switchInCurve: Motion.enter,
               // Un fondu croisé entre le cercle vide et la coche pleine ;
               // pas de bascule sèche, pas de rebond.
-              child: Icon(
+              child: IconButton(
+                tooltip: watched ? 'Marquer non vu' : 'Marquer vu',
+                onPressed: onTap,
+                icon: Icon(
                 watched ? Icons.check_circle : Icons.circle_outlined,
                 key: ValueKey(watched),
                 color: watched ? TtColors.amber : TtColors.dim,
                 size: 24,
+                ),
               ),
             ),
             const SizedBox(width: 12),

@@ -20,7 +20,13 @@ class HistoryScreen extends ConsumerWidget {
     final historyAsync = ref.watch(watchHistoryProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Historique')),
+      appBar: AppBar(
+        title: const Text('Épisodes vus'),
+        actions: [TextButton(
+          onPressed: () => context.push('/movie-history'),
+          child: const Text('Films vus'),
+        )],
+      ),
       body: historyAsync.when(
         loading: () => ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 8),

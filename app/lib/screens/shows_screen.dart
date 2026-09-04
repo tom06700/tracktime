@@ -337,11 +337,18 @@ class _HistoryLink extends StatelessWidget {
 
 // ────────────────────────── Onglet « À venir » ──────────────────────────
 
-class _UpcomingTab extends ConsumerWidget {
+class _UpcomingTab extends ConsumerStatefulWidget {
   const _UpcomingTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_UpcomingTab> createState() => _UpcomingTabState();
+}
+
+class _UpcomingTabState extends ConsumerState<_UpcomingTab> {
+  bool _showAll = false;
+
+  @override
+  Widget build(BuildContext context) {
     final upcomingAsync = ref.watch(upcomingProvider);
 
     return upcomingAsync.when(
@@ -368,7 +375,9 @@ class _UpcomingTab extends ConsumerWidget {
         }
 
         final now = DateTime.now();
-        final groups = groupUpcoming(list, now);
+        final groups = groupUpcoming(list, now,
+          laterPerShowLimit: _showAll ? list.length : 3);
+        final visibleCount = groups.fold<int>(0, (n, g) => n + g.episodes.length);
         // Les dates de diffusion bougent : c'est l'onglet où le geste de
         // rafraîchissement a le plus de sens.
         return RefreshIndicator(
@@ -377,8 +386,23 @@ class _UpcomingTab extends ConsumerWidget {
           onRefresh: () => _refresh(context, ref),
           child: ListView.builder(
             padding: EdgeInsets.only(top: 16, bottom: bottomNavInset(context)),
-            itemCount: groups.length,
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: groups.length + 1,
             itemBuilder: (context, gi) {
+              if (gi == groups.length) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(children: [
+                    if (_showAll || visibleCount < list.length)
+                      TextButton(
+                        onPressed: () => setState(() => _showAll = !_showAll),
+                        child: Text(_showAll ? 'Réduire' : 'Voir les ${list.length} épisodes'),
+                      ),
+                    const Text('Dates annoncées sur les 90 prochains jours.',
+                      style: TextStyle(color: TtColors.dim, fontSize: 12)),
+                  ]),
+                );
+              }
               final group = groups[gi];
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -505,7 +529,7 @@ class _DayCounter extends StatelessWidget {
   Widget build(BuildContext context) {
     if (days <= 0) {
       return const Text(
-        'Ce soir',
+        'Aujourd’hui',
         style: TextStyle(
           fontSize: 12.5,
           fontWeight: FontWeight.w700,

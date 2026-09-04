@@ -22,7 +22,13 @@ class MovieHistoryScreen extends ConsumerWidget {
     final feedAsync = ref.watch(movieFeedProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Films vus')),
+      appBar: AppBar(
+        title: const Text('Films vus'),
+        actions: [TextButton(
+          onPressed: () => context.push('/history'),
+          child: const Text('Épisodes vus'),
+        )],
+      ),
       body: feedAsync.when(
         loading: () => ListView.builder(
           padding: const EdgeInsets.symmetric(vertical: 8),

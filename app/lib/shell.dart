@@ -44,16 +44,28 @@ class HomeShell extends ConsumerWidget {
       appBar: immersive
           ? null
           : AppBar(
-              title: const Text(
-                'NITRATE',
+              title: Text(
+                ['Séries', 'Films', 'Explorer', 'Profil'][tab],
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 26,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 4,
-                  color: TtColors.amber,
+                  letterSpacing: -0.7,
+                  color: TtColors.text,
                 ),
               ),
               actions: [
+                if (tab == HomeTab.series)
+                  IconButton(
+                    tooltip: 'Mes séries',
+                    icon: const Icon(Icons.video_library_outlined),
+                    onPressed: () => context.push('/series'),
+                  ),
+                if (tab == HomeTab.movies)
+                  IconButton(
+                    tooltip: 'Films vus',
+                    icon: const Icon(Icons.history),
+                    onPressed: () => context.push('/movie-history'),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.settings_outlined),
                   tooltip: 'Réglages',

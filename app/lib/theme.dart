@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// Palette reprise de la version web.
+/// Surfaces neutres et accent ambre commun à tous les parcours.
 abstract final class TtColors {
-  static const bg = Color(0xFF0D1017);
-  static const surface = Color(0xFF161B26);
-  static const surfaceHi = Color(0xFF1F2634);
+  static const bg = Color(0xFF101113);
+  static const surface = Color(0xFF1B1D20);
+  static const surfaceHi = Color(0xFF272A2F);
   static const amber = Color(0xFFF5B942);
   static const teal = Color(0xFF4FD1C5);
-  static const dim = Color(0xFF8B93A7);
+  static const dim = Color(0xFFA3A7AF);
   static const text = Color(0xFFF2F4F8);
   static const danger = Color(0xFFE5636F);
 }
@@ -20,7 +20,7 @@ ThemeData buildTheme() {
     colorScheme: const ColorScheme.dark(
       primary: TtColors.amber,
       onPrimary: Color(0xFF131313),
-      secondary: TtColors.teal,
+      secondary: TtColors.amber,
       surface: TtColors.surface,
       onSurface: TtColors.text,
       error: TtColors.danger,
@@ -28,8 +28,19 @@ ThemeData buildTheme() {
   );
 
   return base.copyWith(
+    dividerTheme: const DividerThemeData(color: TtColors.surfaceHi, thickness: 1),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: TtColors.surface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
+      ),
+    ),
     appBarTheme: const AppBarTheme(
       backgroundColor: TtColors.bg,
+      centerTitle: false,
+      scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
       titleTextStyle: TextStyle(
         color: TtColors.text,

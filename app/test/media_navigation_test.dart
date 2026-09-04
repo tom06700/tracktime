@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:tracktime/db/database.dart';
 import 'package:tracktime/providers.dart';
+import 'package:tracktime/profile/sections.dart';
 import 'package:tracktime/screens/movie_history_screen.dart';
 import 'package:tracktime/screens/movies_screen.dart';
 import 'package:tracktime/settings/prefs.dart';
@@ -109,6 +110,31 @@ Future<AppDatabase> _withMovies() async {
 }
 
 void main() {
+  testWidgets('les films de la liste du profil ouvrent leur fiche', (tester) async {
+    final db = await _withMovies();
+    addTearDown(db.close);
+    final opened = <String>[];
+    await _mount(tester, db, WatchlistStrip(movies: await db.allMovies(), shows: const []), opened);
+    await tester.tap(find.text('Dune'));
+    await _navigate(tester);
+    expect(opened, ['/movie/1406']);
+    await _settle(tester);
+  });
+
+  testWidgets('une sortie de film ouvre sa fiche', (tester) async {
+    final db = await _withMovies();
+    addTearDown(db.close);
+    await db.setMovieReleaseDate(1406, DateTime.now().add(const Duration(days: 7)));
+    final opened = <String>[];
+    await _mount(tester, db, const MoviesScreen(), opened);
+    await tester.tap(find.text('Sorties'));
+    await _navigate(tester);
+    await tester.tap(find.text('Dune').last);
+    await _navigate(tester);
+    expect(opened, ['/movie/1406']);
+    await _settle(tester);
+  });
+
   testWidgets('une affiche de la grille Films ouvre sa fiche', (tester) async {
     // La régression : la carte recevait bien un onTap, mais rien ne le
     // branchait — l'affiche n'était reliée à aucun détecteur de geste.

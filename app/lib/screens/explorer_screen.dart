@@ -64,12 +64,14 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   }
 
   void _onChanged(String value) {
+    _requestToken++;
     setState(() {}); // rafraîchit le bouton d'effacement
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), () => _search(value));
   }
 
   Future<void> _search(String query) async {
+    _debounce?.cancel();
     final q = query.trim();
     final token = ++_requestToken;
 
@@ -372,7 +374,24 @@ class _DiscoveryRow extends ConsumerWidget {
 
     // Une rangée qui a échoué ne doit pas condamner tout l'écran : les autres
     // restent utilisables, celle-ci disparaît simplement.
-    if (async.hasError) return const SizedBox.shrink();
+    if (async.hasError) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Card(
+          margin: EdgeInsets.zero,
+          child: ListTile(
+            leading: const Icon(Icons.cloud_off_outlined),
+            title: Text(title),
+            subtitle: const Text('Chargement indisponible'),
+            trailing: IconButton(
+              tooltip: 'Réessayer : $title',
+              icon: const Icon(Icons.refresh),
+              onPressed: () => ref.invalidate(provider),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -787,8 +806,8 @@ class _AddButtonState extends ConsumerState<AddButton> {
       child: GestureDetector(
         onTap: widget.already ? null : _add,
         child: SizedBox(
-          width: 44,
-          height: 44,
+          width: widget.already && !widget.compact ? 96 : 44,
+          height: 48,
           child: Center(
             child: AnimatedContainer(
               duration: duration,

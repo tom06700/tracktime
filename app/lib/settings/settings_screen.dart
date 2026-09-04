@@ -16,10 +16,16 @@ class SettingsScreen extends ConsumerWidget {
   /// pas dans un test widget. En production, c'est [exportBackup].
   final Future<void> Function(AppDatabase db) exportData;
 
-  Future<void> _open(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri != null) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  Future<void> _open(BuildContext context, String url) async {
+    try {
+      if (await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication)) return;
+    } catch (e) {
+      debugPrint('Lien externe indisponible : $e');
+    }
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d’ouvrir ce lien. Réessaie.')),
+      );
     }
   }
 
@@ -59,7 +65,7 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Réglages')),
       body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.fromLTRB(0, 8, 0, MediaQuery.paddingOf(context).bottom + 16),
         children: [
           // Sauvegarder, puis restaurer, puis effacer : l'ordre du parcours.
           const Padding(
@@ -93,7 +99,7 @@ class SettingsScreen extends ConsumerWidget {
           // ── Zone dangereuse ──
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 22, 20, 4),
-            child: Text('ZONE DANGEREUSE',
+            child: Text('SUPPRESSION',
                 style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -145,11 +151,11 @@ class SettingsScreen extends ConsumerWidget {
               children: [
                 _LinkChip(
                   label: 'TheTVDB.com',
-                  onTap: () => _open('https://thetvdb.com'),
+                  onTap: () => _open(context, 'https://thetvdb.com'),
                 ),
                 _LinkChip(
                   label: 'S\'abonner',
-                  onTap: () => _open('https://thetvdb.com/subscribe'),
+                  onTap: () => _open(context, 'https://thetvdb.com/subscribe'),
                 ),
               ],
             ),

@@ -5,7 +5,8 @@ import '../db/database.dart';
 import '../profile/sections.dart';
 import '../providers.dart';
 import '../theme.dart';
-import '../widgets/common.dart';
+import '../widgets/states.dart';
+import 'package:go_router/go_router.dart';
 
 enum _Status { all, ongoing, done, notStarted }
 
@@ -36,8 +37,20 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final shows =
-        ref.watch(showsProvider).value ?? const <ShowWithProgress>[];
+    final async = ref.watch(showsProvider);
+    if (!async.hasValue) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Mes séries')),
+        body: async.hasError
+          ? ErrorRetry(
+              title: 'Bibliothèque indisponible',
+              message: 'Réessaie pour retrouver tes séries.',
+              onRetry: () => ref.invalidate(showsProvider),
+            )
+          : const Center(child: CircularProgressIndicator()),
+      );
+    }
+    final shows = async.value!;
     final lastActivity = ref.watch(universeProvider).value?.lastActivityByShow ??
         const <int, DateTime>{};
 
@@ -185,9 +198,25 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
 
           // ── Grille ──
           if (list.isEmpty)
-            const EmptyState(
-              icon: Icons.search_off,
-              message: 'Aucune série ne correspond à ces filtres.',
+            EmptyPrompt(
+              icon: shows.isEmpty ? Icons.video_library_outlined : Icons.search_off,
+              title: shows.isEmpty ? 'Ta bibliothèque est vide' : 'Aucun résultat',
+              message: shows.isEmpty
+                ? 'Explore le catalogue pour ajouter ta première série.'
+                : 'Essaie un autre titre ou retire les filtres.',
+              actionLabel: shows.isEmpty ? 'Explorer les séries' : 'Effacer les filtres',
+              onAction: () {
+                if (shows.isEmpty) {
+                  ref.read(homeTabProvider.notifier).select(HomeTab.explorer);
+                  context.go('/');
+                } else {
+                  setState(() {
+                    _searchCtrl.clear();
+                    _status = _Status.all;
+                    _genre = null;
+                  });
+                }
+              },
             )
           else
             Padding(

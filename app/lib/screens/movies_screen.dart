@@ -348,7 +348,9 @@ class _ReleaseRow extends StatelessWidget {
     return Semantics(
       button: true,
       label: '${m.title}, sortie le ${frenchDate(upcoming.releaseDate)}',
-      child: Padding(
+      child: InkWell(
+        onTap: () => context.push('/movie/${m.id}', extra: m.title),
+        child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 7, 16, 7),
         child: Row(
           children: [
@@ -402,6 +404,7 @@ class _ReleaseRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

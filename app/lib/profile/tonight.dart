@@ -169,15 +169,18 @@ class _TonightDialogState extends State<_TonightDialog>
                     onPressed: _settled ? _spin : null,
                     child: const Text('Relancer'),
                   ),
-                  if (!item.isMovie) ...[
+                  ...[
                     const SizedBox(width: 10),
                     ProminentGlassButton(
                       icon: Icons.arrow_forward,
                       onPressed: _settled
                           ? () {
+                              final router = GoRouter.of(context);
                               Navigator.of(context).pop();
-                              context.push('/show/${item.id}',
-                                  extra: item.title);
+                              router.push(
+                                item.isMovie ? '/movie/${item.id}' : '/show/${item.id}',
+                                extra: item.title,
+                              );
                             }
                           : null,
                       child: const Text('Ouvrir'),

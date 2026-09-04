@@ -7,6 +7,7 @@ import '../providers.dart';
 import '../theme.dart';
 import '../tmdb/media_detail.dart';
 import '../widgets/common.dart';
+import '../widgets/movie_library_actions.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/states.dart';
 import 'media_detail_parts.dart';
@@ -87,6 +88,7 @@ class _Content extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final movies = ref.watch(moviesProvider).value ?? const [];
     final inLibrary = movies.any((m) => m.id == movie.id);
+    final localMovie = movies.where((m) => m.id == movie.id).firstOrNull;
 
     final meta = [
       ?movie.year,
@@ -121,7 +123,9 @@ class _Content extends ConsumerWidget {
                 const SizedBox(height: 18),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: AddToListButton(
+                  child: localMovie != null
+                    ? MovieLibraryActions(movie: localMovie)
+                    : AddToListButton(
                     label: 'Ajouter à ma liste',
                     inLibrary: inLibrary,
                     onAdd: () => addMovieToLibrary(ref, movie.id),

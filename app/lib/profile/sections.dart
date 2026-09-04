@@ -1322,9 +1322,10 @@ class _WatchTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: item.isMovie
-          ? null
-          : () => context.push('/show/${item.id}', extra: item.title),
+      onTap: () => context.push(
+        item.isMovie ? '/movie/${item.id}' : '/show/${item.id}',
+        extra: item.title,
+      ),
       child: SizedBox(
         width: 104,
         child: Column(

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../backup/backup_format.dart';
@@ -208,6 +209,15 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             ),
           ),
         ),
+        if (_log.isNotEmpty && !_importing)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: OutlinedButton.icon(
+              onPressed: () => context.push('/series'),
+              icon: const Icon(Icons.video_library_outlined),
+              label: const Text('Voir ma bibliothèque'),
+            ),
+          ),
         if (_legacy)
           Card(
             color: const Color(0xFF241D10),

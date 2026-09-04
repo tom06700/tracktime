@@ -9,6 +9,7 @@ import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../tmdb/tvdb.dart';
+import '../tmdb/add.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
 import '../widgets/glass.dart';
@@ -118,7 +119,8 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
           ),
         );
       }
-      if (rows.isNotEmpty) {
+      if (rows.isNotEmpty &&
+          await ref.read(databaseProvider).showById(widget.showId) != null) {
         await ref.read(databaseProvider).upsertEpisodes(rows);
       }
       if (nums.isNotEmpty) numbers = (nums..sort());
@@ -146,6 +148,17 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: IconButton.filledTonal(
+                tooltip: 'Fermer la fiche épisode',
+                onPressed: () => context.pop(),
+                icon: const Icon(Icons.close),
+              ),
+            ),
+          ),
           // Dots dans l'espace vide au-dessus de la carte → indique le swipe.
           if (_controller != null && _episodes.length > 1)
             Opacity(
@@ -310,13 +323,21 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
     }
   }
 
-  void _toggleWatched(bool watched) {
+  Future<void> _toggleWatched(bool watched) async {
     HapticFeedback.lightImpact();
     final db = ref.read(databaseProvider);
-    if (watched) {
-      db.setEpisodeUnwatched(widget.showId, widget.season, widget.episode);
-    } else {
-      db.setEpisodeWatched(widget.showId, widget.season, widget.episode);
+    final tvdb = ref.read(tvdbClientProvider);
+    try {
+      if (watched) {
+        await db.setEpisodeUnwatched(widget.showId, widget.season, widget.episode);
+      } else {
+        await addShowFromTvdb(db, tvdb, widget.showId, preferredName: widget.showName);
+        await db.setEpisodeWatched(widget.showId, widget.season, widget.episode);
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible de modifier cet épisode. Réessaie.')),
+      );
     }
   }
 

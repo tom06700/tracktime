@@ -86,11 +86,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       child: Stack(
         children: [
           Positioned.fill(
-            child: CinemaBackground(
+            child: Opacity(
+              opacity: 0.25,
+              child: CinemaBackground(
               seed: seed,
               palette: palette,
               drive: _drive,
               scroll: _scrollCtrl,
+              ),
             ),
           ),
           Positioned.fill(child: _content(context, universe)),
@@ -502,7 +505,7 @@ class _HeroStats extends StatelessWidget {
           Text(
             fmtTime(stats.totalMinutes),
             style: TextStyle(
-              fontSize: 46,
+              fontSize: 36,
               fontWeight: FontWeight.w900,
               color: TtColors.amber,
               letterSpacing: -1.5,
@@ -514,7 +517,7 @@ class _HeroStats extends StatelessWidget {
             ),
           ),
           Text(
-            'DE PROJECTION DANS TA SALLE OBSCURE',
+            'TEMPS DE VISIONNAGE',
             style: TextStyle(
               fontSize: 10.5,
               letterSpacing: 2,
