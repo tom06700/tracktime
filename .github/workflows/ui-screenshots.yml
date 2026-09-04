@@ -1,0 +1,31 @@
+name: UI screenshots
+on:
+  push:
+    branches: [codex/finish-ui-pages]
+permissions:
+  contents: read
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Capture all pages
+        env:
+          NITRATE_AUDIT: '1'
+        run: |
+          export NITRATE_AUDIT_FONTS="$FLUTTER_ROOT/bin/cache/artifacts/material_fonts"
+          flutter test test/visual_audit_test.dart --timeout 20m
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nitrate-ui
+          path: app/build/audit/

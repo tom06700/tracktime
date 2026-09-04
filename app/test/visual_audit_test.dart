@@ -36,7 +36,7 @@ import 'package:tracktime/settings/prefs.dart';
 import 'package:tracktime/tmdb/tvdb.dart';
 
 final _out = Platform.environment['NITRATE_AUDIT_OUT'] ?? 'build/audit';
-final _fonts =
+final _fonts = Platform.environment['NITRATE_AUDIT_FONTS'] ??
     '${Platform.environment['HOME']}/flutter/bin/cache/artifacts/material_fonts';
 
 // ─────────────────────────────── Polices ────────────────────────────────
@@ -171,6 +171,9 @@ TvdbClient _tvdb() => TvdbClient(
     final p = req.url.path;
     if (p.endsWith('/login')) {
       return http.Response('{"data":{"token":"t"}}', 200);
+    }
+    if (p.endsWith('/search')) {
+      return _ok([_hit(81797, 'One Piece', '1999')]);
     }
     if (p.contains('/series/filter')) {
       return _ok([
