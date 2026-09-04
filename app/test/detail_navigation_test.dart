@@ -296,7 +296,10 @@ void main() {
       );
 
       await _openSeason(tester);
-      await _tapAndSettle(tester, find.textContaining('1. S1E1'));
+      await _tapAndSettle(tester, find.descendant(
+        of: find.ancestor(of: find.textContaining('1. S1E1'), matching: find.byType(InkWell)).first,
+        matching: find.byType(IconButton),
+      ).first);
 
       // Rien n'est entré dans la bibliothèque, et l'utilisateur sait pourquoi.
       expect(await db.showById(81797), isNull);
@@ -357,7 +360,10 @@ void main() {
       expect(await db.showById(81797), isNotNull);
 
       await _openSeason(tester);
-      await _tapAndSettle(tester, find.textContaining('1. S1E1'));
+      await _tapAndSettle(tester, find.descendant(
+        of: find.ancestor(of: find.textContaining('1. S1E1'), matching: find.byType(InkWell)).first,
+        matching: find.byType(IconButton),
+      ).first);
 
       final watched = await db.select(db.watchedEpisodes).get();
       expect(watched.map((w) => 'S${w.season}E${w.episode}'), ['S1E1']);
@@ -470,7 +476,8 @@ void main() {
       const MovieDetailScreen(movieId: 1406, title: 'Dune'),
     );
 
-    expect(find.text('Dans ma liste'), findsOneWidget);
+    expect(find.text('Marquer comme vu'), findsOneWidget);
+    expect(find.text('Ajouter à ma liste'), findsNothing);
 
     await _settle(tester);
   });

@@ -2,6 +2,7 @@ name: UI screenshots
 on:
   push:
     branches: [codex/finish-ui-pages]
+    paths: ['app/lib/**', '.github/workflows/ui-screenshots.yml', 'app/test/visual_audit_test.dart']
 permissions:
   contents: read
 jobs:
@@ -18,6 +19,11 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - name: Format reviewed files
+        run: |
+          mkdir -p build/audit
+          dart format lib/profile/sections.dart lib/profile/tonight.dart lib/screens/episode_detail_screen.dart lib/screens/explorer_screen.dart lib/screens/history_screen.dart lib/screens/import_screen.dart lib/screens/movie_detail_screen.dart lib/screens/movie_history_screen.dart lib/screens/movies_screen.dart lib/screens/profile_screen.dart lib/screens/series_library_screen.dart lib/screens/show_detail_screen.dart lib/screens/shows_screen.dart lib/settings/settings_screen.dart lib/shell.dart lib/theme.dart test/media_navigation_test.dart lib/widgets/movie_library_actions.dart test/movie_library_actions_test.dart test/catch_up_flow_test.dart test/detail_navigation_test.dart
+          git diff > build/audit/formatting.patch
       - name: Capture all pages
         env:
           NITRATE_AUDIT: '1'
