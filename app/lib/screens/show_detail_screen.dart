@@ -398,6 +398,7 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
                         followed: followed,
                         accent: scope.palette.accent,
                         onAdd: _addToLibrary,
+                        onOpenEpisodes: () => _tabs.animateTo(1),
                       ),
                       if (_loadingEpisodes)
                         _SeasonsSkeleton(tint: scope.palette.surface)
@@ -516,6 +517,7 @@ class _AboutTab extends StatelessWidget {
     required this.followed,
     required this.accent,
     required this.onAdd,
+    required this.onOpenEpisodes,
   });
 
   final String metaLine;
@@ -523,6 +525,7 @@ class _AboutTab extends StatelessWidget {
   final bool followed;
   final Color accent;
   final Future<bool> Function() onAdd;
+  final VoidCallback onOpenEpisodes;
 
   @override
   Widget build(BuildContext context) {
@@ -543,7 +546,13 @@ class _AboutTab extends StatelessWidget {
         ],
         Align(
           alignment: Alignment.centerLeft,
-          child: AddToListButton(
+          child: followed
+            ? FilledButton.icon(
+                onPressed: onOpenEpisodes,
+                icon: const Icon(Icons.playlist_play),
+                label: const Text('Voir les épisodes'),
+              )
+            : AddToListButton(
             label: 'Ajouter à ma liste',
             inLibrary: followed,
             onAdd: onAdd,

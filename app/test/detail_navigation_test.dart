@@ -200,7 +200,7 @@ void main() {
       const ShowDetailScreen(showId: 81797, title: 'One Piece'),
     );
 
-    expect(find.text('Dans ma liste'), findsOneWidget);
+    expect(find.text('Voir les épisodes'), findsOneWidget);
     expect(find.text('Ajouter à ma liste'), findsNothing);
 
     await _settle(tester);
