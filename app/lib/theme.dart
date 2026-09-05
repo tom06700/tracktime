@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Surfaces neutres et accent ambre commun à tous les parcours.
+/// Surfaces cinéma et accent ivoire commun à tous les parcours.
 abstract final class TtColors {
   static const bg = Color(0xFF080C0B);
-  static const surface = Color(0xFF1B1D20);
-  static const surfaceHi = Color(0xFF272A2F);
-  static const amber = Color(0xFFF5B942);
+  static const surface = Color(0xFF171D1A);
+  static const surfaceHi = Color(0xFF28312C);
+  static const amber = Color(0xFFF3E7CF);
   static const teal = Color(0xFF4FD1C5);
   static const dim = Color(0xFFA3A7AF);
   static const text = Color(0xFFF2F4F8);
@@ -47,8 +47,9 @@ ThemeData buildTheme() {
       surfaceTintColor: Colors.transparent,
       titleTextStyle: TextStyle(
         color: TtColors.text,
-        fontSize: 22,
-        fontWeight: FontWeight.w800,
+        fontFamily: 'CormorantGaramond',
+        fontSize: 30,
+        fontWeight: FontWeight.w500,
         letterSpacing: -0.5,
       ),
     ),

@@ -92,7 +92,7 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
                       sources: [detail?.backdrop, featured.still, featured.show.poster], seed: featured.show.name))),
                 const DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(
                   begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                  colors: [Color(0x44080C0B), Color(0x11080C0B), Color(0xDD080C0B), NitrateBrand.ink],
+                  colors: [Color(0xB3080C0B), Color(0x55080C0B), Color(0xDD080C0B), NitrateBrand.ink],
                   stops: [0, .28, .72, 1]))),
               ]));
             }),

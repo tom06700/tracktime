@@ -241,8 +241,9 @@ class CinematicTitle extends StatelessWidget {
         (scaler.scale(size) / size).clamp(1.0, 1.25),
       ),
       style: TextStyle(
+        fontFamily: 'CormorantGaramond',
         fontSize: size,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w500,
         height: 1.06,
         // Un peu plus resserré que le reste de l'app : c'est ce qui donne au
         // titre son allure d'affiche sans changer de police.

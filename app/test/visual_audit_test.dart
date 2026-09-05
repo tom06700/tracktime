@@ -132,7 +132,8 @@ Uint8List _fixtureBytes(Uri url) {
   }
   if (name.contains('81797')) return _pngs['one-piece'] ?? _pngs['audit']!;
   if (name.contains('392256')) return _pngs['last-of-us'] ?? _pngs['audit']!;
-  return _pngs['audit']!;
+  final alias = RegExp(r'(?:poster|backdrop)-(\d+)').firstMatch(name)?.group(1);
+  return _pngs['movie-$alias'] ?? _pngs['one-piece'] ?? _pngs['audit']!;
 }
 
 class _Request implements HttpClientRequest {
@@ -188,11 +189,8 @@ TvdbClient _tvdb() => TvdbClient(
     if (p.contains('/series/filter')) {
       return _ok([
         _hit(81797, 'One Piece', '1999'),
-        _hit(70523, 'Dark', '2017'),
-        _hit(371572, 'Severance', '2022'),
+        _hit(371980, 'Severance', '2022'),
         _hit(392256, 'The Last of Us', '2023'),
-        _hit(305288, 'Stranger Things', '2016'),
-        _hit(153021, 'Arcane', '2021'),
       ]);
     }
     if (p.contains('/movies/filter')) {
@@ -297,7 +295,7 @@ TvdbClient _tvdb() => TvdbClient(
                 'number': e,
                 'name': 'Épisode $e de la saison $s',
                 'overview': 'Résumé.',
-                'image': 'https://img.test/still-$s-$e.jpg',
+                'image': 'https://img.test/still-${p.contains('/371980/') ? 371980 : 81797}-$s-$e.jpg',
                 'aired': '2026-0$s-${e.toString().padLeft(2, '0')}',
               },
         ],
@@ -485,7 +483,7 @@ void main() {
       // Decode fixture art outside the fake-async zone before image requests.
       await tester.runAsync(() => _pngFor('audit'));
       await tester.runAsync(() async {
-        for (final name in ['severance', 'severance-backdrop', 'one-piece', 'last-of-us']) {
+        for (final name in ['severance', 'severance-backdrop', 'one-piece', 'last-of-us', 'movie-1406', 'movie-496243', 'movie-27205', 'movie-157336', 'movie-603', 'movie-872585', 'movie-1']) {
           final file = File('test/fixtures/cinema/$name.jpg');
           if (file.existsSync()) _pngs[name] = await file.readAsBytes();
         }
@@ -613,10 +611,10 @@ void main() {
 
       // Épisode : feuille modale.
       router.push(
-        '/episode/371572/1/12',
+        '/episode/371980/1/12',
         extra: {
           'name': 'Severance',
-          'poster': 'https://img.test/poster-371572.jpg',
+          'poster': 'https://img.test/poster-371980.jpg',
         },
       );
       await _settleReal(tester, 900);
@@ -634,6 +632,10 @@ void main() {
       await tester.enterText(find.byType(TextField).first, 'one piece');
       await _settleReal(tester, 900);
       await _shot(tester, '20-explorer-recherche');
+
+      await db.clearAll();
+      await tab(0);
+      await _shot(tester, '21-series-vide');
 
       File('$_out/issues.txt').writeAsStringSync(_issues.join('\n'));
       debugNetworkImageHttpClientProvider = null;
