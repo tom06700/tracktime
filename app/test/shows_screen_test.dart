@@ -125,6 +125,7 @@ void main() {
   ) async {
     final db = await _pump(tester);
 
+    await tester.ensureVisible(find.text('Marquer comme vu'));
     await tester.tap(find.text('Marquer comme vu'));
     await tester.pump();
 

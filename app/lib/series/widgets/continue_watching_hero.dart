@@ -62,46 +62,45 @@ class _ContinueWatchingHeroState extends State<ContinueWatchingHero> {
     final n = widget.next;
     final remaining = n.remaining;
 
+    // The content determines the height: large text never collides with art.
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Semantics(
-        button: true,
-        label: '${n.show.name}, ${n.code}. Ouvrir l\'épisode.',
-        child: GestureDetector(
-          onTap: widget.onOpen,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: AspectRatio(
-              aspectRatio: 16 / 10,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Still d'épisode d'abord : c'est la seule image réellement
-                  // horizontale. L'affiche verticale n'est qu'un repli.
-                  MediaImage(
-                    sources: [n.still, n.show.poster],
-                    seed: n.show.name,
-                    icon: Icons.tv,
-                  ),
-                  // Trois lignes et un bouton occupent la moitié basse de la
-                  // carte : le voile monte jusqu'en haut, franc sous le texte,
-                  // et ne laisse l'image nue que sur son quart supérieur.
-                  const MediaScrim(height: 1),
-                  Positioned(
-                    left: 18,
-                    right: 18,
-                    bottom: 16,
-                    child: _HeroText(
-                      next: n,
-                      remaining: remaining,
-                      onOpenShow: widget.onOpenShow,
-                      confirmed: _confirmed,
-                      onMarkWatched: _markWatched,
-                    ),
-                  ),
-                ],
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [BoxShadow(color: TtColors.amber.withValues(alpha: .09), blurRadius: 48, offset: const Offset(0, 14))],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: MediaImage(sources: [n.show.poster, n.still], seed: n.show.name, icon: Icons.tv),
               ),
-            ),
+              Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(
+                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                  colors: [Colors.black.withValues(alpha: .08), const Color(0x66101013), const Color(0xF5101113), const Color(0xFF101113)],
+                  stops: const [0, .35, .65, 1]),
+              ))),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: .65), borderRadius: BorderRadius.circular(30), border: Border.all(color: Colors.white.withValues(alpha: .2))),
+                      child: const Text('LA SUITE T’ATTEND', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 2)),
+                    ),
+                    const SizedBox(height: 150),
+                    _HeroText(next: n, remaining: remaining, onOpenShow: widget.onOpenShow, onOpen: widget.onOpen, confirmed: _confirmed, onMarkWatched: _markWatched),
+                  ],
+                ),
+              ),
+              Positioned.fill(child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28), border: Border.all(color: Colors.white.withValues(alpha: .12)),
+              )))),
+            ],
           ),
         ),
       ),
@@ -114,6 +113,7 @@ class _HeroText extends StatelessWidget {
     required this.next,
     required this.remaining,
     required this.onOpenShow,
+    required this.onOpen,
     required this.confirmed,
     required this.onMarkWatched,
   });
@@ -121,6 +121,7 @@ class _HeroText extends StatelessWidget {
   final NextUp next;
   final int? remaining;
   final VoidCallback onOpenShow;
+  final VoidCallback onOpen;
   final bool confirmed;
   final VoidCallback onMarkWatched;
 
@@ -137,7 +138,8 @@ class _HeroText extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 21,
+              fontSize: 36,
+              letterSpacing: -1.3,
               fontWeight: FontWeight.w800,
               height: 1.15,
               color: Colors.white,
@@ -167,8 +169,18 @@ class _HeroText extends StatelessWidget {
             style: const TextStyle(fontSize: 12.5, color: TtColors.dim),
           ),
         ],
-        const SizedBox(height: 14),
-        _WatchedButton(confirmed: confirmed, onTap: onMarkWatched),
+        const SizedBox(height: 22),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: onOpen,
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFF4E8D3), foregroundColor: TtColors.bg, padding: const EdgeInsets.symmetric(vertical: 15)),
+            icon: const Icon(Icons.arrow_forward_rounded, size: 19),
+            label: const Text('Ouvrir l’épisode'),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Center(child: _WatchedButton(confirmed: confirmed, onTap: onMarkWatched)),
       ],
     );
   }

@@ -177,8 +177,18 @@ class _ToWatchFeed extends ConsumerWidget {
       onRefresh: () => _refresh(context, ref),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(top: 12, bottom: bottomNavInset(context)),
+        padding: EdgeInsets.only(top: 20, bottom: bottomNavInset(context)),
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('TON RENDEZ-VOUS CINÉMA', style: TextStyle(fontSize: 10, letterSpacing: 2.4, fontWeight: FontWeight.w700, color: TtColors.amber)),
+              const SizedBox(height: 10),
+              const Text('Encore un épisode.', style: TextStyle(fontSize: 32, letterSpacing: -1.2, height: 1.1, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              Text('${feed.toWatch.length + feed.stale.length} séries à retrouver, à ton rythme.', style: const TextStyle(fontSize: 13, color: TtColors.dim)),
+            ]),
+          ),
           if (hero != null)
             ContinueWatchingHero(
               // La clé lie l'état de la carte à l'épisode : la validation ne
@@ -192,9 +202,9 @@ class _ToWatchFeed extends ConsumerWidget {
             ),
           if (next.isNotEmpty) ...[
             const SizedBox(height: 30),
-            const _SectionHeader('Ensuite'),
+            const _SectionHeader('La suite du programme', subtitle: 'Tes prochains épisodes'),
             _Carousel(
-              height: 178,
+              height: 178 + (MediaQuery.textScalerOf(context).scale(32) - 32),
               itemCount: next.length,
               separator: 14,
               itemBuilder: (_, i) => NextEpisodeCard(
@@ -207,7 +217,7 @@ class _ToWatchFeed extends ConsumerWidget {
             const SizedBox(height: 30),
             const _SectionHeader('À reprendre', subtitle: 'Ça fait un moment.'),
             _Carousel(
-              height: 232,
+              height: 232 + (MediaQuery.textScalerOf(context).scale(48) - 48),
               itemCount: feed.stale.length,
               separator: 12,
               itemBuilder: (_, i) => ResumeShowCard(
@@ -277,7 +287,8 @@ class _SectionHeader extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 22,
+                    letterSpacing: -.6,
                     fontWeight: FontWeight.w700,
                     color: TtColors.text,
                   ),

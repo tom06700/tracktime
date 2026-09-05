@@ -45,7 +45,7 @@ class HomeShell extends ConsumerWidget {
           ? null
           : AppBar(
               title: Text(
-                ['Séries', 'Films', 'Explorer', 'Profil'][tab],
+                ['Nitrate', 'Films', 'Explorer', 'Profil'][tab],
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
