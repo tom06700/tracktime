@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../brand/nitrate_brand.dart';
 import '../motion.dart';
 import '../theme.dart';
+import 'filmstrip_painter.dart';
 
 /// Resolves the local preference before displaying either destination.
 /// The library and its database are never modified by onboarding.
@@ -77,11 +78,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1400),
+    duration: const Duration(milliseconds: 1800),
   );
   late final AnimationController _ambient = AnimationController(
     vsync: this,
-    duration: const Duration(seconds: 18),
+    duration: const Duration(seconds: 6),
   );
   bool _busy = false;
   bool _active = true;
@@ -226,91 +227,4 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           ),
         ),
       );
-}
-
-/// Original vector artwork: an aperture opens onto an ivory projection frame.
-/// Animation changes only painting, never layout or the readability of text.
-class _ProjectionPainter extends CustomPainter {
-  _ProjectionPainter(this.animation, this.ambient)
-      : super(repaint: Listenable.merge([animation, ambient]));
-  final Animation<double> animation;
-  final Animation<double> ambient;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final t = Curves.easeOutCubic.transform(animation.value);
-    final phase = ambient.value * math.pi * 2;
-    final breath = math.sin(phase);
-    final center = Offset(size.width / 2, size.height / 2 + 5 * breath * t);
-    final radius = math.min(size.width, size.height) * .43;
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    final glow = Rect.fromCircle(center: Offset.zero, radius: radius * 1.4);
-    canvas.drawCircle(
-        Offset.zero,
-        radius * 1.4,
-        Paint()
-          ..shader = RadialGradient(colors: [
-            NitrateBrand.ivory.withValues(alpha: (.16 + .025 * breath) * t),
-            NitrateBrand.ivory.withValues(alpha: 0),
-          ]).createShader(glow));
-    final line = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = .8;
-    for (var i = 0; i < 3; i++) {
-      line.color = NitrateBrand.ivory.withValues(alpha: .12 + i * .045);
-      canvas.drawCircle(Offset.zero, radius * (1 + i * .1), line);
-    }
-    for (var i = 0; i < 8; i++) {
-      canvas.save();
-      canvas.rotate(i * math.pi / 4 + (1 - t) * .45 + phase / 8);
-      final path = Path()
-        ..moveTo(radius * (.12 + (.28 + .018 * breath) * t), -radius * .12)
-        ..lineTo(radius * .65, -radius * .64)
-        ..quadraticBezierTo(
-            radius * 1.12, -radius * .2, radius * .93, radius * .34)
-        ..close();
-      canvas.drawPath(
-          path,
-          Paint()
-            ..shader = LinearGradient(
-              colors: [
-                NitrateBrand.ivory.withValues(alpha: .7),
-                const Color(0xFF343B33)
-              ],
-            ).createShader(
-                Rect.fromCircle(center: Offset.zero, radius: radius)));
-      canvas.drawPath(
-          path,
-          Paint()
-            ..color = NitrateBrand.ivory.withValues(alpha: .32)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = .6);
-      canvas.restore();
-    }
-    // A travelling highlight catches the outer glass ring without flashing.
-    canvas.drawArc(
-      Rect.fromCircle(center: Offset.zero, radius: radius * 1.1),
-      phase,
-      math.pi * .45,
-      false,
-      Paint()
-        ..color = NitrateBrand.ivory.withValues(alpha: .4 * t)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..strokeCap = StrokeCap.round,
-    );
-    final frame = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-          center: Offset.zero, width: radius * .48, height: radius * .32),
-      const Radius.circular(3),
-    );
-    canvas.drawRRect(
-        frame, Paint()..color = NitrateBrand.ivory.withValues(alpha: t));
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_ProjectionPainter oldDelegate) =>
-      oldDelegate.animation != animation || oldDelegate.ambient != ambient;
 }
