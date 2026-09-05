@@ -10,6 +10,7 @@ import 'screens/history_screen.dart';
 import 'screens/movie_detail_screen.dart';
 import 'screens/movie_history_screen.dart';
 import 'shell.dart';
+import 'motion.dart';
 
 /// Navigation par routes (go_router) : le geste de retour iOS et la touche
 /// retour Android dépilent correctement les écrans au lieu de sortir de l'app.
@@ -55,7 +56,7 @@ final router = GoRouter(
           barrierColor: Colors.black.withValues(alpha: 0.55),
           transitionDuration: const Duration(milliseconds: 320),
           reverseTransitionDuration: const Duration(milliseconds: 260),
-          transitionsBuilder: (_, anim, _, child) => SlideTransition(
+          transitionsBuilder: (context, anim, _, child) => reduceMotionOf(context) ? child : SlideTransition(
             position: Tween(begin: const Offset(0, 1), end: Offset.zero)
                 .animate(
                   CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),

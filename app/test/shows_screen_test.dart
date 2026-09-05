@@ -103,6 +103,7 @@ void main() {
     expect(find.text('Ta liste est vide'), findsOneWidget);
     expect(captured.read(homeTabProvider), HomeTab.series);
 
+    await tester.ensureVisible(find.text('Explorer les séries'));
     await tester.tap(find.text('Explorer les séries'));
     await tester.pump();
 
@@ -118,7 +119,7 @@ void main() {
     addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await _pump(tester);
-    await tester.ensureVisible(find.text('Marquer comme vu'));
+    await tester.ensureVisible(find.text('Marquer vu'));
     await tester.pump();
     expect(tester.takeException(), isNull);
     await _settle(tester);
@@ -129,7 +130,7 @@ void main() {
 
     expect(find.text('Severance'), findsOneWidget);
     expect(find.textContaining('S02 | E04'), findsWidgets);
-    expect(find.text('Marquer comme vu'), findsOneWidget);
+    expect(find.text('Marquer vu'), findsOneWidget);
     await _settle(tester);
   });
 
@@ -138,8 +139,8 @@ void main() {
   ) async {
     final db = await _pump(tester);
 
-    await tester.ensureVisible(find.text('Marquer comme vu'));
-    await tester.tap(find.text('Marquer comme vu'));
+    await tester.ensureVisible(find.text('Marquer vu'));
+    await tester.tap(find.text('Marquer vu'));
     await tester.pump();
 
     // Confirmation immédiate, avant même l'écriture.

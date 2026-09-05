@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme.dart';
+import '../brand/nitrate_brand.dart';
 
 class NavItem {
   const NavItem({required this.icon, required this.label});
@@ -32,7 +33,7 @@ class NitrateNavBar extends StatelessWidget {
 
   /// Hauteur utile, hors safe area. Contient confortablement icône et
   /// libellé, et dépasse les 44 px de zone tactile recommandés.
-  static const double _height = 54;
+  static const double _height = 66;
 
   @override
   Widget build(BuildContext context) {
@@ -45,15 +46,11 @@ class NitrateNavBar extends StatelessWidget {
     final bar = DecoratedBox(
       decoration: BoxDecoration(
         color: TtColors.bg.withValues(alpha: opaque ? 1 : 0.82),
-        border: Border(
-          top: BorderSide(
-            color: Colors.white.withValues(alpha: 0.07),
-            width: 0.5,
-          ),
-        ),
+        borderRadius: BorderRadius.circular(34),
+        border: Border.all(color: Colors.white.withValues(alpha: .12), width: .7),
       ),
       child: Padding(
-        padding: EdgeInsets.only(bottom: bottomSafe),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         child: SizedBox(
           height: _height,
           child: Row(
@@ -78,13 +75,11 @@ class NitrateNavBar extends StatelessWidget {
       ),
     );
 
-    if (opaque) return bar;
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: bar,
-      ),
+    final glass = opaque ? bar : ClipRRect(
+      borderRadius: BorderRadius.circular(34),
+      child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: bar),
     );
+    return Padding(padding: EdgeInsets.fromLTRB(14, 8, 14, bottomSafe + 8), child: glass);
   }
 }
 
@@ -108,7 +103,7 @@ class _NavTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    final target = selected ? TtColors.amber : _inactive;
+    final target = selected ? NitrateBrand.ivory : _inactive;
 
     return Semantics(
       button: true,
@@ -131,16 +126,21 @@ class _NavTab extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(item.icon, size: 22, color: color),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   item.label,
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.1,
                     color: color,
                   ),
                 ),
+                const SizedBox(height: 4),
+                AnimatedContainer(duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
+                  height: 3, width: selected ? 12 : 3,
+                  decoration: BoxDecoration(color: selected ? NitrateBrand.ivory : Colors.transparent,
+                    borderRadius: BorderRadius.circular(4))),
               ],
             ),
           ),

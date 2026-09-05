@@ -53,6 +53,8 @@ Future<void> _loadFonts() async {
   final icons = FontLoader('MaterialIcons')
     ..addFont(bytes('MaterialIcons-Regular.otf'));
   await icons.load();
+  final editorial = FontLoader('CormorantGaramond')..addFont(File('assets/fonts/CormorantGaramond.ttf').readAsBytes().then(ByteData.sublistView));
+  await editorial.load();
 }
 
 // ─────────────────────────── Images servies ──────────────────────────────
@@ -123,6 +125,16 @@ class _Response extends Stream<List<int>> implements HttpClientResponse {
   dynamic noSuchMethod(Invocation i) => null;
 }
 
+Uint8List _fixtureBytes(Uri url) {
+  final name = url.path;
+  if (name.contains('371980')) {
+    return _pngs[name.contains('backdrop') ? 'severance-backdrop' : 'severance'] ?? _pngs['audit']!;
+  }
+  if (name.contains('81797')) return _pngs['one-piece'] ?? _pngs['audit']!;
+  if (name.contains('392256')) return _pngs['last-of-us'] ?? _pngs['audit']!;
+  return _pngs['audit']!;
+}
+
 class _Request implements HttpClientRequest {
   _Request(this.url);
   final Uri url;
@@ -130,7 +142,7 @@ class _Request implements HttpClientRequest {
   HttpHeaders get headers => _Headers();
   @override
   Future<HttpClientResponse> close() async =>
-      _Response(_pngs['audit']!);
+      _Response(_fixtureBytes(url));
   @override
   dynamic noSuchMethod(Invocation i) => null;
 }
@@ -260,7 +272,7 @@ TvdbClient _tvdb() => TvdbClient(
           },
         ],
         'artworks': [
-          {'type': 3, 'image': 'https://img.test/backdrop-81797.jpg'},
+          {'type': 3, 'image': p.contains('/371980/') ? 'https://img.test/backdrop-371980.jpg' : 'https://img.test/backdrop-81797.jpg'},
         ],
       });
     }
@@ -348,11 +360,8 @@ Future<AppDatabase> _seed() async {
     }
   }
 
-  await show(371572, 'Severance', 2, 9, 11);
+  await show(371980, 'Severance', 2, 9, 11);
   await show(392256, 'The Last of Us', 2, 9, 3);
-  await show(70523, 'Dark', 3, 8, 24, status: 'Ended');
-  await show(153021, 'Arcane', 2, 9, 9);
-  await show(305288, 'Stranger Things', 4, 8, 5);
   // Une série avec un épisode à venir aujourd'hui et cette semaine.
   await db.upsertShow(
     ShowsCompanion.insert(
@@ -475,6 +484,12 @@ void main() {
       await tester.runAsync(_loadFonts);
       // Decode fixture art outside the fake-async zone before image requests.
       await tester.runAsync(() => _pngFor('audit'));
+      await tester.runAsync(() async {
+        for (final name in ['severance', 'severance-backdrop', 'one-piece', 'last-of-us']) {
+          final file = File('test/fixtures/cinema/$name.jpg');
+          if (file.existsSync()) _pngs[name] = await file.readAsBytes();
+        }
+      });
       debugPrint('Audit: fonts ready');
       SharedPreferences.setMockInitialValues({});
 
@@ -505,7 +520,29 @@ void main() {
         await _settleReal(tester, 500);
       }
 
+      // Keep the chosen reference's series featured with deterministic activity.
+      await db.setEpisodeWatched(371980, 2, 2, at: DateTime.now().add(const Duration(seconds: 1)));
+      await _settleReal(tester, 900);
       await _shot(tester, '01-series');
+      if (Platform.environment['NITRATE_MOTION'] == '1') {
+        Directory('$_out/motion').createSync(recursive: true);
+        for (var frame = 0; frame < 90; frame++) {
+          if (frame == 12) await tester.tap(find.text('Marquer vu'));
+          if (frame == 48) await tester.tap(find.text('Voir l’épisode'));
+          await tester.pump(const Duration(microseconds: 33333));
+          _readableFonts(_boundary.currentContext!.findRenderObject()!);
+          await tester.pump();
+          await tester.runAsync(() async {
+            final ro = _boundary.currentContext!.findRenderObject() as RenderRepaintBoundary;
+            final image = await ro.toImage(pixelRatio: 2);
+            final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+            await File('$_out/motion/${frame.toString().padLeft(3, '0')}.png').writeAsBytes(bytes!.buffer.asUint8List());
+            image.dispose();
+          });
+        }
+        if (router.canPop()) router.pop();
+        await _settleReal(tester);
+      }
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -450));
       await _shot(tester, '01b-series-programme');
       await tester.drag(find.byType(Scrollable).first, const Offset(0, 900));

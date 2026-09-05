@@ -2,7 +2,7 @@ name: UI screenshots
 on:
   push:
     branches: [codex/finish-ui-pages]
-    paths: ['app/lib/**', '.github/workflows/ui-screenshots.yml', 'app/test/visual_audit_test.dart']
+    paths: ['app/lib/**', 'app/assets/**', 'scripts/**', '.github/workflows/ui-screenshots.yml', 'app/test/visual_audit_test.dart']
 permissions:
   contents: read
 jobs:
@@ -19,17 +19,25 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - name: Prepare catalogue artwork
+        run: python3 ../scripts/prepare_cinema_audit.py
       - name: Format reviewed files
         run: |
           mkdir -p build/audit
-          dart format lib/series/widgets/continue_watching_hero.dart lib/profile/sections.dart lib/profile/tonight.dart lib/screens/episode_detail_screen.dart lib/screens/explorer_screen.dart lib/screens/history_screen.dart lib/screens/import_screen.dart lib/screens/movie_detail_screen.dart lib/screens/movie_history_screen.dart lib/screens/movies_screen.dart lib/screens/profile_screen.dart lib/screens/series_library_screen.dart lib/screens/show_detail_screen.dart lib/screens/shows_screen.dart lib/settings/settings_screen.dart lib/shell.dart lib/theme.dart test/media_navigation_test.dart lib/widgets/movie_library_actions.dart test/movie_library_actions_test.dart test/catch_up_flow_test.dart test/detail_navigation_test.dart
+          dart format lib/brand lib/widgets/nav_bar.dart lib/widgets/media_image.dart lib/router.dart test/shows_screen_test.dart test/visual_audit_test.dart lib/series/widgets/continue_watching_hero.dart lib/profile/sections.dart lib/profile/tonight.dart lib/screens/episode_detail_screen.dart lib/screens/explorer_screen.dart lib/screens/history_screen.dart lib/screens/import_screen.dart lib/screens/movie_detail_screen.dart lib/screens/movie_history_screen.dart lib/screens/movies_screen.dart lib/screens/profile_screen.dart lib/screens/series_library_screen.dart lib/screens/show_detail_screen.dart lib/screens/shows_screen.dart lib/settings/settings_screen.dart lib/shell.dart lib/theme.dart test/media_navigation_test.dart lib/widgets/movie_library_actions.dart test/movie_library_actions_test.dart test/catch_up_flow_test.dart test/detail_navigation_test.dart
           git diff > build/audit/formatting.patch
       - name: Capture all pages
         env:
           NITRATE_AUDIT: '1'
+          NITRATE_MOTION: '1'
         run: |
           export NITRATE_AUDIT_FONTS="$FLUTTER_ROOT/bin/cache/artifacts/material_fonts"
           flutter test test/visual_audit_test.dart --timeout 20m
+      - name: Encode Flutter motion frames
+        run: |
+          ffmpeg -y -framerate 30 -i build/audit/motion/%03d.png -c:v libx264 -pix_fmt yuv420p -crf 20 build/audit/nitrate-motion.mp4
+          cp test/fixtures/cinema/SOURCES.txt build/audit/SOURCES.txt
+          rm -r build/audit/motion
       - uses: actions/upload-artifact@v4
         if: always()
         with:

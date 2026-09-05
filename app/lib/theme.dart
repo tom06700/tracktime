@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Surfaces neutres et accent ambre commun à tous les parcours.
 abstract final class TtColors {
-  static const bg = Color(0xFF101113);
+  static const bg = Color(0xFF080C0B);
   static const surface = Color(0xFF1B1D20);
   static const surfaceHi = Color(0xFF272A2F);
   static const amber = Color(0xFFF5B942);

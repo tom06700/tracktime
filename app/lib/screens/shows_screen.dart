@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers.dart';
+import '../brand/nitrate_brand.dart';
+import '../motion.dart';
 import '../series/feed.dart';
 import '../series/sync.dart';
 import '../series/widgets/continue_watching_hero.dart';
-import '../series/widgets/next_episode_card.dart';
 import '../series/widgets/series_skeleton.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
@@ -54,12 +55,15 @@ void _openEpisode(BuildContext context, NextUp n) => context.push(
   extra: {'name': n.show.name, 'poster': n.show.poster},
 );
 
-void _markWatched(WidgetRef ref, NextUp n) => ref
+Future<void> _markWatched(WidgetRef ref, NextUp n) => ref
     .read(databaseProvider)
     .setEpisodeWatched(n.show.id, n.season, n.episode);
 
 class _ShowsScreenState extends ConsumerState<ShowsScreen> {
   bool _syncStarted = false;
+  final _scroll = ValueNotifier<double>(0);
+  @override
+  void dispose() { _scroll.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -69,42 +73,59 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) => _sync(ref));
     }
 
+    final feed = ref.watch(seriesFeedProvider).value;
+    final queue = [...?feed?.toWatch, ...?feed?.stale];
+    final featured = queue.isEmpty ? null : queue.first;
+    final detail = featured == null ? null : ref.watch(seriesDetailProvider(featured.show.id)).value;
     return DefaultTabController(
       length: 2,
-      child: Column(
-        children: [
-          const _SeriesTabBar(),
-          Expanded(
-            child: TabBarView(children: [_ToWatchTab(), _UpcomingTab()]),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Onglets discrets : bas de casse, graisse mesurée, filet fin sous le libellé.
-class _SeriesTabBar extends StatelessWidget {
-  const _SeriesTabBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return const TabBar(
-      labelColor: TtColors.amber,
-      unselectedLabelColor: TtColors.dim,
-      indicatorColor: TtColors.amber,
-      indicatorSize: TabBarIndicatorSize.label,
-      indicatorWeight: 2,
-      dividerColor: Colors.transparent,
-      labelStyle: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
-      unselectedLabelStyle: TextStyle(
-        fontSize: 14.5,
-        fontWeight: FontWeight.w600,
-      ),
-      tabs: [
-        Tab(text: 'À voir'),
-        Tab(text: 'À venir'),
-      ],
+      child: Stack(children: [
+        Positioned(top: 0, left: 0, right: 0,
+          child: IgnorePointer(child: SizedBox(
+            height: MediaQuery.paddingOf(context).top + 590,
+            child: AnimatedBuilder(animation: _scroll, builder: (context, _) {
+              final offset = reduceMotionOf(context) ? 0.0 : _scroll.value.clamp(0.0, 500.0) * .18;
+              return Transform.translate(offset: Offset(0, -offset), child: Stack(fit: StackFit.expand, children: [
+                if (featured != null)
+                  AnimatedSwitcher(duration: motionOf(context, Motion.ambient),
+                    child: SizedBox.expand(key: ValueKey(featured.show.id), child: MediaImage(
+                      sources: [detail?.backdrop, featured.still, featured.show.poster], seed: featured.show.name))),
+                const DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(
+                  begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                  colors: [Color(0x44080C0B), Color(0x11080C0B), Color(0xDD080C0B), NitrateBrand.ink],
+                  stops: [0, .28, .72, 1]))),
+              ]));
+            }),
+          ))),
+        Column(children: [
+          SafeArea(bottom: false, child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 16, 4),
+            child: Row(children: [
+              const Expanded(child: NitrateWordmark()),
+              IconButton(tooltip: 'Mes séries', onPressed: () => context.push('/series'),
+                icon: const Icon(Icons.video_library_outlined)),
+              IconButton(tooltip: 'Réglages', onPressed: () => context.push('/settings'),
+                icon: const Icon(Icons.settings_outlined, size: 21)),
+            ]),
+          )),
+          Align(alignment: Alignment.centerLeft, child: TabBar(
+            isScrollable: true, tabAlignment: TabAlignment.start,
+            padding: const EdgeInsets.only(left: 8), labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+            labelColor: NitrateBrand.ivory, unselectedLabelColor: TtColors.dim,
+            indicatorColor: NitrateBrand.ivory, indicatorWeight: 3,
+            indicatorSize: TabBarIndicatorSize.label, dividerColor: Colors.transparent,
+            labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            tabs: const [Tab(text: 'À voir'), Tab(text: 'À venir')],
+          )),
+          Expanded(child: TabBarView(children: [
+            NotificationListener<ScrollNotification>(onNotification: (n) {
+              if (n.depth == 0 && n.metrics.axis == Axis.vertical) _scroll.value = n.metrics.pixels;
+              return false;
+            }, child: const _ToWatchTab()),
+            const ColoredBox(color: NitrateBrand.ink, child: _UpcomingTab()),
+          ])),
+        ]),
+      ]),
     );
   }
 }
@@ -144,16 +165,8 @@ class _ToWatchTab extends ConsumerWidget {
               onAction: () => context.push('/series'),
             );
           }
-          return EmptyPrompt(
-            icon: Icons.tv_outlined,
-            title: 'Ta liste est vide',
-            message:
-                'Ajoute une série et Nitrate te montrera '
-                'automatiquement le prochain épisode à regarder.',
-            actionLabel: 'Explorer les séries',
-            onAction: () =>
-                ref.read(homeTabProvider.notifier).select(HomeTab.explorer),
-          );
+          return _CinemaEmpty(onExplore: () =>
+            ref.read(homeTabProvider.notifier).select(HomeTab.explorer));
         }
         return _ToWatchFeed(feed: feed);
       },
@@ -168,8 +181,9 @@ class _ToWatchFeed extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hero = feed.toWatch.isEmpty ? null : feed.toWatch.first;
-    final next = feed.toWatch.skip(1).toList();
+    final queue = [...feed.toWatch, ...feed.stale];
+    final hero = queue.isEmpty ? null : queue.first;
+    final next = queue.skip(1).toList();
 
     return RefreshIndicator(
       color: TtColors.amber,
@@ -177,40 +191,8 @@ class _ToWatchFeed extends ConsumerWidget {
       onRefresh: () => _refresh(context, ref),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(top: 20, bottom: bottomNavInset(context)),
+        padding: EdgeInsets.only(bottom: bottomNavInset(context)),
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'TON RENDEZ-VOUS CINÉMA',
-                  style: TextStyle(
-                    fontSize: 10,
-                    letterSpacing: 2.4,
-                    fontWeight: FontWeight.w700,
-                    color: TtColors.amber,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Encore un épisode.',
-                  style: TextStyle(
-                    fontSize: 32,
-                    letterSpacing: -1.2,
-                    height: 1.1,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${feed.toWatch.length + feed.stale.length} séries à retrouver, à ton rythme.',
-                  style: const TextStyle(fontSize: 13, color: TtColors.dim),
-                ),
-              ],
-            ),
-          ),
           if (hero != null)
             ContinueWatchingHero(
               // La clé lie l'état de la carte à l'épisode : la validation ne
@@ -225,30 +207,15 @@ class _ToWatchFeed extends ConsumerWidget {
           if (next.isNotEmpty) ...[
             const SizedBox(height: 30),
             const _SectionHeader(
-              'La suite du programme',
-              subtitle: 'Tes prochains épisodes',
+              'Dans ta liste',
             ),
             _Carousel(
-              height: 178 + (MediaQuery.textScalerOf(context).scale(32) - 32),
+              height: 205 + (MediaQuery.textScalerOf(context).scale(30) - 30),
               itemCount: next.length,
               separator: 14,
-              itemBuilder: (_, i) => NextEpisodeCard(
+              itemBuilder: (_, i) => _QueuePoster(
                 next: next[i],
                 onTap: () => _openEpisode(context, next[i]),
-              ),
-            ),
-          ],
-          if (feed.stale.isNotEmpty) ...[
-            const SizedBox(height: 30),
-            const _SectionHeader('À reprendre', subtitle: 'Ça fait un moment.'),
-            _Carousel(
-              height: 232 + (MediaQuery.textScalerOf(context).scale(48) - 48),
-              itemCount: feed.stale.length,
-              separator: 12,
-              itemBuilder: (_, i) => ResumeShowCard(
-                next: feed.stale[i],
-                since: feed.stale[i].lastActivity,
-                onTap: () => _openEpisode(context, feed.stale[i]),
               ),
             ),
           ],
@@ -283,7 +250,7 @@ class _Carousel extends StatelessWidget {
       height: height,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
         itemCount: itemCount,
         separatorBuilder: (_, _) => SizedBox(width: separator),
         itemBuilder: itemBuilder,
@@ -622,4 +589,46 @@ class _DayCounter extends StatelessWidget {
       ],
     );
   }
+}
+
+
+class _QueuePoster extends StatelessWidget {
+  const _QueuePoster({required this.next, required this.onTap});
+  final NextUp next;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => SizedBox(width: 112, child: Semantics(
+    button: true, label: '${next.show.name}, ${next.code}',
+    child: GestureDetector(onTap: onTap, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      ClipRRect(borderRadius: BorderRadius.circular(9), child: SizedBox(height: 164, width: 112,
+        child: MediaImage(sources: [next.show.poster, next.still], seed: next.show.name))),
+      const SizedBox(height: 8),
+      Text(next.show.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+    ])),
+  ));
+}
+
+class _CinemaEmpty extends StatelessWidget {
+  const _CinemaEmpty({required this.onExplore});
+  final VoidCallback onExplore;
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    padding: EdgeInsets.only(bottom: bottomNavInset(context)),
+    child: Column(children: [
+      SizedBox(height: 290, width: double.infinity,
+        child: Image.asset('assets/images/empty_cinema.webp', fit: BoxFit.cover, alignment: Alignment.topCenter)),
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 28), child: Column(children: [
+        Text('Ta liste est vide', textAlign: TextAlign.center, style: NitrateBrand.display(42)),
+        const SizedBox(height: 12),
+        const Text('Les histoires restent.
+Retrouve ici celles que tu veux suivre.', textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 15, height: 1.5, color: TtColors.dim)),
+        const SizedBox(height: 24),
+        FilledButton.icon(onPressed: onExplore, icon: const Icon(Icons.add), label: const Text('Explorer les séries'),
+          style: FilledButton.styleFrom(backgroundColor: NitrateBrand.ivory, foregroundColor: NitrateBrand.ink,
+            minimumSize: const Size(double.infinity, 50), shape: const StadiumBorder())),
+      ])),
+    ]),
+  );
 }
