@@ -193,8 +193,9 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
                   children: [
                     NotificationListener<ScrollNotification>(
                       onNotification: (n) {
-                        if (n.depth == 0 && n.metrics.axis == Axis.vertical)
+                        if (n.depth == 0 && n.metrics.axis == Axis.vertical) {
                           _scroll.value = n.metrics.pixels;
+                        }
                         return false;
                       },
                       child: const _ToWatchTab(),

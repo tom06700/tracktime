@@ -219,7 +219,7 @@ TvdbClient _tvdb() => TvdbClient(
       };
       return _ok({
         'name': titles[id] ?? 'Dune',
-        'image': 'https://img.test/poster-1406.jpg',
+        'image': 'https://img.test/poster-$id.jpg',
         'runtime': 155,
         'first_release': {'date': '2021-09-15'},
         'genres': [
@@ -227,7 +227,7 @@ TvdbClient _tvdb() => TvdbClient(
           {'name': 'Aventure'},
         ],
         'artworks': [
-          {'type': 15, 'image': 'https://img.test/backdrop-1406.jpg'},
+          {'type': 15, 'image': 'https://img.test/backdrop-$id.jpg'},
         ],
         'characters': [
           {'personName': 'Denis Villeneuve', 'peopleType': 'Director'},
