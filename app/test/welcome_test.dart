@@ -5,6 +5,31 @@ import 'package:tracktime/onboarding/welcome_screen.dart';
 import 'package:tracktime/theme.dart';
 
 void main() {
+  testWidgets(
+      'boucle continue, arrêt en arrière-plan et réduction des animations',
+      (tester) async {
+    Widget page(bool reduce) => MaterialApp(
+          builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: reduce),
+              child: child!),
+          home: WelcomeScreen(onFinish: () async {}),
+        );
+    await tester.pumpWidget(page(false));
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 20));
+    expect(tester.binding.hasScheduledFrame, isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(tester.binding.hasScheduledFrame, isTrue);
+    await tester.pumpWidget(page(true));
+    await tester.pumpAndSettle();
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
   Widget host() => MaterialApp(
         theme: buildTheme(),
         home: const WelcomeGate(child: Scaffold(body: Text('Ma collection'))),
@@ -14,7 +39,8 @@ void main() {
       (tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(host());
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
     expect(find.text('Ma collection'), findsNothing);
     await tester.ensureVisible(find.text('Entrer dans Nitrate'));
     await tester.tap(find.text('Entrer dans Nitrate'));

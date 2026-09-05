@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../providers.dart';
 import '../series/feed.dart';
 import '../theme.dart';
+import '../widgets/async_icon_button.dart';
 import '../widgets/editorial_heading.dart';
 import '../widgets/media_image.dart';
 import '../widgets/skeleton.dart';
@@ -193,7 +194,7 @@ class _HistoryRow extends ConsumerWidget {
                   ],
                 ),
               ),
-              IconButton(
+              AsyncIconButton(
                 icon: const Icon(Icons.remove_done, size: 19),
                 color: TtColors.dim,
                 tooltip: 'Remettre à non vu',

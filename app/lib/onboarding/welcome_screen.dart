@@ -51,12 +51,20 @@ class _WelcomeGateState extends State<WelcomeGate> {
 
   @override
   Widget build(BuildContext context) {
-    if (_seen == null) return const Scaffold(body: SizedBox.expand());
+    if (_seen == null) {
+      return const Scaffold(
+        body: Center(
+            child: Image(
+                image: AssetImage('assets/images/launch_mark.png'),
+                width: 96,
+                height: 96)),
+      );
+    }
     return _seen! ? widget.child : WelcomeScreen(onFinish: _finish);
   }
 }
 
-/// A finite opening sequence, with no network assets or perpetual ticker.
+/// An opening iris followed by a seamless ambient loop; text stays still.
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key, required this.onFinish});
   final Future<void> Function() onFinish;
@@ -66,25 +74,56 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1400),
   );
+  late final AnimationController _ambient = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 18),
+  );
   bool _busy = false;
+  bool _active = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _active = state == AppLifecycleState.resumed;
+    _syncMotion();
+  }
+
+  void _syncMotion() {
+    if (!_active || reduceMotionOf(context)) {
+      _controller.stop();
+      _ambient.stop();
+      if (reduceMotionOf(context)) {
+        _controller.value = 1;
+        _ambient.value = 0;
+      }
+      return;
+    }
+    if (_controller.value < 1 && !_controller.isAnimating) {
+      _controller.forward();
+    }
+    if (!_ambient.isAnimating) _ambient.repeat();
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (reduceMotionOf(context)) {
-      _controller.value = 1;
-    } else if (!_controller.isAnimating && _controller.value == 0) {
-      _controller.forward();
-    }
+    _syncMotion();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _ambient.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -139,7 +178,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     .clamp(160.0, 300.0),
                                 width: double.infinity,
                                 child: CustomPaint(
-                                    painter: _ProjectionPainter(_controller)),
+                                    painter: _ProjectionPainter(
+                                        _controller, _ambient)),
                               ),
                             ),
                           ),
@@ -191,13 +231,17 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 /// Original vector artwork: an aperture opens onto an ivory projection frame.
 /// Animation changes only painting, never layout or the readability of text.
 class _ProjectionPainter extends CustomPainter {
-  _ProjectionPainter(this.animation) : super(repaint: animation);
+  _ProjectionPainter(this.animation, this.ambient)
+      : super(repaint: Listenable.merge([animation, ambient]));
   final Animation<double> animation;
+  final Animation<double> ambient;
 
   @override
   void paint(Canvas canvas, Size size) {
     final t = Curves.easeOutCubic.transform(animation.value);
-    final center = Offset(size.width / 2, size.height / 2);
+    final phase = ambient.value * math.pi * 2;
+    final breath = math.sin(phase);
+    final center = Offset(size.width / 2, size.height / 2 + 5 * breath * t);
     final radius = math.min(size.width, size.height) * .43;
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -207,7 +251,7 @@ class _ProjectionPainter extends CustomPainter {
         radius * 1.4,
         Paint()
           ..shader = RadialGradient(colors: [
-            NitrateBrand.ivory.withValues(alpha: .16 * t),
+            NitrateBrand.ivory.withValues(alpha: (.16 + .025 * breath) * t),
             NitrateBrand.ivory.withValues(alpha: 0),
           ]).createShader(glow));
     final line = Paint()
@@ -219,9 +263,9 @@ class _ProjectionPainter extends CustomPainter {
     }
     for (var i = 0; i < 8; i++) {
       canvas.save();
-      canvas.rotate(i * math.pi / 4 + (1 - t) * .45);
+      canvas.rotate(i * math.pi / 4 + (1 - t) * .45 + phase / 8);
       final path = Path()
-        ..moveTo(radius * (.12 + .28 * t), -radius * .12)
+        ..moveTo(radius * (.12 + (.28 + .018 * breath) * t), -radius * .12)
         ..lineTo(radius * .65, -radius * .64)
         ..quadraticBezierTo(
             radius * 1.12, -radius * .2, radius * .93, radius * .34)
@@ -244,6 +288,18 @@ class _ProjectionPainter extends CustomPainter {
             ..strokeWidth = .6);
       canvas.restore();
     }
+    // A travelling highlight catches the outer glass ring without flashing.
+    canvas.drawArc(
+      Rect.fromCircle(center: Offset.zero, radius: radius * 1.1),
+      phase,
+      math.pi * .45,
+      false,
+      Paint()
+        ..color = NitrateBrand.ivory.withValues(alpha: .4 * t)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..strokeCap = StrokeCap.round,
+    );
     final frame = RRect.fromRectAndRadius(
       Rect.fromCenter(
           center: Offset.zero, width: radius * .48, height: radius * .32),
@@ -256,5 +312,5 @@ class _ProjectionPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ProjectionPainter oldDelegate) =>
-      oldDelegate.animation != animation;
+      oldDelegate.animation != animation || oldDelegate.ambient != ambient;
 }

@@ -197,9 +197,7 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
   }
 
   Future<void> _upsertFromDetails(Map<String, dynamic> d, String name) {
-    return ref
-        .read(databaseProvider)
-        .upsertShow(
+    return ref.read(databaseProvider).upsertShow(
           ShowsCompanion(
             id: Value(widget.showId),
             name: Value(name),
@@ -331,10 +329,10 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
               child: EmptyState(icon: Icons.error_outline, message: _error!),
             )
           : _details == null
-          // La forme de la fiche plutôt qu'un rond qui tourne : la mise en
-          // page est connue d'avance, autant l'annoncer.
-          ? const DetailWithBack(child: MediaDetailSkeleton())
-          : _buildContent(followed),
+              // La forme de la fiche plutôt qu'un rond qui tourne : la mise en
+              // page est connue d'avance, autant l'annoncer.
+              ? const DetailWithBack(child: MediaDetailSkeleton())
+              : _buildContent(followed),
     );
   }
 
@@ -557,8 +555,7 @@ class _AboutTab extends StatelessWidget {
                   label: 'Ajouter à ma liste',
                   inLibrary: followed,
                   onAdd: onAdd,
-                  failureMessage:
-                      'Impossible d\'ajouter cette série.\n'
+                  failureMessage: 'Impossible d\'ajouter cette série.\n'
                       'Réessaie dans un instant.',
                 ),
         ),
@@ -840,28 +837,34 @@ class _SeasonCheck extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Opacity(
-        opacity: enabled ? 1 : 0.4,
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: allWatched
-                ? TtColors.teal
-                : Colors.white.withValues(alpha: 0.08),
-            shape: BoxShape.circle,
-            border: Border.all(
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label:
+          allWatched ? 'Remettre la saison à non vue' : 'Marquer la saison vue',
+      child: GestureDetector(
+        onTap: enabled ? onTap : null,
+        child: Opacity(
+          opacity: enabled ? 1 : 0.4,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
               color: allWatched
                   ? TtColors.teal
-                  : Colors.white.withValues(alpha: 0.22),
+                  : Colors.white.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: allWatched
+                    ? TtColors.teal
+                    : Colors.white.withValues(alpha: 0.22),
+              ),
             ),
-          ),
-          child: Icon(
-            Icons.done_all,
-            size: 20,
-            color: allWatched ? const Color(0xFF0C1A15) : TtColors.text,
+            child: Icon(
+              Icons.done_all,
+              size: 20,
+              color: allWatched ? const Color(0xFF0C1A15) : TtColors.text,
+            ),
           ),
         ),
       ),

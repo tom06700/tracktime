@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme.dart';
+import '../motion.dart';
 import '../widgets/common.dart';
 import '../widgets/glass.dart';
 import 'sections.dart';
@@ -12,6 +13,7 @@ import 'sections.dart';
 /// s'arrête au hasard sur un titre. Relance possible ; « Ouvrir la fiche »
 /// pour les séries.
 Future<void> showTonightPicker(BuildContext context, List<WatchItem> items) {
+  if (items.isEmpty) return Future<void>.value();
   return showDialog(
     context: context,
     barrierColor: Colors.black.withValues(alpha: 0.82),
@@ -52,7 +54,19 @@ class _TonightDialogState extends State<_TonightDialog>
         setState(() => _settled = true);
       }
     });
-    _spin();
+  }
+
+  bool _started = false;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_started) {
+      _started = true;
+      _spin();
+    } else if (reduceMotionOf(context)) {
+      _c.value = 1;
+      _settled = true;
+    }
   }
 
   void _spin() {
@@ -61,9 +75,14 @@ class _TonightDialogState extends State<_TonightDialog>
     // Au moins deux tours complets avant de se poser sur la cible.
     _spins = widget.items.length * 2 + _target;
     if (widget.items.length == 1) _spins = 1;
-    _c
-      ..reset()
-      ..forward();
+    if (reduceMotionOf(context)) {
+      _c.value = 1;
+      _settled = true;
+    } else {
+      _c
+        ..reset()
+        ..forward();
+    }
     setState(() {});
   }
 
@@ -111,7 +130,7 @@ class _TonightDialogState extends State<_TonightDialog>
               // Affiche sous le halo du projecteur.
               AnimatedScale(
                 scale: _settled ? 1 : 0.94,
-                duration: const Duration(milliseconds: 260),
+                duration: motionOf(context, Motion.normal),
                 curve: Curves.easeOutBack,
                 child: Container(
                   decoration: BoxDecoration(
@@ -152,7 +171,7 @@ class _TonightDialogState extends State<_TonightDialog>
               const SizedBox(height: 4),
               AnimatedOpacity(
                 opacity: _settled ? 1 : 0,
-                duration: const Duration(milliseconds: 250),
+                duration: motionOf(context, Motion.normal),
                 child: Text(
                   item.isMovie
                       ? 'Film · dans ta liste de lecture'

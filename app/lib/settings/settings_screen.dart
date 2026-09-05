@@ -57,7 +57,17 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
     if (ok != true) return;
-    await ref.read(databaseProvider).clearAll();
+    try {
+      await ref.read(databaseProvider).clearAll();
+    } catch (error, stack) {
+      debugPrint('Suppression impossible : $error\n$stack');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Impossible d’effacer les données. Réessaie.'),
+        ));
+      }
+      return;
+    }
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
