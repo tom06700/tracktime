@@ -111,6 +111,19 @@ void main() {
     await _settle(tester);
   });
 
+  testWidgets('accueil lisible sur petit écran avec texte agrandi', (tester) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await _pump(tester);
+    await tester.ensureVisible(find.text('Marquer comme vu'));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    await _settle(tester);
+  });
+
   testWidgets('le prochain épisode devient le héros', (tester) async {
     await _pump(tester);
 

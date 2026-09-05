@@ -504,6 +504,11 @@ void main() {
       }
 
       await _shot(tester, '01-series');
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -450));
+      await _shot(tester, '01b-series-programme');
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 900));
+      await _settleReal(tester);
+
       // Onglet À venir.
       await tester.tap(find.text('À venir'));
       await _shot(tester, '02-series-a-venir');

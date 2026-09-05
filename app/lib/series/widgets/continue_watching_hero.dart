@@ -239,15 +239,15 @@ class _WatchedButton extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              AnimatedDefaultTextStyle(
+              Flexible(child: AnimatedDefaultTextStyle(
                 duration: duration,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: confirmed ? TtColors.bg : Colors.white,
                 ),
-                child: Text(confirmed ? 'Vu' : 'Marquer comme vu'),
-              ),
+                child: Text(confirmed ? 'Vu' : 'Marquer comme vu', textAlign: TextAlign.center),
+              )),
             ],
           ),
         ),
