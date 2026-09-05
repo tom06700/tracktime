@@ -20,10 +20,15 @@ class FilmstripPainter extends CustomPainter {
     final reveal = Curves.easeOutCubic.transform(entrance.value);
     canvas.translate((1 - reveal) * 72, (1 - reveal) * 18);
     canvas.clipRect(const Rect.fromLTWH(-20, -20, 440, 320));
+    // A closed six-second choreography: the stock bends gently while its
+    // emulsion advances. No random noise, and identical geometry at 0 and 1.
+    final phase = travel.value * math.pi * 2;
+    final bend = math.sin(phase) * 7;
+    final lift = (math.cos(phase) - 1) * 3;
     final line = Path()
       ..moveTo(-65, 190)
-      ..cubicTo(75, 258, 90, 45, 225, 93)
-      ..cubicTo(300, 120, 316, 185, 465, 74);
+      ..cubicTo(75, 258 + bend, 90, 45 + lift, 225, 93 + bend)
+      ..cubicTo(300, 120 - bend, 316, 185 + lift, 465, 74);
     final metric = line.computeMetrics().single;
     final length = metric.length;
     Offset edge(double distance, double offset) {
@@ -70,35 +75,47 @@ class FilmstripPainter extends CustomPainter {
     for (var i = 0; i < 8; i++) {
       final distance = (i * pitch + offset) % length;
       if (distance < 0 || distance > length) continue;
-      final tangent = metric.getTangentForOffset(distance)!;
-      canvas.save();
-      canvas.translate(tangent.position.dx, tangent.position.dy);
-      canvas.rotate(tangent.angle);
-      final frame = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset.zero, width: pitch - 9, height: 56),
-        const Radius.circular(2),
-      );
-      canvas.drawRRect(frame, Paint()..color = const Color(0xFF111713));
-      canvas.drawRRect(
-          frame.deflate(3),
-          Paint()
-            ..color = NitrateBrand.ivory.withValues(alpha: .13)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = .6);
-      // A photographic exposure: light crosses the emulsion, not the labels.
-      canvas.drawRRect(
+      // Sample both edges of each exposure along the same spline as the
+      // stock. Tangent-rotated rectangles looked rigid at the tight bends.
+      final frame = Path();
+      final start = distance - (pitch - 9) / 2;
+      final end = distance + (pitch - 9) / 2;
+      const steps = 12;
+      for (var j = 0; j <= steps; j++) {
+        final point = edge(start + (end - start) * j / steps, -28);
+        if (j == 0) {
+          frame.moveTo(point.dx, point.dy);
+        } else {
+          frame.lineTo(point.dx, point.dy);
+        }
+      }
+      for (var j = steps; j >= 0; j--) {
+        final point = edge(start + (end - start) * j / steps, 28);
+        frame.lineTo(point.dx, point.dy);
+      }
+      frame.close();
+      canvas.drawPath(frame, Paint()..color = const Color(0xFF111713));
+      canvas.drawPath(
           frame,
           Paint()
-            ..shader = LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                NitrateBrand.ivory.withValues(alpha: .08),
-                Colors.transparent
-              ],
-            ).createShader(frame.outerRect));
-      canvas.restore();
+            ..color = NitrateBrand.ivory.withValues(alpha: .22)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = .7);
     }
+    // A broad grazing light travels over the stock, not across the copy.
+    // Its periodic position and intensity keep the loop free of a flash.
+    final lightX = 200 + math.sin(phase) * 100;
+    canvas.drawRect(
+      const Rect.fromLTWH(-65, 0, 530, 260),
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            NitrateBrand.ivory.withValues(alpha: .12),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromCenter(
+            center: Offset(lightX, 120 + lift), width: 260, height: 220)),
+    );
     for (var i = 0; i < 48; i++) {
       final distance = (i * (pitch / 6) + offset) % length;
       if (distance < 0 || distance > length) continue;

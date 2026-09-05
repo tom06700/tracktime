@@ -15,6 +15,7 @@ import '../widgets/common.dart';
 import '../widgets/media_image.dart';
 import '../widgets/hero_artwork.dart';
 import '../widgets/states.dart';
+import '../widgets/press_response.dart';
 
 class ShowsScreen extends ConsumerStatefulWidget {
   const ShowsScreen({super.key});
@@ -95,10 +96,11 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen>
             left: 0,
             right: 0,
             child: AnimatedBuilder(
-              animation: _tabs.animation!,
+              animation: Listenable.merge([_tabs.animation!, _scroll]),
               builder: (context, child) => Opacity(
                 key: const ValueKey('featured-artwork-opacity'),
-                opacity: (1 - _tabs.animation!.value).clamp(0.0, 1.0),
+                opacity: (1 - _tabs.animation!.value).clamp(0.0, 1.0) *
+                    (1 - _scroll.value / 220).clamp(0.0, 1.0),
                 child: child,
               ),
               child: IgnorePointer(
@@ -212,7 +214,39 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen>
                         }
                         return false;
                       },
-                      child: const _ToWatchTab(),
+                      child: ValueListenableBuilder<double>(
+                        valueListenable: _scroll,
+                        child: const _ToWatchTab(),
+                        builder: (context, pixels, child) => Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            child!,
+                            Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              height: 24,
+                              child: IgnorePointer(
+                                child: Opacity(
+                                  opacity: (pixels / 24).clamp(0.0, 1.0),
+                                  child: const DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          NitrateBrand.ink,
+                                          Color(0x00080C0B)
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                     const ColoredBox(
                       color: NitrateBrand.ink,
@@ -290,6 +324,7 @@ class _ToWatchFeed extends ConsumerWidget {
       backgroundColor: TtColors.surface,
       onRefresh: () => _refresh(context, ref),
       child: ListView(
+        key: const PageStorageKey('to-watch-feed'),
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(bottom: bottomNavInset(context)),
         children: [
@@ -680,7 +715,7 @@ class _QueuePoster extends StatelessWidget {
         child: Semantics(
           button: true,
           label: '${next.show.name}, ${next.code}',
-          child: GestureDetector(
+          child: PressTarget(
             onTap: onTap,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

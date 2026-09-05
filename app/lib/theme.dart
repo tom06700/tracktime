@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/press_response.dart';
+
 /// Surfaces cinéma et accent ivoire commun à tous les parcours.
 abstract final class TtColors {
   static const bg = Color(0xFF080C0B);
@@ -52,7 +54,7 @@ ThemeData buildTheme() {
         foregroundColor: TtColors.amber,
         side: const BorderSide(color: TtColors.surfaceHi),
         shape: const StadiumBorder(),
-      ),
+      ).copyWith(foregroundBuilder: buttonPressResponse),
     ),
     dividerTheme: const DividerThemeData(
       color: TtColors.surfaceHi,
@@ -123,10 +125,11 @@ ThemeData buildTheme() {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         shape: const StadiumBorder(),
-      ),
+      ).copyWith(foregroundBuilder: buttonPressResponse),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: TtColors.amber),
+      style: TextButton.styleFrom(foregroundColor: TtColors.amber)
+          .copyWith(foregroundBuilder: buttonPressResponse),
     ),
     snackBarTheme: const SnackBarThemeData(
       backgroundColor: TtColors.surfaceHi,

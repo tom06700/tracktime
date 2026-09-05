@@ -20,3 +20,24 @@ Lottie animé ni plugin MCP n’est utilisé.
 
 Validation artistique native encore requise : la validité du dessin et des
 calculs ne prouve ni sa finition visuelle ni sa fluidité sur iPhone.
+
+## Raffinement de la pellicule et gestes
+
+La courbe varie périodiquement de 7 unités, sans déplacer la typographie.
+Les fenêtres des photogrammes suivent désormais les deux bords de la courbe
+au lieu de rectangles rigides orientés selon une tangente. Un éclairage large
+varie avec la même phase de six secondes, raccord compris. Le titre éditorial
+et le sous-titre apparaissent pendant l’entrée, puis restent immobiles.
+Le SVG conserve son rôle d’étude éditable ; le rendu animé de référence est
+le CustomPainter Flutter, pas un export de Glaxnimate.
+
+La pression dure 90 ms et le retour 240 ms, avec une contraction de 2,5 %.
+Les boutons natifs animent leur contenu à partir de leur propre état tactile ;
+les affiches et onglets animent leur surface. Un glissement annule la pression.
+La réduction des animations supprime ces déplacements et fixe la pellicule.
+
+L’accueil atténue son décor sur les 220 premiers pixels de défilement. La
+navigation possède une assise opaque qui couvre aussi les marges latérales
+et la zone du home indicator pour supprimer les fragments de texte dessous.
+Ces ajustements restent à inspecter sur iPhone : les tests ne mesurent pas
+la fluidité d’une compilation installée.
