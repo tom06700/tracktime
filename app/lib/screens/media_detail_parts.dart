@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
+import '../brand/nitrate_brand.dart';
 import '../tmdb/add.dart';
 
 /// Ajoute une série et renvoie false si TheTVDB refuse.
@@ -87,13 +88,9 @@ class MediaSectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-    text,
-    style: const TextStyle(
-      fontSize: 17,
-      fontWeight: FontWeight.w700,
-      color: TtColors.text,
-    ),
-  );
+        text,
+        style: NitrateBrand.display(28).copyWith(height: 1.15),
+      );
 }
 
 /// Ligne « libellé : valeur ». Le texte s'enroule au lieu d'être tronqué,
@@ -185,9 +182,8 @@ class _AddToListButtonState extends ConsumerState<AddToListButton> {
       child: GestureDetector(
         onTap: _add,
         child: AnimatedContainer(
-          duration: reduceMotion
-              ? Duration.zero
-              : const Duration(milliseconds: 200),
+          duration:
+              reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
           curve: Curves.easeOut,
           // Pas de hauteur fixe : le libellé doit pouvoir grandir.
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),

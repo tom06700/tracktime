@@ -86,7 +86,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     }
 
     final universe = ref.watch(universeProvider).value;
-    final palette = universe?.palette ?? const [Color(0xFF6C4CE0)];
+    final palette = universe?.palette ?? const [Color(0xFF818B73)];
     final seed = universe?.seed ?? 7;
 
     final safeTop = MediaQuery.paddingOf(context).top;
@@ -136,12 +136,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     // Chaque section apparaît en fondu quand elle entre à l'écran (léger
     // stagger pour les premières, visibles dès l'ouverture).
     Widget sec(int i, List<Widget> children) => Reveal(
-      delayMs: i < 3 ? i * 90 : 0,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
-      ),
-    );
+          delayMs: i < 3 ? i * 90 : 0,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        );
 
     // Pas d'AppBar sur le Profil : le décor remplit tout, le contenu démarre
     // juste sous la safe area (en laissant la place au bouton Réglages).
@@ -159,7 +159,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             data: (profile) => _UniverseHeader(
               profile: profile,
               tagline: universe == null ? '…' : universeTagline(universe),
-              palette: universe?.palette ?? const [Color(0xFF6C4CE0)],
+              palette: universe?.palette ?? const [Color(0xFF818B73)],
               memberSince: memberSince(profile.since),
             ),
           ),
@@ -368,7 +368,7 @@ class _UniverseHeader extends ConsumerWidget {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: const Color(0xFF0C0F16),
+                color: const Color(0xFF080C0B),
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: spot.withValues(alpha: 0.55),
@@ -379,7 +379,7 @@ class _UniverseHeader extends ConsumerWidget {
                   radius: 1.1,
                   colors: [
                     spot.withValues(alpha: 0.22),
-                    const Color(0xFF0C0F16),
+                    const Color(0xFF080C0B),
                   ],
                   stops: const [0, 0.75],
                 ),
@@ -630,29 +630,29 @@ class _DataCard extends StatelessWidget {
       child: Material(
         type: MaterialType.transparency,
         child: Column(
-        children: [
-          _ActionTile(
-            icon: Icons.ios_share,
-            title: 'Exporter mes données',
-            subtitle: 'Sauvegarde JSON (compatible avec l\'import)',
-            onTap: onExport,
-          ),
-          const _TileDivider(),
-          _ActionTile(
-            icon: Icons.download_outlined,
-            title: 'Importer / restaurer',
-            subtitle: 'Sauvegarde ou export TV Time',
-            onTap: () => context.push('/import'),
-          ),
-          const _TileDivider(),
-          _ActionTile(
-            icon: Icons.tune,
-            title: 'Réglages',
-            subtitle: 'Métadonnées TheTVDB, à propos',
-            onTap: () => context.push('/settings'),
-          ),
-        ],
-      ),
+          children: [
+            _ActionTile(
+              icon: Icons.ios_share,
+              title: 'Exporter mes données',
+              subtitle: 'Sauvegarde JSON (compatible avec l\'import)',
+              onTap: onExport,
+            ),
+            const _TileDivider(),
+            _ActionTile(
+              icon: Icons.download_outlined,
+              title: 'Importer / restaurer',
+              subtitle: 'Sauvegarde ou export TV Time',
+              onTap: () => context.push('/import'),
+            ),
+            const _TileDivider(),
+            _ActionTile(
+              icon: Icons.tune,
+              title: 'Réglages',
+              subtitle: 'Métadonnées TheTVDB, à propos',
+              onTap: () => context.push('/settings'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -704,8 +704,8 @@ class _TileDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Divider(
-    height: 1,
-    indent: 56,
-    color: Colors.white.withValues(alpha: 0.08),
-  );
+        height: 1,
+        indent: 56,
+        color: Colors.white.withValues(alpha: 0.08),
+      );
 }

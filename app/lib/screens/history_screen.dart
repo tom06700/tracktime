@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../providers.dart';
 import '../series/feed.dart';
 import '../theme.dart';
+import '../widgets/editorial_heading.dart';
 import '../widgets/media_image.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/states.dart';
@@ -58,8 +59,7 @@ class HistoryScreen extends ConsumerWidget {
           debugPrint('Historique — chargement impossible : $e\n$st');
           return ErrorRetry(
             title: 'Impossible de charger ton historique',
-            message:
-                'Tes données sont toujours là. '
+            message: 'Tes données sont toujours là. '
                 'Réessaie dans un instant.',
             onRetry: () => ref.invalidate(showsProvider),
           );
@@ -69,15 +69,18 @@ class HistoryScreen extends ConsumerWidget {
             return const EmptyPrompt(
               icon: Icons.history,
               title: 'Rien de vu pour l\'instant',
-              message:
-                  'Les épisodes que tu marques comme vus '
+              message: 'Les épisodes que tu marques comme vus '
                   'apparaîtront ici, du plus récent au plus ancien.',
             );
           }
           return ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: entries.length,
-            itemBuilder: (context, i) => _HistoryRow(entry: entries[i]),
+            itemCount: entries.length + 1,
+            itemBuilder: (context, i) => i == 0
+                ? EditorialHeading(
+                    eyebrow: '${entries.length} épisodes vus',
+                    title: 'Le fil de tes soirées.')
+                : _HistoryRow(entry: entries[i - 1]),
           );
         },
       ),
@@ -125,8 +128,7 @@ class _HistoryRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Semantics(
       button: true,
-      label:
-          '${entry.show.name}, ${entry.code}, vu le '
+      label: '${entry.show.name}, ${entry.code}, vu le '
           '${_stamp(entry.watchedAt)}',
       child: InkWell(
         onTap: () => context.push(
@@ -134,7 +136,7 @@ class _HistoryRow extends ConsumerWidget {
           extra: {'name': entry.show.name, 'poster': entry.show.poster},
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 7, 8, 7),
+          padding: const EdgeInsets.fromLTRB(24, 12, 16, 12),
           child: Row(
             children: [
               ClipRRect(

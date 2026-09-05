@@ -11,6 +11,7 @@ import 'screens/movie_detail_screen.dart';
 import 'screens/movie_history_screen.dart';
 import 'shell.dart';
 import 'motion.dart';
+import 'onboarding/welcome_screen.dart';
 
 /// Navigation par routes (go_router) : le geste de retour iOS et la touche
 /// retour Android dépilent correctement les écrans au lieu de sortir de l'app.
@@ -19,7 +20,13 @@ import 'motion.dart';
 /// seule page au-dessus de la coquille, d'où une seule animation de retour.
 final router = GoRouter(
   routes: [
-    GoRoute(path: '/', builder: (_, _) => const HomeShell()),
+    GoRoute(
+        path: '/', builder: (_, _) => const WelcomeGate(child: HomeShell())),
+    GoRoute(
+        path: '/welcome',
+        builder: (context, _) => WelcomeScreen(
+              onFinish: () async => context.pop(),
+            )),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
     GoRoute(path: '/import', builder: (_, _) => const ImportPage()),
     GoRoute(path: '/series', builder: (_, _) => const SeriesLibraryScreen()),
@@ -58,17 +65,18 @@ final router = GoRouter(
           reverseTransitionDuration: const Duration(milliseconds: 260),
           transitionsBuilder: (context, anim, _, child) =>
               reduceMotionOf(context)
-              ? child
-              : SlideTransition(
-                  position: Tween(begin: const Offset(0, 1), end: Offset.zero)
-                      .animate(
+                  ? child
+                  : SlideTransition(
+                      position:
+                          Tween(begin: const Offset(0, 1), end: Offset.zero)
+                              .animate(
                         CurvedAnimation(
                           parent: anim,
                           curve: Curves.easeOutCubic,
                         ),
                       ),
-                  child: child,
-                ),
+                      child: child,
+                    ),
           child: EpisodeSheet(
             showId: int.parse(p['showId']!),
             season: int.parse(p['season']!),

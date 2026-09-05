@@ -11,11 +11,23 @@ String imageUrl(String path, {String size = 'w154'}) => path;
 /// élément puisse remonter au-dessus de la nav bar flottante (le contenu
 /// intermédiaire, lui, passe derrière la barre translucide).
 double bottomNavInset(BuildContext context) =>
-    MediaQuery.paddingOf(context).bottom + 92;
+    MediaQuery.paddingOf(context).bottom +
+    92 +
+    (MediaQuery.textScalerOf(context).scale(11) - 11).clamp(0.0, 22.0);
 
 const _frMonths = [
-  'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
-  'août', 'septembre', 'octobre', 'novembre', 'décembre'
+  'janvier',
+  'février',
+  'mars',
+  'avril',
+  'mai',
+  'juin',
+  'juillet',
+  'août',
+  'septembre',
+  'octobre',
+  'novembre',
+  'décembre'
 ];
 
 /// "12 juillet 2026".
@@ -41,7 +53,7 @@ class SectionPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xF23B414D),
+        color: TtColors.surfaceHi,
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         boxShadow: [
@@ -142,8 +154,8 @@ class PosterBox extends StatelessWidget {
   }
 
   static Gradient _posterGradient(String seed) {
-    final hue = (seed.codeUnits.fold<int>(0, (a, c) => a * 31 + c) % 360)
-        .toDouble();
+    final hue =
+        (seed.codeUnits.fold<int>(0, (a, c) => a * 31 + c) % 360).toDouble();
     return LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -174,7 +186,8 @@ class EmptyState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: TtColors.dim, fontSize: 14, height: 1.6),
+              style: const TextStyle(
+                  color: TtColors.dim, fontSize: 14, height: 1.6),
             ),
           ],
         ),

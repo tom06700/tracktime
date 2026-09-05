@@ -8,6 +8,7 @@ import '../build_info.dart';
 import '../db/database.dart';
 import '../providers.dart';
 import '../theme.dart';
+import '../widgets/editorial_heading.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key, this.exportData = exportBackup});
@@ -18,7 +19,8 @@ class SettingsScreen extends ConsumerWidget {
 
   Future<void> _open(BuildContext context, String url) async {
     try {
-      if (await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication)) {
+      if (await launchUrl(Uri.parse(url),
+          mode: LaunchMode.externalApplication)) {
         return;
       }
     } catch (e) {
@@ -76,6 +78,12 @@ class SettingsScreen extends ConsumerWidget {
           MediaQuery.paddingOf(context).bottom + 16,
         ),
         children: [
+          const EditorialHeading(
+            eyebrow: 'À ta façon',
+            title: 'Ta collection t’appartient.',
+            description:
+                'Garde une copie de tes souvenirs de cinéma, ou retrouve ton historique.',
+          ),
           // Sauvegarder, puis restaurer, puis effacer : l'ordre du parcours.
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
@@ -110,6 +118,17 @@ class SettingsScreen extends ConsumerWidget {
               ),
               trailing: const Icon(Icons.chevron_right, color: TtColors.dim),
               onTap: () => context.push('/import'),
+            ),
+          ),
+
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.auto_awesome_motion_outlined,
+                  color: TtColors.amber),
+              title: const Text('Découvrir Nitrate'),
+              subtitle: const Text('Revoir le générique d’ouverture'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/welcome'),
             ),
           ),
 

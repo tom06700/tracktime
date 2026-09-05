@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme.dart';
+import '../motion.dart';
 
 /// Système « Liquid Glass » v2.
 ///
@@ -357,11 +358,10 @@ class _ProminentGlassButtonState extends State<ProminentGlassButton> {
   Widget build(BuildContext context) {
     final enabled = widget.onPressed != null;
     final tint = widget.color ?? TtColors.amber;
-    final onTint = tint.computeLuminance() > 0.5
-        ? const Color(0xFF1A1405)
-        : Colors.white;
-    final top = Color.lerp(tint, Colors.white, 0.22)!;
-    final bottom = Color.lerp(tint, Colors.black, 0.18)!;
+    final onTint =
+        tint.computeLuminance() > 0.5 ? const Color(0xFF1A1405) : Colors.white;
+    final top = Color.lerp(tint, Colors.white, 0.08)!;
+    final bottom = Color.lerp(tint, Colors.black, 0.04)!;
 
     return _PressEffect(
       enabled: enabled,
@@ -381,7 +381,7 @@ class _ProminentGlassButtonState extends State<ProminentGlassButton> {
                 offset: const Offset(0, 6),
               ),
               BoxShadow(
-                color: tint.withValues(alpha: _down ? 0.22 : 0.45),
+                color: tint.withValues(alpha: _down ? 0.04 : 0.08),
                 blurRadius: 22,
                 spreadRadius: -4,
                 offset: const Offset(0, 6),
@@ -440,7 +440,7 @@ class _ButtonLabel extends StatelessWidget {
       children: [
         Icon(icon, size: 19, color: color),
         const SizedBox(width: 8),
-        text,
+        Flexible(child: text),
       ],
     );
   }
@@ -464,22 +464,26 @@ class _PressEffect extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: enabled ? (_) => onDown(true) : null,
-      onTapCancel: enabled ? () => onDown(false) : null,
-      onTap: enabled
-          ? () {
-              onDown(false);
-              HapticFeedback.lightImpact();
-              onTap?.call();
-            }
-          : null,
-      child: AnimatedScale(
-        scale: down ? 0.96 : 1,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOut,
-        child: child,
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: enabled ? (_) => onDown(true) : null,
+        onTapCancel: enabled ? () => onDown(false) : null,
+        onTap: enabled
+            ? () {
+                onDown(false);
+                HapticFeedback.lightImpact();
+                onTap?.call();
+              }
+            : null,
+        child: AnimatedScale(
+          scale: down && !reduceMotionOf(context) ? 0.97 : 1,
+          duration: motionOf(context, Motion.fast),
+          curve: Curves.easeOut,
+          child: child,
+        ),
       ),
     );
   }

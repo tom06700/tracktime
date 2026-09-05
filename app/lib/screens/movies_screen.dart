@@ -11,6 +11,7 @@ import '../motion.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
+import '../widgets/editorial_heading.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
 import '../widgets/skeleton.dart';
@@ -31,10 +32,10 @@ String movieMeta(Movie m, {bool includeYear = true}) {
 }
 
 Future<void> _sync(WidgetRef ref) => backfillMovieMeta(
-  ref.read(databaseProvider),
-  ref.read(tvdbClientProvider),
-  throttle: () => Future.delayed(const Duration(milliseconds: 120)),
-);
+      ref.read(databaseProvider),
+      ref.read(tvdbClientProvider),
+      throttle: () => Future.delayed(const Duration(milliseconds: 120)),
+    );
 
 class MoviesScreen extends ConsumerStatefulWidget {
   const MoviesScreen({super.key});
@@ -111,8 +112,7 @@ class _LibraryTab extends ConsumerWidget {
           return EmptyPrompt(
             icon: Icons.movie_outlined,
             title: 'Aucun film dans ta liste',
-            message:
-                'Ajoute les films que tu veux voir '
+            message: 'Ajoute les films que tu veux voir '
                 'et retrouve-les ici.',
             actionLabel: 'Explorer les films',
             onAction: () =>
@@ -159,6 +159,12 @@ class _LibraryGrid extends ConsumerWidget {
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
+          SliverToBoxAdapter(
+              child: EditorialHeading(
+            eyebrow: '${library.length} films à découvrir',
+            title: 'Ta prochaine séance.',
+            description: 'Les films que tu as gardés pour plus tard.',
+          )),
           if (library.isEmpty)
             const SliverToBoxAdapter(
               child: Padding(
@@ -179,8 +185,9 @@ class _LibraryGrid extends ConsumerWidget {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount:
+                      MediaQuery.textScalerOf(context).scale(14) > 21 ? 1 : 2,
                   crossAxisSpacing: 13,
                   mainAxisSpacing: 20,
                   // Affiche 2:3 plus deux lignes de texte.
@@ -293,8 +300,7 @@ class _ReleasesTab extends ConsumerWidget {
           return const EmptyPrompt(
             icon: Icons.event_outlined,
             title: 'Aucune sortie annoncée',
-            message:
-                'Ajoute des films pas encore sortis — '
+            message: 'Ajoute des films pas encore sortis — '
                 'leur date apparaîtra ici.',
           );
         }

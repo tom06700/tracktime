@@ -515,7 +515,7 @@ void main() {
         }
       });
       debugPrint('Audit: fonts ready');
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({'nitrate.welcome.v1': true});
 
       tester.view.physicalSize = const Size(390 * 3, 844 * 3);
       tester.view.devicePixelRatio = 3;

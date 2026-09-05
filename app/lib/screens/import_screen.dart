@@ -38,9 +38,9 @@ final kTvTimeExportDeadline = DateTime(2026, 7, 15);
 /// d'exporter « avant le 15 juillet » en septembre.
 String tvTimeNotice(DateTime now) => now.isBefore(kTvTimeExportDeadline)
     ? '⏳ Exporte tes données TV Time avant le 15 juillet 2026 sur '
-          'gdpr.tvtime.com — après, tout est supprimé définitivement.'
+        'gdpr.tvtime.com — après, tout est supprimé définitivement.'
     : 'TV Time a cessé de fournir ses exports le 15 juillet 2026. Si tu as '
-          'gardé tes fichiers CSV ou JSON, ils s\'importent toujours ici.';
+        'gardé tes fichiers CSV ou JSON, ils s\'importent toujours ici.';
 
 class ImportScreen extends ConsumerStatefulWidget {
   const ImportScreen({super.key, this.now});
@@ -176,7 +176,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
         Card(
-          color: const Color(0xFF241D10),
+          color: TtColors.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: TtColors.amber.withValues(alpha: 0.3)),
@@ -234,7 +234,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           ),
         if (_legacy)
           Card(
-            color: const Color(0xFF241D10),
+            color: TtColors.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(color: TtColors.amber.withValues(alpha: 0.3)),

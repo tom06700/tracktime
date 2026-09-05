@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import '../brand/nitrate_brand.dart';
 
 /// État vide qui propose une issue au lieu de constater l'absence.
 class EmptyPrompt extends StatelessWidget {
@@ -27,16 +28,21 @@ class EmptyPrompt extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: TtColors.dim),
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: TtColors.surface,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: TtColors.surfaceHi),
+              ),
+              child: Icon(icon, size: 34, color: TtColors.amber),
+            ),
             const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: TtColors.text,
-              ),
+              style: NitrateBrand.display(32).copyWith(height: 1.1),
             ),
             const SizedBox(height: 8),
             Text(
@@ -101,11 +107,7 @@ class ErrorRetry extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: TtColors.text,
-              ),
+              style: NitrateBrand.display(32).copyWith(height: 1.1),
             ),
             const SizedBox(height: 8),
             Text(
