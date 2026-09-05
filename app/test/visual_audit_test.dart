@@ -521,6 +521,7 @@ void main() {
       }
 
       // Keep the chosen reference's series featured with deterministic activity.
+      await db.setEpisodeUnwatched(371980, 2, 2);
       await db.setEpisodeWatched(371980, 2, 2, at: DateTime.now().add(const Duration(seconds: 1)));
       await _settleReal(tester, 900);
       await _shot(tester, '01-series');

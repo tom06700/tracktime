@@ -129,7 +129,7 @@ void main() {
     await _pump(tester);
 
     expect(find.text('Severance'), findsOneWidget);
-    expect(find.textContaining('S02 | E04'), findsWidgets);
+    expect(find.textContaining('S02 · E04'), findsWidgets);
     expect(find.text('Marquer vu'), findsOneWidget);
     await _settle(tester);
   });
@@ -156,7 +156,7 @@ void main() {
 
     // Le fil se recompose : l'épisode suivant prend la place du héros.
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.textContaining('S02 | E05'), findsWidgets);
+    expect(find.textContaining('S02 · E05'), findsWidgets);
     await _settle(tester);
   });
 

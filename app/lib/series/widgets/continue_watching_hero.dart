@@ -44,7 +44,7 @@ class _ContinueWatchingHeroState extends State<ContinueWatchingHero> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SizedBox(height: largeText ? 140 : (width * .51).clamp(150.0, 240.0)),
+        SizedBox(height: largeText ? 140 : (width * .38).clamp(130.0, 210.0)),
         EntranceFade(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Semantics(button: true, label: 'Ouvrir la série ${n.show.name}',
             child: GestureDetector(onTap: widget.onOpenShow, child: Text(n.show.name,

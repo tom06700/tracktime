@@ -82,7 +82,7 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
       child: Stack(children: [
         Positioned(top: 0, left: 0, right: 0,
           child: IgnorePointer(child: SizedBox(
-            height: MediaQuery.paddingOf(context).top + 590,
+            height: MediaQuery.paddingOf(context).top + 540,
             child: AnimatedBuilder(animation: _scroll, builder: (context, _) {
               final offset = reduceMotionOf(context) ? 0.0 : _scroll.value.clamp(0.0, 500.0) * .18;
               return Transform.translate(offset: Offset(0, -offset), child: Stack(fit: StackFit.expand, children: [
@@ -260,15 +260,14 @@ class _Carousel extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.title, {this.subtitle});
+  const _SectionHeader(this.title);
 
   final String title;
-  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -285,17 +284,7 @@ class _SectionHeader extends StatelessWidget {
                     color: TtColors.text,
                   ),
                 ),
-                if (subtitle != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      subtitle!,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: TtColors.dim,
-                      ),
-                    ),
-                  ),
+
               ],
             ),
           ),
