@@ -25,7 +25,13 @@ final router = GoRouter(
     GoRoute(
         path: '/welcome',
         builder: (context, _) => WelcomeScreen(
-              onFinish: () async => context.pop(),
+              onFinish: () async {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/');
+                }
+              },
             )),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
     GoRoute(path: '/import', builder: (_, _) => const ImportPage()),

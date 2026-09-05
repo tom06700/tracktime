@@ -17,6 +17,7 @@ import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/glass.dart';
+import '../widgets/states.dart';
 
 /// Page Profil « Univers » : une frise verticale cinématographique, unique
 /// par profil (salle obscure + projecteur teinté par les genres regardés),
@@ -154,8 +155,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         sec(0, [
           profileAsync.when(
             loading: () => const SizedBox(height: 200),
-            error: (e, _) =>
-                EmptyState(icon: Icons.error_outline, message: '$e'),
+            error: (e, _) => ErrorRetry(
+              title: 'Profil indisponible',
+              message: 'Réessaie pour retrouver ton profil.',
+              onRetry: () => ref.invalidate(profileProvider),
+            ),
             data: (profile) => _UniverseHeader(
               profile: profile,
               tagline: universe == null ? '…' : universeTagline(universe),
@@ -169,7 +173,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         sec(1, [
           statsAsync.when(
             loading: () => const SizedBox(height: 120),
-            error: (_, _) => const SizedBox.shrink(),
+            error: (_, _) => ErrorRetry(
+              title: 'Statistiques indisponibles',
+              message: 'Tes visionnages restent enregistrés.',
+              onRetry: () => ref.invalidate(statsProvider),
+            ),
             data: (stats) => _HeroStats(stats: stats),
           ),
         ]),
@@ -291,7 +299,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     try {
       await exportBackup(ref.read(databaseProvider));
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Export impossible : $e')));
+      debugPrint('Export impossible : $e');
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Impossible de créer la sauvegarde. Réessaie.')));
     }
   }
 }

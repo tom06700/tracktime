@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../db/database.dart';
 import '../providers.dart';
 import '../theme.dart';
+import '../widgets/async_icon_button.dart';
 import '../widgets/editorial_heading.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
@@ -171,7 +172,7 @@ class _WatchedRow extends ConsumerWidget {
                   ],
                 ),
               ),
-              IconButton(
+              AsyncIconButton(
                 icon: const Icon(Icons.replay, size: 19),
                 color: TtColors.dim,
                 tooltip: 'Remettre dans ma liste',

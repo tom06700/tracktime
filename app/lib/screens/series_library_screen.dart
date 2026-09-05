@@ -5,6 +5,7 @@ import '../db/database.dart';
 import '../profile/sections.dart';
 import '../providers.dart';
 import '../theme.dart';
+import '../motion.dart';
 import '../widgets/editorial_heading.dart';
 import '../widgets/states.dart';
 import 'package:go_router/go_router.dart';
@@ -151,7 +152,7 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
           if (genreNames.isNotEmpty) ...[
             const SizedBox(height: 10),
             SizedBox(
-              height: 34,
+              height: 48 + (MediaQuery.textScalerOf(context).scale(13) - 13),
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -249,8 +250,11 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
                 itemCount: list.length,
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 116,
+                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent:
+                      MediaQuery.textScalerOf(context).scale(12) > 18
+                          ? 200
+                          : 116,
                   childAspectRatio: 0.53,
                   mainAxisSpacing: 14,
                   crossAxisSpacing: 12,
@@ -347,28 +351,34 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-        decoration: BoxDecoration(
-          color: selected
-              ? TtColors.amber.withValues(alpha: 0.16)
-              : TtColors.surface,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: motionOf(context, Motion.fast),
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+          decoration: BoxDecoration(
             color: selected
-                ? TtColors.amber.withValues(alpha: 0.7)
-                : Colors.white.withValues(alpha: 0.08),
+                ? TtColors.amber.withValues(alpha: 0.16)
+                : TtColors.surface,
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: selected
+                  ? TtColors.amber.withValues(alpha: 0.7)
+                  : Colors.white.withValues(alpha: 0.08),
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
-            color: selected ? TtColors.amber : TtColors.text,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: selected ? TtColors.amber : TtColors.text,
+            ),
           ),
         ),
       ),

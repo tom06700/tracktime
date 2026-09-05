@@ -56,6 +56,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   final ParsedData _parsed = ParsedData();
   final List<String> _log = [];
   bool _importing = false;
+  bool _picking = false;
   bool _legacy = false;
   double _pct = 0;
 
@@ -67,31 +68,44 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   }
 
   Future<void> _pickFiles() async {
-    final result = await FilePicker.pickFiles(
-      allowMultiple: true,
-      type: FileType.custom,
-      allowedExtensions: ['csv', 'json', 'txt'],
-      withData: true,
-    );
-    if (result == null) return;
+    if (_picking || _importing) return;
+    setState(() => _picking = true);
+    try {
+      final result = await FilePicker.pickFiles(
+        allowMultiple: true,
+        type: FileType.custom,
+        allowedExtensions: ['csv', 'json', 'txt'],
+        withData: true,
+      );
+      if (result == null || !mounted) return;
 
-    for (final f in result.files) {
-      final bytes = f.bytes;
-      if (bytes == null) {
-        _log.add('⚠️ ${f.name} : lecture impossible');
-        continue;
+      for (final f in result.files) {
+        if (!mounted) return;
+        final bytes = f.bytes;
+        if (bytes == null) {
+          _log.add('⚠️ ${f.name} : lecture impossible');
+          continue;
+        }
+        final text = utf8.decode(bytes, allowMalformed: true);
+        switch (parseFile(_parsed, text)) {
+          case BackupFileFound(:final backup):
+            await _restore(f.name, backup);
+          case EntriesAdded(:final count):
+            _log.add('✅ ${f.name} : $count entrées détectées');
+          case UnrecognizedFile():
+            _log.add('⚠️ ${f.name} : format non reconnu');
+        }
       }
-      final text = utf8.decode(bytes, allowMalformed: true);
-      switch (parseFile(_parsed, text)) {
-        case BackupFileFound(:final backup):
-          await _restore(f.name, backup);
-        case EntriesAdded(:final count):
-          _log.add('✅ ${f.name} : $count entrées détectées');
-        case UnrecognizedFile():
-          _log.add('⚠️ ${f.name} : format non reconnu');
+      if (mounted) setState(() {});
+    } catch (error, stack) {
+      debugPrint('Lecture ou restauration impossible : $error\n$stack');
+      if (mounted) {
+        setState(() => _importing = false);
+        _toast('Impossible de lire ou restaurer ce fichier. Réessaie.');
       }
+    } finally {
+      if (mounted) setState(() => _picking = false);
     }
-    if (mounted) setState(() {});
   }
 
   /// Restaure une sauvegarde. Une sauvegarde Nitrate est rétablie telle quelle ;
@@ -214,7 +228,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: ProminentGlassButton(
-                    onPressed: _importing ? null : _pickFiles,
+                    onPressed: _importing || _picking ? null : _pickFiles,
                     icon: Icons.folder_open,
                     child: const Text('Choisir les fichiers'),
                   ),

@@ -223,7 +223,7 @@ class _FilterRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-      child: Row(
+      child: Wrap(
         children: [
           for (final f in SearchFilter.values)
             Semantics(
@@ -234,7 +234,7 @@ class _FilterRow extends StatelessWidget {
                 onTap: () => onChanged(f),
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 18, top: 8, bottom: 10),
+                  padding: const EdgeInsets.only(right: 18, top: 14, bottom: 14),
                   child: Text(
                     _labels[f]!,
                     style: TextStyle(

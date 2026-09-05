@@ -53,3 +53,15 @@ contrôlée sur appareil ; ce traitement n'est pas une validation artistique.
 Pas d'abonnement Appllama ou Rive, pas de nouveau package, pas de cible web,
 pas de changement du stockage de la collection. Les tests ne remplacent pas
 la revue du cadrage, du défilement, des transitions et de la fluidité sur iPhone.
+
+## Retours TestFlight — mouvement et cohérence
+
+Le propriétaire a validé l’intention de l’intro et demandé un mouvement continu.
+L’ouverture initiale est conservée et se prolonge par une boucle d’iris de 18 s,
+avec reflet orbital et faible respiration verticale. Elle s’arrête en arrière-plan
+et en réduction des animations. Le splash natif est statique, encre et logo
+existant ; aucun délai artificiel ne retient le démarrage.
+
+La revue détaillée du code et les limites de contrôle se trouvent dans
+`revue-coherence.md`. Les petites images sont désormais exclues du fond plein
+écran selon leur résolution décodée. Le fond disparaît en allant vers À venir.

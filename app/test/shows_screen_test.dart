@@ -69,14 +69,32 @@ Future<void> _settle(WidgetTester tester) async {
 /// Client TheTVDB muet : les écrans déclenchent une synchro au montage, et son
 /// échec réseau lèverait une erreur asynchrone non gérée en plein test.
 TvdbClient _silentTvdb() => TvdbClient(
-  'test',
-  client: MockClient(
-    (_) async =>
-        http.Response('{"data":{"token":"t"},"status":"success"}', 200),
-  ),
-);
+      'test',
+      client: MockClient(
+        (_) async =>
+            http.Response('{"data":{"token":"t"},"status":"success"}', 200),
+      ),
+    );
 
 void main() {
+  testWidgets('À venir masque le fond vedette, retour À voir le rétablit',
+      (tester) async {
+    await _pump(tester);
+    double opacity() => tester
+        .widget<Opacity>(find.byKey(const ValueKey('featured-artwork-opacity')))
+        .opacity;
+    expect(opacity(), 1);
+    await tester.tap(find.text('À venir'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(opacity(), 0);
+    await tester.tap(find.text('À voir'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(opacity(), 1);
+    await _settle(tester);
+  });
+
   testWidgets('une liste vide propose d\'aller explorer', (tester) async {
     late WidgetRef captured;
     final db = AppDatabase.forTesting(NativeDatabase.memory());

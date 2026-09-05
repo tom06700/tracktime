@@ -21,14 +21,18 @@ String? preferredText(List<String?> candidates) {
 /// l'affiche prend le relais.
 String? backdropOf(Map<String, dynamic> d, {required bool movie}) {
   final wanted = movie ? 15 : 3;
-  for (final a in (d['artworks'] as List?) ?? const []) {
-    if (a is! Map) continue;
-    if (a['type'] == wanted) {
-      final url = '${a['image'] ?? ''}';
-      if (url.isNotEmpty) return url;
-    }
+  final candidates = ((d['artworks'] as List?) ?? const [])
+      .whereType<Map>()
+      .where((a) => a['type'] == wanted && '${a['image'] ?? ''}'.trim().isNotEmpty)
+      .toList();
+  double pixels(Map a) => ((a['width'] as num?) ?? 0).toDouble() *
+      ((a['height'] as num?) ?? 0).toDouble();
+  // Keep catalogue order for equal/unknown sizes; never pick another work.
+  Map? best;
+  for (final candidate in candidates) {
+    if (best == null || pixels(candidate) > pixels(best)) best = candidate;
   }
-  return null;
+  return best == null ? null : '${best['image']}';
 }
 
 /// Sociétés d'une fiche, dans l'ordre où elles méritent d'être citées.

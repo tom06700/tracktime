@@ -13,6 +13,7 @@ import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
+import '../widgets/hero_artwork.dart';
 import '../widgets/states.dart';
 
 class ShowsScreen extends ConsumerStatefulWidget {
@@ -59,11 +60,14 @@ Future<void> _markWatched(WidgetRef ref, NextUp n) => ref
     .read(databaseProvider)
     .setEpisodeWatched(n.show.id, n.season, n.episode);
 
-class _ShowsScreenState extends ConsumerState<ShowsScreen> {
+class _ShowsScreenState extends ConsumerState<ShowsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs = TabController(length: 2, vsync: this);
   bool _syncStarted = false;
   final _scroll = ValueNotifier<double>(0);
   @override
   void dispose() {
+    _tabs.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -90,54 +94,62 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
             top: 0,
             left: 0,
             right: 0,
-            child: IgnorePointer(
-              child: SizedBox(
-                height: MediaQuery.paddingOf(context).top + 590,
-                child: AnimatedBuilder(
-                  animation: _scroll,
-                  builder: (context, _) {
-                    final offset = reduceMotionOf(context)
-                        ? 0.0
-                        : _scroll.value.clamp(0.0, 500.0) * .18;
-                    return Transform.translate(
-                      offset: Offset(0, -offset),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          if (featured != null)
-                            AnimatedSwitcher(
-                              duration: motionOf(context, Motion.ambient),
-                              child: SizedBox.expand(
-                                key: ValueKey(featured.show.id),
-                                child: MediaImage(
-                                  sources: [
-                                    detail?.backdrop,
-                                    featured.still,
-                                    featured.show.poster,
+            child: AnimatedBuilder(
+              animation: _tabs.animation!,
+              builder: (context, child) => Opacity(
+                key: const ValueKey('featured-artwork-opacity'),
+                opacity: (1 - _tabs.animation!.value).clamp(0.0, 1.0),
+                child: child,
+              ),
+              child: IgnorePointer(
+                child: SizedBox(
+                  height: MediaQuery.paddingOf(context).top + 590,
+                  child: AnimatedBuilder(
+                    animation: _scroll,
+                    builder: (context, _) {
+                      final offset = reduceMotionOf(context)
+                          ? 0.0
+                          : _scroll.value.clamp(0.0, 500.0) * .18;
+                      return Transform.translate(
+                        offset: Offset(0, -offset),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            if (featured != null)
+                              AnimatedSwitcher(
+                                duration: motionOf(context, Motion.ambient),
+                                child: SizedBox.expand(
+                                  key: ValueKey(featured.show.id),
+                                  child: HeroArtwork(
+                                    sources: [
+                                      detail?.backdrop,
+                                      detail?.poster,
+                                      featured.show.poster,
+                                    ],
+                                    seed: featured.show.name,
+                                  ),
+                                ),
+                              ),
+                            const DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Color(0xA0080C0B),
+                                    Color(0x18080C0B),
+                                    Color(0xDE080C0B),
+                                    NitrateBrand.ink,
                                   ],
-                                  seed: featured.show.name,
+                                  stops: [0, .30, .76, 1],
                                 ),
                               ),
                             ),
-                          const DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Color(0xA0080C0B),
-                                  Color(0x18080C0B),
-                                  Color(0xDE080C0B),
-                                  NitrateBrand.ink,
-                                ],
-                                stops: [0, .30, .76, 1],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -168,6 +180,7 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: TabBar(
+                  controller: _tabs,
                   isScrollable: true,
                   tabAlignment: TabAlignment.start,
                   padding: const EdgeInsets.only(left: 8),
@@ -190,6 +203,7 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
               ),
               Expanded(
                 child: TabBarView(
+                  controller: _tabs,
                   children: [
                     NotificationListener<ScrollNotification>(
                       onNotification: (n) {
