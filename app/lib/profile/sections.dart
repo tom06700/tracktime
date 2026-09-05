@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../db/database.dart';
 import '../theme.dart';
+import '../brand/nitrate_brand.dart';
 import '../widgets/common.dart';
 import 'universe.dart';
 
@@ -39,12 +40,9 @@ class UniverseSectionTitle extends StatelessWidget {
               children: [
                 Text(
                   title.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 2,
-                    color: Colors.white,
-                    shadows: [Shadow(color: Color(0x99000000), blurRadius: 8)],
+                  style: NitrateBrand.display(25).copyWith(
+                    letterSpacing: .4,
+                    height: 1.15,
                   ),
                 ),
                 if (subtitle != null) ...[
@@ -488,7 +486,7 @@ class _MarqueeCarouselState extends State<MarqueeCarousel> {
                 current.isDone
                     ? 'Terminée · ${current.watchedCount} ép.'
                     : '${(current.progress * 100).round()} % · '
-                          '${current.watchedCount} ép. vus',
+                        '${current.watchedCount} ép. vus',
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
@@ -727,8 +725,8 @@ class SeriesPosterTile extends StatelessWidget {
 
 /// Dégradé de repli (stable par titre) quand il n'y a pas d'affiche.
 Widget _posterFallback(String name, {double iconSize = 26}) {
-  final hue = (name.codeUnits.fold<int>(0, (a, c) => a * 31 + c) % 360)
-      .toDouble();
+  final hue =
+      (name.codeUnits.fold<int>(0, (a, c) => a * 31 + c) % 360).toDouble();
   return DecoratedBox(
     decoration: BoxDecoration(
       gradient: LinearGradient(
@@ -904,10 +902,9 @@ class _ActivityHeatmapState extends State<ActivityHeatmap> {
       child: LayoutBuilder(
         builder: (context, c) {
           const gap = 4.0;
-          final cell =
-              ((c.maxWidth - gap * (ActivityHeatmap.weeks - 1)) /
-                      ActivityHeatmap.weeks)
-                  .clamp(8.0, 18.0);
+          final cell = ((c.maxWidth - gap * (ActivityHeatmap.weeks - 1)) /
+                  ActivityHeatmap.weeks)
+              .clamp(8.0, 18.0);
           final height = cell * 7 + gap * 6;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1373,9 +1370,8 @@ class _WatchTile extends StatelessWidget {
                   width: 104,
                   child: PosterBox(
                     posterPath: item.poster,
-                    fallbackIcon: item.isMovie
-                        ? Icons.movie_outlined
-                        : Icons.tv,
+                    fallbackIcon:
+                        item.isMovie ? Icons.movie_outlined : Icons.tv,
                     label: item.title,
                   ),
                 ),

@@ -8,9 +8,11 @@ import 'package:go_router/go_router.dart';
 import '../profile/sections.dart' show watchlistItems;
 import '../profile/tonight.dart';
 import '../motion.dart';
+import '../brand/nitrate_brand.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
+import '../widgets/editorial_heading.dart';
 import '../tmdb/add.dart';
 import '../tmdb/search_result.dart';
 import '../tmdb/tvdb.dart';
@@ -262,6 +264,11 @@ class _Discovery extends ConsumerWidget {
     return ListView(
       padding: EdgeInsets.only(top: 4, bottom: bottomNavInset(context)),
       children: [
+        const EditorialHeading(
+          eyebrow: 'Le prochain coup de cœur',
+          title: 'Laisse-toi surprendre.',
+          description: 'Des histoires à découvrir, une collection à inventer.',
+        ),
         const _TonightCard(),
         _DiscoveryRow(
           title: 'Séries populaires',
@@ -400,15 +407,11 @@ class _DiscoveryRow extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
           child: Text(
             title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: TtColors.text,
-            ),
+            style: NitrateBrand.display(28),
           ),
         ),
         SizedBox(
-          height: 254,
+          height: 254 + (MediaQuery.textScalerOf(context).scale(32) - 32),
           child: async.when(
             loading: () => ListView.separated(
               scrollDirection: Axis.horizontal,

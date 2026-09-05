@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../db/database.dart';
 import '../providers.dart';
 import '../theme.dart';
+import '../widgets/editorial_heading.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
 import '../widgets/skeleton.dart';
@@ -68,15 +69,18 @@ class MovieHistoryScreen extends ConsumerWidget {
             return const EmptyPrompt(
               icon: Icons.check_circle_outline,
               title: 'Aucun film vu pour l\'instant',
-              message:
-                  'Les films que tu marques comme vus '
+              message: 'Les films que tu marques comme vus '
                   'apparaîtront ici.',
             );
           }
           return ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: feed.history.length,
-            itemBuilder: (context, i) => _WatchedRow(movie: feed.history[i]),
+            itemCount: feed.history.length + 1,
+            itemBuilder: (context, i) => i == 0
+                ? EditorialHeading(
+                    eyebrow: '${feed.history.length} films vus',
+                    title: 'Après le générique.')
+                : _WatchedRow(movie: feed.history[i - 1]),
           );
         },
       ),
@@ -112,7 +116,7 @@ class _WatchedRow extends ConsumerWidget {
       child: InkWell(
         onTap: () => context.push('/movie/${movie.id}', extra: movie.title),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 7, 8, 7),
+          padding: const EdgeInsets.fromLTRB(24, 12, 16, 12),
           child: Row(
             children: [
               ClipRRect(

@@ -8,6 +8,7 @@ import '../build_info.dart';
 import '../db/database.dart';
 import '../providers.dart';
 import '../theme.dart';
+import '../widgets/editorial_heading.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key, this.exportData = exportBackup});
@@ -77,6 +78,12 @@ class SettingsScreen extends ConsumerWidget {
           MediaQuery.paddingOf(context).bottom + 16,
         ),
         children: [
+          const EditorialHeading(
+            eyebrow: 'À ta façon',
+            title: 'Ta collection t’appartient.',
+            description:
+                'Garde une copie de tes souvenirs de cinéma, ou retrouve ton historique.',
+          ),
           // Sauvegarder, puis restaurer, puis effacer : l'ordre du parcours.
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 8, 20, 4),

@@ -1,5 +1,11 @@
 # Native Flutter design QA — Nitrate
 
+> Revue historique, antérieure à la refonte de septembre 2026. Le verdict
+> ci-dessous ne valide ni la nouvelle branche ni le niveau artistique demandé.
+> Nouvelle intro, accueil et composants : validation iPhone à effectuer par le
+> propriétaire après livraison du lot. Aucun nouveau rendu natif inspecté ici.
+
+
 Source visual truth: selected first image, `exec-f3a6a009-8547-4537-bfcf-fe004fd132ce.png` (854 × 1844).
 Implementation: GitHub Actions native Flutter widget captures, 390 × 844 logical pixels, 780 × 1688 PNG; device padding top 59 / bottom 34 logical pixels. Both images are normalized to 390 × 844 for comparisons. The source omits system safe areas; these remain respected in the app.
 State: dark home, Severance S02 E03, queued shows below. Catalogue posters and number of queued shows follow real fixture data; the mock contains different works. No claim of a pixel-identical poster collage.

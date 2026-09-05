@@ -5,6 +5,7 @@ import '../db/database.dart';
 import '../profile/sections.dart';
 import '../providers.dart';
 import '../theme.dart';
+import '../widgets/editorial_heading.dart';
 import '../widgets/states.dart';
 import 'package:go_router/go_router.dart';
 
@@ -53,7 +54,7 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
     final shows = async.value!;
     final lastActivity =
         ref.watch(universeProvider).value?.lastActivityByShow ??
-        const <int, DateTime>{};
+            const <int, DateTime>{};
 
     // Genres disponibles, fréquence décroissante.
     final freq = <String, int>{};
@@ -73,6 +74,10 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(0, 4, 0, 28),
         children: [
+          EditorialHeading(
+            eyebrow: '${shows.length} séries dans ta collection',
+            title: 'Les histoires que tu suis.',
+          ),
           // ── Recherche ──
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -216,15 +221,13 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
               icon: shows.isEmpty
                   ? Icons.video_library_outlined
                   : Icons.search_off,
-              title: shows.isEmpty
-                  ? 'Ta bibliothèque est vide'
-                  : 'Aucun résultat',
+              title:
+                  shows.isEmpty ? 'Ta bibliothèque est vide' : 'Aucun résultat',
               message: shows.isEmpty
                   ? 'Explore le catalogue pour ajouter ta première série.'
                   : 'Essaie un autre titre ou retire les filtres.',
-              actionLabel: shows.isEmpty
-                  ? 'Explorer les séries'
-                  : 'Effacer les filtres',
+              actionLabel:
+                  shows.isEmpty ? 'Explorer les séries' : 'Effacer les filtres',
               onAction: () {
                 if (shows.isEmpty) {
                   ref.read(homeTabProvider.notifier).select(HomeTab.explorer);
