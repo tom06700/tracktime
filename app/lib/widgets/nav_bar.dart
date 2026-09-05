@@ -13,12 +13,7 @@ class NavItem {
   final String label;
 }
 
-/// Navigation principale : un socle sobre ancré au bas de l'écran.
-///
-/// Pas de capsule flottante, pas d'ombre portée, pas d'arête lumineuse — la
-/// barre se lit comme la navigation du système plutôt que comme un widget
-/// décoratif posé par-dessus. Le contenu défile derrière un fond assombri et
-/// flouté, séparé par un simple filet.
+/// Navigation flottante en verre fumé, avec un fond opaque en contraste élevé.
 class NitrateNavBar extends StatelessWidget {
   const NitrateNavBar({
     super.key,
@@ -52,7 +47,7 @@ class NitrateNavBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: SizedBox(
-          height: _height,
+          height: _height + (MediaQuery.textScalerOf(context).scale(11) - 11).clamp(0.0, 22.0),
           child: Row(
             children: [
               for (var i = 0; i < items.length; i++)
@@ -83,8 +78,7 @@ class NitrateNavBar extends StatelessWidget {
   }
 }
 
-/// Un onglet. L'état actif ne tient qu'à la couleur — icône et libellé
-/// passent en ambre — sans capsule, bordure, halo ni agrandissement.
+/// Onglet actif en ivoire, signalé aussi par un repère sous son libellé.
 class _NavTab extends StatelessWidget {
   const _NavTab({
     required this.item,
@@ -129,6 +123,8 @@ class _NavTab extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,

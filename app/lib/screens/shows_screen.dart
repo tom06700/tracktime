@@ -621,8 +621,7 @@ class _CinemaEmpty extends StatelessWidget {
       Padding(padding: const EdgeInsets.symmetric(horizontal: 28), child: Column(children: [
         Text('Ta liste est vide', textAlign: TextAlign.center, style: NitrateBrand.display(42)),
         const SizedBox(height: 12),
-        const Text('Les histoires restent.
-Retrouve ici celles que tu veux suivre.', textAlign: TextAlign.center,
+        const Text('Les histoires restent.\nRetrouve ici celles que tu veux suivre.', textAlign: TextAlign.center,
           style: TextStyle(fontSize: 15, height: 1.5, color: TtColors.dim)),
         const SizedBox(height: 24),
         FilledButton.icon(onPressed: onExplore, icon: const Icon(Icons.add), label: const Text('Explorer les séries'),
