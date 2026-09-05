@@ -6,8 +6,12 @@ abstract final class NitrateBrand {
   static const ivory = Color(0xFFF3E7CF);
   static const displayFamily = 'CormorantGaramond';
   static TextStyle display(double size) => TextStyle(
-    fontFamily: displayFamily, fontSize: size, height: .98,
-    fontWeight: FontWeight.w500, letterSpacing: -1.6, color: ivory,
+    fontFamily: displayFamily,
+    fontSize: size,
+    height: .98,
+    fontWeight: FontWeight.w500,
+    letterSpacing: -1.6,
+    color: ivory,
   );
 }
 
@@ -16,7 +20,10 @@ class NitrateWordmark extends StatelessWidget {
   final double size;
   @override
   Widget build(BuildContext context) => Semantics(
-    label: 'Nitrate', image: true,
-    child: ExcludeSemantics(child: Text('Nitrate', style: NitrateBrand.display(size))),
+    label: 'Nitrate',
+    image: true,
+    child: ExcludeSemantics(
+      child: Text('Nitrate', style: NitrateBrand.display(size)),
+    ),
   );
 }

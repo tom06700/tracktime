@@ -83,10 +83,19 @@ class MediaImage extends StatelessWidget {
         );
       },
       errorBuilder: (_, _, _) {
-        final alternatives = sources.map(absoluteArtwork).whereType<String>().toSet().toList();
+        final alternatives = sources
+            .map(absoluteArtwork)
+            .whereType<String>()
+            .toSet()
+            .toList();
         alternatives.remove(url);
         if (alternatives.isEmpty) return _fallback;
-        return MediaImage(sources: alternatives, seed: seed, fit: fit, icon: icon);
+        return MediaImage(
+          sources: alternatives,
+          seed: seed,
+          fit: fit,
+          icon: icon,
+        );
       },
     );
   }

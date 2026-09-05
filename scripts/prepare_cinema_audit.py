@@ -1,7 +1,7 @@
 """Fetch catalogue artwork for the opt-in visual audit only; never user data.
 The standard test suite remains offline. No token or key is persisted.
 """
-import json,re,urllib.request,urllib.parse
+import json,re,urllib.request,urllib.parse,difflib
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 out=root/'app/test/fixtures/cinema';out.mkdir(parents=True,exist_ok=True)
@@ -31,7 +31,13 @@ for alias,title,year in [(1406,'Dune','2021'),(496243,'Parasite','2019'),(27205,
   req=urllib.request.Request('https://api4.thetvdb.com/v4/search?'+query,headers={'Authorization':'Bearer '+token})
   with urllib.request.urlopen(req,timeout=30) as r:hits=json.load(r)['data']
  if not hits:raise ValueError('No catalogue match for '+title)
- hit=next((h for h in hits if str(h.get('year'))==year),hits[0])
+ def score(h):
+  names=[h.get('name',''),*(h.get('translations') or {}).values(),*(h.get('aliases') or [])]
+  norm=lambda v:re.sub(r'[^a-z0-9]','',str(v).lower())
+  similarity=max(difflib.SequenceMatcher(None,norm(title),norm(n)).ratio() for n in names)
+  return similarity+(0.08 if str(h.get('year'))==year else 0)
+ hit=max(hits,key=score)
+ if score(hit)<0.95:raise ValueError('Ambiguous catalogue match for '+title)
  print('Artwork:',title,'->',hit.get('name'),hit.get('year'),flush=True)
  url=hit.get('image_url') or hit.get('thumbnail')
  with urllib.request.urlopen(url,timeout=30) as r:content=r.read()

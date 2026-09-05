@@ -42,12 +42,20 @@ class NitrateNavBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: TtColors.bg.withValues(alpha: opaque ? 1 : 0.82),
         borderRadius: BorderRadius.circular(34),
-        border: Border.all(color: Colors.white.withValues(alpha: .12), width: .7),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: .12),
+          width: .7,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: SizedBox(
-          height: _height + (MediaQuery.textScalerOf(context).scale(11) - 11).clamp(0.0, 22.0),
+          height:
+              _height +
+              (MediaQuery.textScalerOf(context).scale(11) - 11).clamp(
+                0.0,
+                22.0,
+              ),
           child: Row(
             children: [
               for (var i = 0; i < items.length; i++)
@@ -70,11 +78,19 @@ class NitrateNavBar extends StatelessWidget {
       ),
     );
 
-    final glass = opaque ? bar : ClipRRect(
-      borderRadius: BorderRadius.circular(34),
-      child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: bar),
+    final glass = opaque
+        ? bar
+        : ClipRRect(
+            borderRadius: BorderRadius.circular(34),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: bar,
+            ),
+          );
+    return Padding(
+      padding: EdgeInsets.fromLTRB(14, 8, 14, bottomSafe + 8),
+      child: glass,
     );
-    return Padding(padding: EdgeInsets.fromLTRB(14, 8, 14, bottomSafe + 8), child: glass);
   }
 }
 
@@ -133,10 +149,17 @@ class _NavTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                AnimatedContainer(duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
-                  height: 3, width: selected ? 12 : 3,
-                  decoration: BoxDecoration(color: selected ? NitrateBrand.ivory : Colors.transparent,
-                    borderRadius: BorderRadius.circular(4))),
+                AnimatedContainer(
+                  duration: reduceMotion
+                      ? Duration.zero
+                      : const Duration(milliseconds: 180),
+                  height: 3,
+                  width: selected ? 12 : 3,
+                  decoration: BoxDecoration(
+                    color: selected ? NitrateBrand.ivory : Colors.transparent,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
               ],
             ),
           ),

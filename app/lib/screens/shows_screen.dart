@@ -63,7 +63,10 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
   bool _syncStarted = false;
   final _scroll = ValueNotifier<double>(0);
   @override
-  void dispose() { _scroll.dispose(); super.dispose(); }
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,56 +79,137 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
     final feed = ref.watch(seriesFeedProvider).value;
     final queue = [...?feed?.toWatch, ...?feed?.stale];
     final featured = queue.isEmpty ? null : queue.first;
-    final detail = featured == null ? null : ref.watch(seriesDetailProvider(featured.show.id)).value;
+    final detail = featured == null
+        ? null
+        : ref.watch(seriesDetailProvider(featured.show.id)).value;
     return DefaultTabController(
       length: 2,
-      child: Stack(children: [
-        Positioned(top: 0, left: 0, right: 0,
-          child: IgnorePointer(child: SizedBox(
-            height: MediaQuery.paddingOf(context).top + 540,
-            child: AnimatedBuilder(animation: _scroll, builder: (context, _) {
-              final offset = reduceMotionOf(context) ? 0.0 : _scroll.value.clamp(0.0, 500.0) * .18;
-              return Transform.translate(offset: Offset(0, -offset), child: Stack(fit: StackFit.expand, children: [
-                if (featured != null)
-                  AnimatedSwitcher(duration: motionOf(context, Motion.ambient),
-                    child: SizedBox.expand(key: ValueKey(featured.show.id), child: MediaImage(
-                      sources: [detail?.backdrop, featured.still, featured.show.poster], seed: featured.show.name))),
-                const DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(
-                  begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                  colors: [Color(0xB3080C0B), Color(0x55080C0B), Color(0xDD080C0B), NitrateBrand.ink],
-                  stops: [0, .28, .72, 1]))),
-              ]));
-            }),
-          ))),
-        Column(children: [
-          SafeArea(bottom: false, child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 16, 4),
-            child: Row(children: [
-              const Expanded(child: NitrateWordmark()),
-              IconButton(tooltip: 'Mes séries', onPressed: () => context.push('/series'),
-                icon: const Icon(Icons.video_library_outlined)),
-              IconButton(tooltip: 'Réglages', onPressed: () => context.push('/settings'),
-                icon: const Icon(Icons.settings_outlined, size: 21)),
-            ]),
-          )),
-          Align(alignment: Alignment.centerLeft, child: TabBar(
-            isScrollable: true, tabAlignment: TabAlignment.start,
-            padding: const EdgeInsets.only(left: 8), labelPadding: const EdgeInsets.symmetric(horizontal: 16),
-            labelColor: NitrateBrand.ivory, unselectedLabelColor: TtColors.dim,
-            indicatorColor: NitrateBrand.ivory, indicatorWeight: 3,
-            indicatorSize: TabBarIndicatorSize.label, dividerColor: Colors.transparent,
-            labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-            tabs: const [Tab(text: 'À voir'), Tab(text: 'À venir')],
-          )),
-          Expanded(child: TabBarView(children: [
-            NotificationListener<ScrollNotification>(onNotification: (n) {
-              if (n.depth == 0 && n.metrics.axis == Axis.vertical) _scroll.value = n.metrics.pixels;
-              return false;
-            }, child: const _ToWatchTab()),
-            const ColoredBox(color: NitrateBrand.ink, child: _UpcomingTab()),
-          ])),
-        ]),
-      ]),
+      child: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: SizedBox(
+                height: MediaQuery.paddingOf(context).top + 540,
+                child: AnimatedBuilder(
+                  animation: _scroll,
+                  builder: (context, _) {
+                    final offset = reduceMotionOf(context)
+                        ? 0.0
+                        : _scroll.value.clamp(0.0, 500.0) * .18;
+                    return Transform.translate(
+                      offset: Offset(0, -offset),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (featured != null)
+                            AnimatedSwitcher(
+                              duration: motionOf(context, Motion.ambient),
+                              child: SizedBox.expand(
+                                key: ValueKey(featured.show.id),
+                                child: MediaImage(
+                                  sources: [
+                                    detail?.backdrop,
+                                    featured.still,
+                                    featured.show.poster,
+                                  ],
+                                  seed: featured.show.name,
+                                ),
+                              ),
+                            ),
+                          const DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Color(0xC0080C0B),
+                                  Color(0xC0080C0B),
+                                  Color(0xDD080C0B),
+                                  NitrateBrand.ink,
+                                ],
+                                stops: [0, .28, .72, 1],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+          Column(
+            children: [
+              SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 16, 4),
+                  child: Row(
+                    children: [
+                      const Expanded(child: NitrateWordmark()),
+                      IconButton(
+                        tooltip: 'Mes séries',
+                        onPressed: () => context.push('/series'),
+                        icon: const Icon(Icons.video_library_outlined),
+                      ),
+                      IconButton(
+                        tooltip: 'Réglages',
+                        onPressed: () => context.push('/settings'),
+                        icon: const Icon(Icons.settings_outlined, size: 21),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TabBar(
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  padding: const EdgeInsets.only(left: 8),
+                  labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  labelColor: NitrateBrand.ivory,
+                  unselectedLabelColor: TtColors.dim,
+                  indicatorColor: NitrateBrand.ivory,
+                  indicatorWeight: 3,
+                  indicatorSize: TabBarIndicatorSize.label,
+                  dividerColor: Colors.transparent,
+                  labelStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  tabs: const [
+                    Tab(text: 'À voir'),
+                    Tab(text: 'À venir'),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    NotificationListener<ScrollNotification>(
+                      onNotification: (n) {
+                        if (n.depth == 0 && n.metrics.axis == Axis.vertical)
+                          _scroll.value = n.metrics.pixels;
+                        return false;
+                      },
+                      child: const _ToWatchTab(),
+                    ),
+                    const ColoredBox(
+                      color: NitrateBrand.ink,
+                      child: _UpcomingTab(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -165,8 +249,10 @@ class _ToWatchTab extends ConsumerWidget {
               onAction: () => context.push('/series'),
             );
           }
-          return _CinemaEmpty(onExplore: () =>
-            ref.read(homeTabProvider.notifier).select(HomeTab.explorer));
+          return _CinemaEmpty(
+            onExplore: () =>
+                ref.read(homeTabProvider.notifier).select(HomeTab.explorer),
+          );
         }
         return _ToWatchFeed(feed: feed);
       },
@@ -206,9 +292,7 @@ class _ToWatchFeed extends ConsumerWidget {
             ),
           if (next.isNotEmpty) ...[
             const SizedBox(height: 30),
-            const _SectionHeader(
-              'Dans ta liste',
-            ),
+            const _SectionHeader('Dans ta liste'),
             _Carousel(
               height: 205 + (MediaQuery.textScalerOf(context).scale(30) - 30),
               itemCount: next.length,
@@ -284,7 +368,6 @@ class _SectionHeader extends StatelessWidget {
                     color: TtColors.text,
                   ),
                 ),
-
               ],
             ),
           ),
@@ -580,22 +663,44 @@ class _DayCounter extends StatelessWidget {
   }
 }
 
-
 class _QueuePoster extends StatelessWidget {
   const _QueuePoster({required this.next, required this.onTap});
   final NextUp next;
   final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => SizedBox(width: 112, child: Semantics(
-    button: true, label: '${next.show.name}, ${next.code}',
-    child: GestureDetector(onTap: onTap, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      ClipRRect(borderRadius: BorderRadius.circular(9), child: SizedBox(height: 164, width: 112,
-        child: MediaImage(sources: [next.show.poster, next.still], seed: next.show.name))),
-      const SizedBox(height: 8),
-      Text(next.show.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-    ])),
-  ));
+  Widget build(BuildContext context) => SizedBox(
+    width: 112,
+    child: Semantics(
+      button: true,
+      label: '${next.show.name}, ${next.code}',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(9),
+              child: SizedBox(
+                height: 164,
+                width: 112,
+                child: MediaImage(
+                  sources: [next.show.poster, next.still],
+                  seed: next.show.name,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              next.show.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _CinemaEmpty extends StatelessWidget {
@@ -604,19 +709,52 @@ class _CinemaEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
     padding: EdgeInsets.only(bottom: bottomNavInset(context)),
-    child: Column(children: [
-      SizedBox(height: 290, width: double.infinity,
-        child: Image.asset('assets/images/empty_cinema.webp', fit: BoxFit.cover, alignment: Alignment.topCenter)),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 28), child: Column(children: [
-        Text('Ta liste est vide', textAlign: TextAlign.center, style: NitrateBrand.display(42)),
-        const SizedBox(height: 12),
-        const Text('Les histoires restent.\nRetrouve ici celles que tu veux suivre.', textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15, height: 1.5, color: TtColors.dim)),
-        const SizedBox(height: 24),
-        FilledButton.icon(onPressed: onExplore, icon: const Icon(Icons.add), label: const Text('Explorer les séries'),
-          style: FilledButton.styleFrom(backgroundColor: NitrateBrand.ivory, foregroundColor: NitrateBrand.ink,
-            minimumSize: const Size(double.infinity, 50), shape: const StadiumBorder())),
-      ])),
-    ]),
+    child: Column(
+      children: [
+        SizedBox(
+          height: 290,
+          width: double.infinity,
+          child: Image.asset(
+            'assets/images/empty_cinema.webp',
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Column(
+            children: [
+              Text(
+                'Ta liste est vide',
+                textAlign: TextAlign.center,
+                style: NitrateBrand.display(42),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Les histoires restent.\nRetrouve ici celles que tu veux suivre.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 1.5,
+                  color: TtColors.dim,
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: onExplore,
+                icon: const Icon(Icons.add),
+                label: const Text('Explorer les séries'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: NitrateBrand.ivory,
+                  foregroundColor: NitrateBrand.ink,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: const StadiumBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
   );
 }

@@ -71,7 +71,8 @@ Future<void> _settle(WidgetTester tester) async {
 TvdbClient _silentTvdb() => TvdbClient(
   'test',
   client: MockClient(
-    (_) async => http.Response('{"data":{"token":"t"},"status":"success"}', 200),
+    (_) async =>
+        http.Response('{"data":{"token":"t"},"status":"success"}', 200),
   ),
 );
 
@@ -112,7 +113,9 @@ void main() {
     await _settle(tester);
   });
 
-  testWidgets('accueil lisible sur petit écran avec texte agrandi', (tester) async {
+  testWidgets('accueil lisible sur petit écran avec texte agrandi', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(320, 700);
     tester.view.devicePixelRatio = 1;
     tester.platformDispatcher.textScaleFactorTestValue = 2;
@@ -200,21 +203,12 @@ void main() {
   });
 
   group('groupUpcoming', () {
-    UpcomingEpisode ep(Show show, DateTime air) => UpcomingEpisode(
-      show: show,
-      season: 1,
-      episode: 1,
-      airDate: air,
-    );
+    UpcomingEpisode ep(Show show, DateTime air) =>
+        UpcomingEpisode(show: show, season: 1, episode: 1, airDate: air);
 
     test('répartit par proximité et omet les tranches vides', () {
       final now = DateTime(2026, 5, 10, 12);
-      final show = Show(
-        id: 1,
-        name: 'X',
-        runtime: 42,
-        addedAt: now,
-      );
+      final show = Show(id: 1, name: 'X', runtime: 42, addedAt: now);
 
       final groups = groupUpcoming([
         ep(show, DateTime(2026, 5, 10, 21)),

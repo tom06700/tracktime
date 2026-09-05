@@ -36,7 +36,8 @@ import 'package:tracktime/settings/prefs.dart';
 import 'package:tracktime/tmdb/tvdb.dart';
 
 final _out = Platform.environment['NITRATE_AUDIT_OUT'] ?? 'build/audit';
-final _fonts = Platform.environment['NITRATE_AUDIT_FONTS'] ??
+final _fonts =
+    Platform.environment['NITRATE_AUDIT_FONTS'] ??
     '${Platform.environment['HOME']}/flutter/bin/cache/artifacts/material_fonts';
 
 // ─────────────────────────────── Polices ────────────────────────────────
@@ -53,7 +54,12 @@ Future<void> _loadFonts() async {
   final icons = FontLoader('MaterialIcons')
     ..addFont(bytes('MaterialIcons-Regular.otf'));
   await icons.load();
-  final editorial = FontLoader('CormorantGaramond')..addFont(File('assets/fonts/CormorantGaramond.ttf').readAsBytes().then(ByteData.sublistView));
+  final editorial = FontLoader('CormorantGaramond')
+    ..addFont(
+      File(
+        'assets/fonts/CormorantGaramond.ttf',
+      ).readAsBytes().then(ByteData.sublistView),
+    );
   await editorial.load();
 }
 
@@ -128,7 +134,10 @@ class _Response extends Stream<List<int>> implements HttpClientResponse {
 Uint8List _fixtureBytes(Uri url) {
   final name = url.path;
   if (name.contains('371980')) {
-    return _pngs[name.contains('backdrop') ? 'severance-backdrop' : 'severance'] ?? _pngs['audit']!;
+    return _pngs[name.contains('backdrop')
+            ? 'severance-backdrop'
+            : 'severance'] ??
+        _pngs['audit']!;
   }
   if (name.contains('81797')) return _pngs['one-piece'] ?? _pngs['audit']!;
   if (name.contains('392256')) return _pngs['last-of-us'] ?? _pngs['audit']!;
@@ -142,8 +151,7 @@ class _Request implements HttpClientRequest {
   @override
   HttpHeaders get headers => _Headers();
   @override
-  Future<HttpClientResponse> close() async =>
-      _Response(_fixtureBytes(url));
+  Future<HttpClientResponse> close() async => _Response(_fixtureBytes(url));
   @override
   dynamic noSuchMethod(Invocation i) => null;
 }
@@ -270,7 +278,12 @@ TvdbClient _tvdb() => TvdbClient(
           },
         ],
         'artworks': [
-          {'type': 3, 'image': p.contains('/371980/') ? 'https://img.test/backdrop-371980.jpg' : 'https://img.test/backdrop-81797.jpg'},
+          {
+            'type': 3,
+            'image': p.contains('/371980/')
+                ? 'https://img.test/backdrop-371980.jpg'
+                : 'https://img.test/backdrop-81797.jpg',
+          },
         ],
       });
     }
@@ -295,7 +308,8 @@ TvdbClient _tvdb() => TvdbClient(
                 'number': e,
                 'name': 'Épisode $e de la saison $s',
                 'overview': 'Résumé.',
-                'image': 'https://img.test/still-${p.contains('/371980/') ? 371980 : 81797}-$s-$e.jpg',
+                'image':
+                    'https://img.test/still-${p.contains('/371980/') ? 371980 : 81797}-$s-$e.jpg',
                 'aired': '2026-0$s-${e.toString().padLeft(2, '0')}',
               },
         ],
@@ -483,7 +497,19 @@ void main() {
       // Decode fixture art outside the fake-async zone before image requests.
       await tester.runAsync(() => _pngFor('audit'));
       await tester.runAsync(() async {
-        for (final name in ['severance', 'severance-backdrop', 'one-piece', 'last-of-us', 'movie-1406', 'movie-496243', 'movie-27205', 'movie-157336', 'movie-603', 'movie-872585', 'movie-1']) {
+        for (final name in [
+          'severance',
+          'severance-backdrop',
+          'one-piece',
+          'last-of-us',
+          'movie-1406',
+          'movie-496243',
+          'movie-27205',
+          'movie-157336',
+          'movie-603',
+          'movie-872585',
+          'movie-1',
+        ]) {
           final file = File('test/fixtures/cinema/$name.jpg');
           if (file.existsSync()) _pngs[name] = await file.readAsBytes();
         }
@@ -520,7 +546,12 @@ void main() {
 
       // Keep the chosen reference's series featured with deterministic activity.
       await db.setEpisodeUnwatched(371980, 2, 2);
-      await db.setEpisodeWatched(371980, 2, 2, at: DateTime.now().add(const Duration(seconds: 1)));
+      await db.setEpisodeWatched(
+        371980,
+        2,
+        2,
+        at: DateTime.now().add(const Duration(seconds: 1)),
+      );
       await _settleReal(tester, 900);
       await _shot(tester, '01-series');
       if (Platform.environment['NITRATE_MOTION'] == '1') {
@@ -532,10 +563,16 @@ void main() {
           _readableFonts(_boundary.currentContext!.findRenderObject()!);
           await tester.pump();
           await tester.runAsync(() async {
-            final ro = _boundary.currentContext!.findRenderObject() as RenderRepaintBoundary;
+            final ro =
+                _boundary.currentContext!.findRenderObject()
+                    as RenderRepaintBoundary;
             final image = await ro.toImage(pixelRatio: 2);
-            final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-            await File('$_out/motion/${frame.toString().padLeft(3, '0')}.png').writeAsBytes(bytes!.buffer.asUint8List());
+            final bytes = await image.toByteData(
+              format: ui.ImageByteFormat.png,
+            );
+            await File(
+              '$_out/motion/${frame.toString().padLeft(3, '0')}.png',
+            ).writeAsBytes(bytes!.buffer.asUint8List());
             image.dispose();
           });
         }

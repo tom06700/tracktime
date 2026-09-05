@@ -56,13 +56,19 @@ final router = GoRouter(
           barrierColor: Colors.black.withValues(alpha: 0.55),
           transitionDuration: const Duration(milliseconds: 320),
           reverseTransitionDuration: const Duration(milliseconds: 260),
-          transitionsBuilder: (context, anim, _, child) => reduceMotionOf(context) ? child : SlideTransition(
-            position: Tween(begin: const Offset(0, 1), end: Offset.zero)
-                .animate(
-                  CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
+          transitionsBuilder: (context, anim, _, child) =>
+              reduceMotionOf(context)
+              ? child
+              : SlideTransition(
+                  position: Tween(begin: const Offset(0, 1), end: Offset.zero)
+                      .animate(
+                        CurvedAnimation(
+                          parent: anim,
+                          curve: Curves.easeOutCubic,
+                        ),
+                      ),
+                  child: child,
                 ),
-            child: child,
-          ),
           child: EpisodeSheet(
             showId: int.parse(p['showId']!),
             season: int.parse(p['season']!),
