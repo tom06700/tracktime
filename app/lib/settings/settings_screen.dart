@@ -18,8 +18,9 @@ class SettingsScreen extends ConsumerWidget {
 
   Future<void> _open(BuildContext context, String url) async {
     try {
-      if (await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication))
+      if (await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication)) {
         return;
+      }
     } catch (e) {
       debugPrint('Lien externe indisponible : $e');
     }

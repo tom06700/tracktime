@@ -50,12 +50,6 @@ Future<void> _loadFonts() async {
     ..addFont(bytes('Roboto-Bold.ttf'))
     ..addFont(bytes('Roboto-Black.ttf'));
   await roboto.load();
-  // Flutter widget tests use Ahem as their default font. Render that
-  // family with readable glyphs as well, including explicit TextStyles.
-  final fallback = FontLoader('Ahem')
-    ..addFont(bytes('Roboto-Regular.ttf'))
-    ..addFont(bytes('Roboto-Bold.ttf'));
-  await fallback.load();
   final icons = FontLoader('MaterialIcons')
     ..addFont(bytes('MaterialIcons-Regular.otf'));
   await icons.load();
@@ -431,10 +425,34 @@ Future<void> _settleReal(WidgetTester tester, [int ms = 350]) async {
   }
 }
 
+// A TextStyle without a family uses the engine's test font, even after
+// Roboto is loaded. Resolve only that default on render paragraphs; keep
+// explicit icon fonts. Production uses the platform font automatically.
+InlineSpan _readableSpan(InlineSpan span) {
+  if (span is! TextSpan) return span;
+  final style = span.style ?? const TextStyle();
+  return TextSpan(
+    text: span.text,
+    style: style.fontFamily == null || style.fontFamily == 'Ahem'
+        ? style.copyWith(fontFamily: 'Roboto')
+        : style,
+    children: span.children?.map(_readableSpan).toList(),
+    recognizer: span.recognizer,
+    semanticsLabel: span.semanticsLabel,
+  );
+}
+
+void _readableFonts(RenderObject object) {
+  if (object is RenderParagraph) object.text = _readableSpan(object.text);
+  object.visitChildren(_readableFonts);
+}
+
 Future<void> _shot(WidgetTester tester, String name) async {
   // ignore: avoid_print
   print("[shot] $name");
   await _settleReal(tester);
+  _readableFonts(_boundary.currentContext!.findRenderObject()!);
+  await tester.pump();
   final e = tester.takeException();
   if (e != null) _issues.add('$name : $e');
   await tester.runAsync(() async {
