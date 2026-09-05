@@ -50,6 +50,12 @@ Future<void> _loadFonts() async {
     ..addFont(bytes('Roboto-Bold.ttf'))
     ..addFont(bytes('Roboto-Black.ttf'));
   await roboto.load();
+  // Flutter widget tests use Ahem as their default font. Render that
+  // family with readable glyphs as well, including explicit TextStyles.
+  final fallback = FontLoader('Ahem')
+    ..addFont(bytes('Roboto-Regular.ttf'))
+    ..addFont(bytes('Roboto-Bold.ttf'));
+  await fallback.load();
   final icons = FontLoader('MaterialIcons')
     ..addFont(bytes('MaterialIcons-Regular.otf'));
   await icons.load();

@@ -28,7 +28,10 @@ ThemeData buildTheme() {
   );
 
   return base.copyWith(
-    dividerTheme: const DividerThemeData(color: TtColors.surfaceHi, thickness: 1),
+    dividerTheme: const DividerThemeData(
+      color: TtColors.surfaceHi,
+      thickness: 1,
+    ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: TtColors.surface,
@@ -70,13 +73,12 @@ ThemeData buildTheme() {
       }),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
-        return IconThemeData(
-          color: selected ? TtColors.amber : TtColors.dim,
-        );
+        return IconThemeData(color: selected ? TtColors.amber : TtColors.dim);
       }),
     ),
-    progressIndicatorTheme:
-        const ProgressIndicatorThemeData(color: TtColors.amber),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: TtColors.amber,
+    ),
     // Boutons standards restants (dialogues) : coins arrondis cohérents avec
     // le système « verre ». Les actions principales utilisent GlassButton /
     // ProminentGlassButton (lib/widgets/glass.dart).
@@ -85,9 +87,7 @@ ThemeData buildTheme() {
         backgroundColor: TtColors.amber,
         foregroundColor: const Color(0xFF131313),
         textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(

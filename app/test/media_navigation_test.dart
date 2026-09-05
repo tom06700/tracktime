@@ -20,14 +20,18 @@ import 'package:tracktime/tmdb/tvdb.dart';
 TvdbClient _silentTvdb() => TvdbClient(
   'test',
   client: MockClient(
-    (_) async => http.Response('{"data":{"token":"t"},"status":"success"}', 200),
+    (_) async =>
+        http.Response('{"data":{"token":"t"},"status":"success"}', 200),
   ),
 );
 
 /// Routes réduites à ce qui nous intéresse : on note ce qui a été ouvert.
 GoRouter _router(Widget home, List<String> opened) => GoRouter(
   routes: [
-    GoRoute(path: '/', builder: (_, _) => Scaffold(body: home)),
+    GoRoute(
+      path: '/',
+      builder: (_, _) => Scaffold(body: home),
+    ),
     GoRoute(
       path: '/movie/:id',
       builder: (_, state) {
@@ -110,11 +114,18 @@ Future<AppDatabase> _withMovies() async {
 }
 
 void main() {
-  testWidgets('les films de la liste du profil ouvrent leur fiche', (tester) async {
+  testWidgets('les films de la liste du profil ouvrent leur fiche', (
+    tester,
+  ) async {
     final db = await _withMovies();
     addTearDown(db.close);
     final opened = <String>[];
-    await _mount(tester, db, WatchlistStrip(movies: await db.allMovies(), shows: const []), opened);
+    await _mount(
+      tester,
+      db,
+      WatchlistStrip(movies: await db.allMovies(), shows: const []),
+      opened,
+    );
     await tester.tap(find.text('Dune'));
     await _navigate(tester);
     expect(opened, ['/movie/1406']);
@@ -124,7 +135,10 @@ void main() {
   testWidgets('une sortie de film ouvre sa fiche', (tester) async {
     final db = await _withMovies();
     addTearDown(db.close);
-    await db.setMovieReleaseDate(1406, DateTime.now().add(const Duration(days: 7)));
+    await db.setMovieReleaseDate(
+      1406,
+      DateTime.now().add(const Duration(days: 7)),
+    );
     final opened = <String>[];
     await _mount(tester, db, const MoviesScreen(), opened);
     await tester.tap(find.text('Sorties'));
@@ -225,20 +239,28 @@ void main() {
     await _settle(tester);
   });
 
-  testWidgets('avec les animations réduites, la navigation aboutit quand même',
-      (tester) async {
-    final db = await _withMovies();
-    addTearDown(db.close);
-    final opened = <String>[];
+  testWidgets(
+    'avec les animations réduites, la navigation aboutit quand même',
+    (tester) async {
+      final db = await _withMovies();
+      addTearDown(db.close);
+      final opened = <String>[];
 
-    await _mount(tester, db, const MoviesScreen(), opened, reduceMotion: true);
-    await tester.tap(find.text('Dune'));
-    await _navigate(tester);
+      await _mount(
+        tester,
+        db,
+        const MoviesScreen(),
+        opened,
+        reduceMotion: true,
+      );
+      await tester.tap(find.text('Dune'));
+      await _navigate(tester);
 
-    expect(opened, ['/movie/1406']);
-    expect(tester.takeException(), isNull);
-    await _settle(tester);
-  });
+      expect(opened, ['/movie/1406']);
+      expect(tester.takeException(), isNull);
+      await _settle(tester);
+    },
+  );
 
   testWidgets('aucun conflit de Hero pendant l\'ouverture d\'une fiche', (
     tester,

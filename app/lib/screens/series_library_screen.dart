@@ -42,16 +42,17 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
       return Scaffold(
         appBar: AppBar(title: const Text('Mes séries')),
         body: async.hasError
-          ? ErrorRetry(
-              title: 'Bibliothèque indisponible',
-              message: 'Réessaie pour retrouver tes séries.',
-              onRetry: () => ref.invalidate(showsProvider),
-            )
-          : const Center(child: CircularProgressIndicator()),
+            ? ErrorRetry(
+                title: 'Bibliothèque indisponible',
+                message: 'Réessaie pour retrouver tes séries.',
+                onRetry: () => ref.invalidate(showsProvider),
+              )
+            : const Center(child: CircularProgressIndicator()),
       );
     }
     final shows = async.value!;
-    final lastActivity = ref.watch(universeProvider).value?.lastActivityByShow ??
+    final lastActivity =
+        ref.watch(universeProvider).value?.lastActivityByShow ??
         const <int, DateTime>{};
 
     // Genres disponibles, fréquence décroissante.
@@ -82,15 +83,20 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
               decoration: InputDecoration(
                 hintText: 'Rechercher une série…',
                 hintStyle: const TextStyle(color: TtColors.dim, fontSize: 14.5),
-                prefixIcon:
-                    const Icon(Icons.search, color: TtColors.dim, size: 21),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: TtColors.dim,
+                  size: 21,
+                ),
                 suffixIcon: _searchCtrl.text.isEmpty
                     ? null
                     : IconButton(
-                        icon: const Icon(Icons.close,
-                            color: TtColors.dim, size: 19),
-                        onPressed: () =>
-                            setState(() => _searchCtrl.clear()),
+                        icon: const Icon(
+                          Icons.close,
+                          color: TtColors.dim,
+                          size: 19,
+                        ),
+                        onPressed: () => setState(() => _searchCtrl.clear()),
                       ),
                 filled: true,
                 fillColor: TtColors.surface,
@@ -113,22 +119,25 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
               runSpacing: 8,
               children: [
                 _Pill(
-                    label: 'Toutes',
-                    selected: _status == _Status.all,
-                    onTap: () => setState(() => _status = _Status.all)),
+                  label: 'Toutes',
+                  selected: _status == _Status.all,
+                  onTap: () => setState(() => _status = _Status.all),
+                ),
                 _Pill(
-                    label: 'En cours',
-                    selected: _status == _Status.ongoing,
-                    onTap: () => setState(() => _status = _Status.ongoing)),
+                  label: 'En cours',
+                  selected: _status == _Status.ongoing,
+                  onTap: () => setState(() => _status = _Status.ongoing),
+                ),
                 _Pill(
-                    label: 'Terminées',
-                    selected: _status == _Status.done,
-                    onTap: () => setState(() => _status = _Status.done)),
+                  label: 'Terminées',
+                  selected: _status == _Status.done,
+                  onTap: () => setState(() => _status = _Status.done),
+                ),
                 _Pill(
-                    label: 'À commencer',
-                    selected: _status == _Status.notStarted,
-                    onTap: () =>
-                        setState(() => _status = _Status.notStarted)),
+                  label: 'À commencer',
+                  selected: _status == _Status.notStarted,
+                  onTap: () => setState(() => _status = _Status.notStarted),
+                ),
               ],
             ),
           ),
@@ -167,21 +176,26 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
               children: [
                 const Padding(
                   padding: EdgeInsets.only(right: 2),
-                  child: Text('Trier :',
-                      style: TextStyle(fontSize: 12.5, color: TtColors.dim)),
+                  child: Text(
+                    'Trier :',
+                    style: TextStyle(fontSize: 12.5, color: TtColors.dim),
+                  ),
                 ),
                 _Pill(
-                    label: 'Récentes',
-                    selected: _sort == _Sort.recent,
-                    onTap: () => setState(() => _sort = _Sort.recent)),
+                  label: 'Récentes',
+                  selected: _sort == _Sort.recent,
+                  onTap: () => setState(() => _sort = _Sort.recent),
+                ),
                 _Pill(
-                    label: 'Progression',
-                    selected: _sort == _Sort.progress,
-                    onTap: () => setState(() => _sort = _Sort.progress)),
+                  label: 'Progression',
+                  selected: _sort == _Sort.progress,
+                  onTap: () => setState(() => _sort = _Sort.progress),
+                ),
                 _Pill(
-                    label: 'A → Z',
-                    selected: _sort == _Sort.az,
-                    onTap: () => setState(() => _sort = _Sort.az)),
+                  label: 'A → Z',
+                  selected: _sort == _Sort.az,
+                  onTap: () => setState(() => _sort = _Sort.az),
+                ),
               ],
             ),
           ),
@@ -199,12 +213,18 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
           // ── Grille ──
           if (list.isEmpty)
             EmptyPrompt(
-              icon: shows.isEmpty ? Icons.video_library_outlined : Icons.search_off,
-              title: shows.isEmpty ? 'Ta bibliothèque est vide' : 'Aucun résultat',
+              icon: shows.isEmpty
+                  ? Icons.video_library_outlined
+                  : Icons.search_off,
+              title: shows.isEmpty
+                  ? 'Ta bibliothèque est vide'
+                  : 'Aucun résultat',
               message: shows.isEmpty
-                ? 'Explore le catalogue pour ajouter ta première série.'
-                : 'Essaie un autre titre ou retire les filtres.',
-              actionLabel: shows.isEmpty ? 'Explorer les séries' : 'Effacer les filtres',
+                  ? 'Explore le catalogue pour ajouter ta première série.'
+                  : 'Essaie un autre titre ou retire les filtres.',
+              actionLabel: shows.isEmpty
+                  ? 'Explorer les séries'
+                  : 'Effacer les filtres',
               onAction: () {
                 if (shows.isEmpty) {
                   ref.read(homeTabProvider.notifier).select(HomeTab.explorer);
@@ -244,7 +264,9 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w600),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   );
@@ -276,8 +298,7 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
           break;
       }
       final genre = _genre;
-      if (genre != null &&
-          !(s.show.genres ?? '').split('|').contains(genre)) {
+      if (genre != null && !(s.show.genres ?? '').split('|').contains(genre)) {
         return false;
       }
       return true;

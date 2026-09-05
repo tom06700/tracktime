@@ -34,8 +34,10 @@ class _TonightDialogState extends State<_TonightDialog>
     vsync: this,
     duration: const Duration(milliseconds: 2300),
   );
-  late final Animation<double> _a =
-      CurvedAnimation(parent: _c, curve: Curves.easeOutQuart);
+  late final Animation<double> _a = CurvedAnimation(
+    parent: _c,
+    curve: Curves.easeOutQuart,
+  );
 
   final _rnd = math.Random();
   late int _target;
@@ -116,8 +118,9 @@ class _TonightDialogState extends State<_TonightDialog>
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: TtColors.amber
-                            .withValues(alpha: _settled ? 0.45 : 0.22),
+                        color: TtColors.amber.withValues(
+                          alpha: _settled ? 0.45 : 0.22,
+                        ),
                         blurRadius: 44,
                         spreadRadius: -4,
                       ),
@@ -142,7 +145,7 @@ class _TonightDialogState extends State<_TonightDialog>
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                   shadows: const [
-                    Shadow(color: Color(0xAA000000), blurRadius: 10)
+                    Shadow(color: Color(0xAA000000), blurRadius: 10),
                   ],
                 ),
               ),
@@ -178,7 +181,9 @@ class _TonightDialogState extends State<_TonightDialog>
                               final router = GoRouter.of(context);
                               Navigator.of(context).pop();
                               router.push(
-                                item.isMovie ? '/movie/${item.id}' : '/show/${item.id}',
+                                item.isMovie
+                                    ? '/movie/${item.id}'
+                                    : '/show/${item.id}',
                                 extra: item.title,
                               );
                             }

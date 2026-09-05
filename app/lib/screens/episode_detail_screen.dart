@@ -331,15 +331,30 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
     final tvdb = ref.read(tvdbClientProvider);
     try {
       if (watched) {
-        await db.setEpisodeUnwatched(widget.showId, widget.season, widget.episode);
+        await db.setEpisodeUnwatched(
+          widget.showId,
+          widget.season,
+          widget.episode,
+        );
       } else {
-        await addShowFromTvdb(db, tvdb, widget.showId, preferredName: widget.showName);
-        await db.setEpisodeWatched(widget.showId, widget.season, widget.episode);
+        await addShowFromTvdb(
+          db,
+          tvdb,
+          widget.showId,
+          preferredName: widget.showName,
+        );
+        await db.setEpisodeWatched(
+          widget.showId,
+          widget.season,
+          widget.episode,
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible de modifier cet épisode. Réessaie.')),
+          const SnackBar(
+            content: Text('Impossible de modifier cet épisode. Réessaie.'),
+          ),
         );
       }
     }
@@ -350,20 +365,31 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
     final db = ref.read(databaseProvider);
     final tvdb = ref.read(tvdbClientProvider);
     try {
-      await addShowFromTvdb(db, tvdb, widget.showId, preferredName: widget.showName);
+      await addShowFromTvdb(
+        db,
+        tvdb,
+        widget.showId,
+        preferredName: widget.showName,
+      );
       final show = await db.showById(widget.showId);
       if (show == null) return;
       await syncShowEpisodes(db, tvdb, show);
       await db.markWatchedUpTo(widget.showId, widget.season, widget.episode);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Épisodes précédents marqués comme vus ✓')),
+          const SnackBar(
+            content: Text('Épisodes précédents marqués comme vus ✓'),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible de mettre à jour la progression. Réessaie.')),
+          const SnackBar(
+            content: Text(
+              'Impossible de mettre à jour la progression. Réessaie.',
+            ),
+          ),
         );
       }
     }

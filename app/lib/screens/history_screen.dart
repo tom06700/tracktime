@@ -22,10 +22,12 @@ class HistoryScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Épisodes vus'),
-        actions: [TextButton(
-          onPressed: () => context.push('/movie-history'),
-          child: const Text('Films vus'),
-        )],
+        actions: [
+          TextButton(
+            onPressed: () => context.push('/movie-history'),
+            child: const Text('Films vus'),
+          ),
+        ],
       ),
       body: historyAsync.when(
         loading: () => ListView.separated(

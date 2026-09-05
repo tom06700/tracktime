@@ -132,12 +132,14 @@ class _ToWatchTab extends ConsumerWidget {
       },
       data: (feed) {
         if (feed.isEmpty) {
-          final hasShows = (ref.watch(showsProvider).value ?? const []).isNotEmpty;
+          final hasShows =
+              (ref.watch(showsProvider).value ?? const []).isNotEmpty;
           if (hasShows) {
             return EmptyPrompt(
               icon: Icons.check_circle_outline,
               title: 'Tu es à jour',
-              message: 'Retrouve tes séries dans la bibliothèque ou consulte les prochaines diffusions.',
+              message:
+                  'Retrouve tes séries dans la bibliothèque ou consulte les prochaines diffusions.',
               actionLabel: 'Mes séries',
               onAction: () => context.push('/series'),
             );
@@ -388,9 +390,15 @@ class _UpcomingTabState extends ConsumerState<_UpcomingTab> {
         }
 
         final now = DateTime.now();
-        final groups = groupUpcoming(list, now,
-          laterPerShowLimit: _showAll ? list.length : 3);
-        final visibleCount = groups.fold<int>(0, (n, g) => n + g.episodes.length);
+        final groups = groupUpcoming(
+          list,
+          now,
+          laterPerShowLimit: _showAll ? list.length : 3,
+        );
+        final visibleCount = groups.fold<int>(
+          0,
+          (n, g) => n + g.episodes.length,
+        );
         // Les dates de diffusion bougent : c'est l'onglet où le geste de
         // rafraîchissement a le plus de sens.
         return RefreshIndicator(
@@ -405,15 +413,23 @@ class _UpcomingTabState extends ConsumerState<_UpcomingTab> {
               if (gi == groups.length) {
                 return Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Column(children: [
-                    if (_showAll || visibleCount < list.length)
-                      TextButton(
-                        onPressed: () => setState(() => _showAll = !_showAll),
-                        child: Text(_showAll ? 'Réduire' : 'Voir les ${list.length} épisodes'),
+                  child: Column(
+                    children: [
+                      if (_showAll || visibleCount < list.length)
+                        TextButton(
+                          onPressed: () => setState(() => _showAll = !_showAll),
+                          child: Text(
+                            _showAll
+                                ? 'Réduire'
+                                : 'Voir les ${list.length} épisodes',
+                          ),
+                        ),
+                      const Text(
+                        'Dates annoncées sur les 90 prochains jours.',
+                        style: TextStyle(color: TtColors.dim, fontSize: 12),
                       ),
-                    const Text('Dates annoncées sur les 90 prochains jours.',
-                      style: TextStyle(color: TtColors.dim, fontSize: 12)),
-                  ]),
+                    ],
+                  ),
                 );
               }
               final group = groups[gi];

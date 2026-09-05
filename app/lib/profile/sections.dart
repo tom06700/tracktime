@@ -44,9 +44,7 @@ class UniverseSectionTitle extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                     letterSpacing: 2,
                     color: Colors.white,
-                    shadows: [
-                      Shadow(color: Color(0x99000000), blurRadius: 8),
-                    ],
+                    shadows: [Shadow(color: Color(0x99000000), blurRadius: 8)],
                   ),
                 ),
                 if (subtitle != null) ...[
@@ -80,8 +78,11 @@ class UniverseSectionTitle extends StatelessWidget {
                         color: TtColors.amber,
                       ),
                     ),
-                    const Icon(Icons.chevron_right,
-                        size: 17, color: TtColors.amber),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 17,
+                      color: TtColors.amber,
+                    ),
                   ],
                 ),
               ),
@@ -162,10 +163,7 @@ class GenreFilmStrip extends StatelessWidget {
             runSpacing: 8,
             children: [
               for (final g in top)
-                _GenreChip(
-                  slice: g,
-                  percent: g.weight / total,
-                ),
+                _GenreChip(slice: g, percent: g.weight / total),
             ],
           ),
         ],
@@ -181,8 +179,10 @@ class _FilmBasePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width, h = size.height;
-    final base =
-        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(12));
+    final base = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      const Radius.circular(12),
+    );
 
     canvas.drawRRect(base, Paint()..color = const Color(0xFF10141D));
     canvas.drawRRect(
@@ -197,12 +197,16 @@ class _FilmBasePainter extends CustomPainter {
     for (var x = 10.0; x + holeW < w - 10; x += step) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-            Rect.fromLTWH(x, 6, holeW, holeH), const Radius.circular(2)),
+          Rect.fromLTWH(x, 6, holeW, holeH),
+          const Radius.circular(2),
+        ),
         holePaint,
       );
       canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(x, h - 6 - holeH, holeW, holeH),
-            const Radius.circular(2)),
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, h - 6 - holeH, holeW, holeH),
+          const Radius.circular(2),
+        ),
         holePaint,
       );
     }
@@ -293,7 +297,7 @@ class _FilmFrame extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
                           shadows: [
-                            Shadow(color: Color(0xAA000000), blurRadius: 4)
+                            Shadow(color: Color(0xAA000000), blurRadius: 4),
                           ],
                         ),
                       ),
@@ -304,7 +308,7 @@ class _FilmFrame extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                           color: Colors.white.withValues(alpha: 0.85),
                           shadows: const [
-                            Shadow(color: Color(0xAA000000), blurRadius: 4)
+                            Shadow(color: Color(0xAA000000), blurRadius: 4),
                           ],
                         ),
                       ),
@@ -343,26 +347,26 @@ class _GenreChip extends StatelessWidget {
             decoration: BoxDecoration(
               color: slice.color,
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(color: slice.color, blurRadius: 6),
-              ],
+              boxShadow: [BoxShadow(color: slice.color, blurRadius: 6)],
             ),
           ),
           const SizedBox(width: 7),
           Text(
             slice.name,
             style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: Colors.white),
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
           const SizedBox(width: 6),
           Text(
             '${(percent * 100).round()}%',
             style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: Colors.white.withValues(alpha: 0.55)),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withValues(alpha: 0.55),
+            ),
           ),
         ],
       ),
@@ -392,8 +396,9 @@ class MarqueeCarousel extends StatefulWidget {
 }
 
 class _MarqueeCarouselState extends State<MarqueeCarousel> {
-  late final PageController _controller =
-      PageController(viewportFraction: 0.58);
+  late final PageController _controller = PageController(
+    viewportFraction: 0.58,
+  );
   int _current = 0;
 
   /// Séries en cours d'abord (les plus récemment regardées en tête),
@@ -483,7 +488,7 @@ class _MarqueeCarouselState extends State<MarqueeCarousel> {
                 current.isDone
                     ? 'Terminée · ${current.watchedCount} ép.'
                     : '${(current.progress * 100).round()} % · '
-                        '${current.watchedCount} ép. vus',
+                          '${current.watchedCount} ép. vus',
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
@@ -588,8 +593,9 @@ class _MarqueePoster extends StatelessWidget {
                           child: LinearProgressIndicator(
                             value: item.progress,
                             minHeight: 6,
-                            backgroundColor:
-                                Colors.white.withValues(alpha: 0.22),
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.22,
+                            ),
                             color: accent,
                           ),
                         ),
@@ -649,8 +655,9 @@ class SeriesPosterTile extends StatelessWidget {
             boxShadow: done
                 ? [
                     BoxShadow(
-                        color: TtColors.teal.withValues(alpha: 0.35),
-                        blurRadius: 14)
+                      color: TtColors.teal.withValues(alpha: 0.35),
+                      blurRadius: 14,
+                    ),
                   ]
                 : null,
           ),
@@ -720,8 +727,8 @@ class SeriesPosterTile extends StatelessWidget {
 
 /// Dégradé de repli (stable par titre) quand il n'y a pas d'affiche.
 Widget _posterFallback(String name, {double iconSize = 26}) {
-  final hue =
-      (name.codeUnits.fold<int>(0, (a, c) => a * 31 + c) % 360).toDouble();
+  final hue = (name.codeUnits.fold<int>(0, (a, c) => a * 31 + c) % 360)
+      .toDouble();
   return DecoratedBox(
     decoration: BoxDecoration(
       gradient: LinearGradient(
@@ -809,12 +816,21 @@ class StreakRow extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
       child: Row(
         children: [
-          chip('🔥', 'En ce moment',
-              current > 0 ? '$current jour${current > 1 ? 's' : ''} d\'affilée' : '—',
-              current > 0),
+          chip(
+            '🔥',
+            'En ce moment',
+            current > 0
+                ? '$current jour${current > 1 ? 's' : ''} d\'affilée'
+                : '—',
+            current > 0,
+          ),
           const SizedBox(width: 10),
-          chip('🏆', 'Record',
-              best > 0 ? '$best jour${best > 1 ? 's' : ''}' : '—', false),
+          chip(
+            '🏆',
+            'Record',
+            best > 0 ? '$best jour${best > 1 ? 's' : ''}' : '—',
+            false,
+          ),
         ],
       ),
     );
@@ -851,10 +867,10 @@ class _ActivityHeatmapState extends State<ActivityHeatmap> {
       DateTime(widget.now.year, widget.now.month, widget.now.day);
 
   DateTime get _firstMonday {
-    final mondayThisWeek =
-        _today.subtract(Duration(days: _today.weekday - 1));
-    return mondayThisWeek
-        .subtract(Duration(days: (ActivityHeatmap.weeks - 1) * 7));
+    final mondayThisWeek = _today.subtract(Duration(days: _today.weekday - 1));
+    return mondayThisWeek.subtract(
+      Duration(days: (ActivityHeatmap.weeks - 1) * 7),
+    );
   }
 
   void _onTap(Offset pos, double cell, double gap) {
@@ -918,10 +934,13 @@ class _ActivityHeatmapState extends State<ActivityHeatmap> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text('Moins',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white.withValues(alpha: 0.5))),
+                  Text(
+                    'Moins',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
+                  ),
                   const SizedBox(width: 6),
                   for (final level in const [0, 1, 2, 3])
                     Padding(
@@ -936,10 +955,13 @@ class _ActivityHeatmapState extends State<ActivityHeatmap> {
                       ),
                     ),
                   const SizedBox(width: 6),
-                  Text('Plus',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white.withValues(alpha: 0.5))),
+                  Text(
+                    'Plus',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
+                  ),
                 ],
               ),
               // Détail du jour sélectionné.
@@ -957,7 +979,8 @@ class _ActivityHeatmapState extends State<ActivityHeatmap> {
                           color: Colors.white.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                              color: accent.withValues(alpha: 0.45)),
+                            color: accent.withValues(alpha: 0.45),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -981,8 +1004,7 @@ class _ActivityHeatmapState extends State<ActivityHeatmap> {
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     height: 1.35,
-                                    color:
-                                        Colors.white.withValues(alpha: 0.7),
+                                    color: Colors.white.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ),
@@ -1050,7 +1072,9 @@ class _HeatmapPainter extends CustomPainter {
     final today = DateTime(now.year, now.month, now.day);
     // Lundi de la semaine courante, puis recul de (weeks-1) semaines.
     final mondayThisWeek = today.subtract(Duration(days: today.weekday - 1));
-    final firstMonday = mondayThisWeek.subtract(Duration(days: (weeks - 1) * 7));
+    final firstMonday = mondayThisWeek.subtract(
+      Duration(days: (weeks - 1) * 7),
+    );
     final radius = Radius.circular(cell * 0.28);
 
     for (var w = 0; w < weeks; w++) {
@@ -1062,7 +1086,9 @@ class _HeatmapPainter extends CustomPainter {
         final x = w * (cell + gap);
         final y = d * (cell + gap);
         final r = RRect.fromRectAndRadius(
-            Rect.fromLTWH(x, y, cell, cell), radius);
+          Rect.fromLTWH(x, y, cell, cell),
+          radius,
+        );
         canvas.drawRRect(r, Paint()..color = color);
         if (count > 3) {
           canvas.drawRRect(
@@ -1112,11 +1138,16 @@ class RecordsBand extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -1206,7 +1237,12 @@ class _BadgeTile extends StatelessWidget {
               : Colors.white.withValues(alpha: 0.07),
         ),
         boxShadow: on
-            ? [BoxShadow(color: TtColors.amber.withValues(alpha: 0.25), blurRadius: 16)]
+            ? [
+                BoxShadow(
+                  color: TtColors.amber.withValues(alpha: 0.25),
+                  blurRadius: 16,
+                ),
+              ]
             : null,
       ),
       child: Column(
@@ -1264,7 +1300,9 @@ class WatchItem {
 
 /// Construit la liste de lecture : films non vus + séries pas commencées.
 List<WatchItem> watchlistItems(
-    List<Movie> movies, List<ShowWithProgress> shows) {
+  List<Movie> movies,
+  List<ShowWithProgress> shows,
+) {
   return [
     for (final m in movies)
       if (m.watchedAt == null)
@@ -1272,21 +1310,18 @@ List<WatchItem> watchlistItems(
     for (final s in shows)
       if (s.watchedCount == 0)
         WatchItem(
-            id: s.show.id,
-            title: s.show.name,
-            poster: s.show.poster,
-            isMovie: false),
+          id: s.show.id,
+          title: s.show.name,
+          poster: s.show.poster,
+          isMovie: false,
+        ),
   ];
 }
 
 /// « Liste de lecture » : films non vus + séries pas encore commencées,
 /// en bande horizontale d'affiches.
 class WatchlistStrip extends StatelessWidget {
-  const WatchlistStrip({
-    super.key,
-    required this.movies,
-    required this.shows,
-  });
+  const WatchlistStrip({super.key, required this.movies, required this.shows});
 
   final List<Movie> movies;
   final List<ShowWithProgress> shows;
@@ -1338,8 +1373,9 @@ class _WatchTile extends StatelessWidget {
                   width: 104,
                   child: PosterBox(
                     posterPath: item.poster,
-                    fallbackIcon:
-                        item.isMovie ? Icons.movie_outlined : Icons.tv,
+                    fallbackIcon: item.isMovie
+                        ? Icons.movie_outlined
+                        : Icons.tv,
                     label: item.title,
                   ),
                 ),

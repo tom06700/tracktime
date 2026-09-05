@@ -11,7 +11,8 @@ class MovieLibraryActions extends ConsumerStatefulWidget {
   final Movie movie;
 
   @override
-  ConsumerState<MovieLibraryActions> createState() => _MovieLibraryActionsState();
+  ConsumerState<MovieLibraryActions> createState() =>
+      _MovieLibraryActionsState();
 }
 
 class _MovieLibraryActionsState extends ConsumerState<MovieLibraryActions> {
@@ -26,9 +27,11 @@ class _MovieLibraryActionsState extends ConsumerState<MovieLibraryActions> {
     } catch (e, st) {
       debugPrint('Action film impossible : $e\n$st');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Modification impossible. Réessaie dans un instant.'),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Modification impossible. Réessaie dans un instant.'),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -41,10 +44,18 @@ class _MovieLibraryActionsState extends ConsumerState<MovieLibraryActions> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Retirer ce film ?'),
-        content: Text('« ${movie.title} » sera retiré de ta bibliothèque et de ton historique.'),
+        content: Text(
+          '« ${movie.title} » sera retiré de ta bibliothèque et de ton historique.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Retirer')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Retirer'),
+          ),
         ],
       ),
     );
@@ -61,9 +72,15 @@ class _MovieLibraryActionsState extends ConsumerState<MovieLibraryActions> {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         FilledButton.icon(
-          onPressed: _busy ? null : () => _run((db) => db.toggleMovieWatched(widget.movie)),
+          onPressed: _busy
+              ? null
+              : () => _run((db) => db.toggleMovieWatched(widget.movie)),
           icon: _busy
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : Icon(seen ? Icons.undo : Icons.check),
           label: Text(seen ? 'Remettre à voir' : 'Marquer comme vu'),
         ),

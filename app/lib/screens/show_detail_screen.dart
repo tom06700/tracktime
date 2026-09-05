@@ -405,7 +405,8 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
                       else if (_episodesError != null)
                         ErrorRetry(
                           title: 'Épisodes indisponibles',
-                          message: 'Vérifie ta connexion pour charger les saisons.',
+                          message:
+                              'Vérifie ta connexion pour charger les saisons.',
                           onRetry: () => _loadEpisodes(refresh: true),
                         )
                       else
@@ -547,19 +548,19 @@ class _AboutTab extends StatelessWidget {
         Align(
           alignment: Alignment.centerLeft,
           child: followed
-            ? FilledButton.icon(
-                onPressed: onOpenEpisodes,
-                icon: const Icon(Icons.playlist_play),
-                label: const Text('Voir les épisodes'),
-              )
-            : AddToListButton(
-            label: 'Ajouter à ma liste',
-            inLibrary: followed,
-            onAdd: onAdd,
-            failureMessage:
-                'Impossible d\'ajouter cette série.\n'
-                'Réessaie dans un instant.',
-          ),
+              ? FilledButton.icon(
+                  onPressed: onOpenEpisodes,
+                  icon: const Icon(Icons.playlist_play),
+                  label: const Text('Voir les épisodes'),
+                )
+              : AddToListButton(
+                  label: 'Ajouter à ma liste',
+                  inLibrary: followed,
+                  onAdd: onAdd,
+                  failureMessage:
+                      'Impossible d\'ajouter cette série.\n'
+                      'Réessaie dans un instant.',
+                ),
         ),
         const SizedBox(height: 26),
         const MediaSectionTitle('Synopsis'),
@@ -615,7 +616,9 @@ class _EpisodesTab extends ConsumerWidget {
             loadEpisodes: () => loadSeason(n),
             episodeName: (e) => episodeName(n, e),
             onOpen: (e) => context.push(
-              '/episode/$showId/$n/$e', extra: {'name': showName}),
+              '/episode/$showId/$n/$e',
+              extra: {'name': showName},
+            ),
             onToggle: (e, w) => onToggle(n, e, w),
             onSetSeason: (eps, on) => onSetSeason(n, eps, on),
           ),
@@ -902,10 +905,10 @@ class _EpisodeRow extends StatelessWidget {
                 tooltip: watched ? 'Marquer non vu' : 'Marquer vu',
                 onPressed: onTap,
                 icon: Icon(
-                watched ? Icons.check_circle : Icons.circle_outlined,
-                key: ValueKey(watched),
-                color: watched ? TtColors.amber : TtColors.dim,
-                size: 24,
+                  watched ? Icons.check_circle : Icons.circle_outlined,
+                  key: ValueKey(watched),
+                  color: watched ? TtColors.amber : TtColors.dim,
+                  size: 24,
                 ),
               ),
             ),

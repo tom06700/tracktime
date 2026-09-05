@@ -32,15 +32,27 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with SingleTickerProviderStateMixin {
   static const _months = [
-    'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
-    'août', 'septembre', 'octobre', 'novembre', 'décembre'
+    'janvier',
+    'février',
+    'mars',
+    'avril',
+    'mai',
+    'juin',
+    'juillet',
+    'août',
+    'septembre',
+    'octobre',
+    'novembre',
+    'décembre',
   ];
 
   bool _backfillStarted = false;
 
   /// Horloge du fond vivant (poussières, scintillement) : 30 s en boucle.
-  late final AnimationController _drive =
-      AnimationController(vsync: this, duration: const Duration(seconds: 30));
+  late final AnimationController _drive = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 30),
+  );
   final _scrollCtrl = ScrollController();
 
   static String memberSince(DateTime since) =>
@@ -89,10 +101,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             child: Opacity(
               opacity: 0.25,
               child: CinemaBackground(
-              seed: seed,
-              palette: palette,
-              drive: _drive,
-              scroll: _scrollCtrl,
+                seed: seed,
+                palette: palette,
+                drive: _drive,
+                scroll: _scrollCtrl,
               ),
             ),
           ),
@@ -124,12 +136,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     // Chaque section apparaît en fondu quand elle entre à l'écran (léger
     // stagger pour les premières, visibles dès l'ouverture).
     Widget sec(int i, List<Widget> children) => Reveal(
-          delayMs: i < 3 ? i * 90 : 0,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: children,
-          ),
-        );
+      delayMs: i < 3 ? i * 90 : 0,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
 
     // Pas d'AppBar sur le Profil : le décor remplit tout, le contenu démarre
     // juste sous la safe area (en laissant la place au bouton Réglages).
@@ -164,10 +176,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
         // ── À l'affiche (aperçu, la page dédiée montre tout) ──
         sec(2, [
-          UniverseSectionTitle('À l\'affiche',
-              subtitle: 'Tes séries du moment, en grand écran.',
-              actionLabel: 'Tout voir',
-              onAction: () => context.push('/series')),
+          UniverseSectionTitle(
+            'À l\'affiche',
+            subtitle: 'Tes séries du moment, en grand écran.',
+            actionLabel: 'Tout voir',
+            onAction: () => context.push('/series'),
+          ),
           MarqueeCarousel(
             shows: shows,
             lastActivity: universe?.lastActivityByShow ?? const {},
@@ -176,16 +190,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
         // ── Pellicule de genres ──
         sec(3, [
-          const UniverseSectionTitle('Ta pellicule',
-              subtitle:
-                  'Chaque photogramme, un genre — à la mesure du temps passé.'),
+          const UniverseSectionTitle(
+            'Ta pellicule',
+            subtitle:
+                'Chaque photogramme, un genre — à la mesure du temps passé.',
+          ),
           if (universe != null) GenreFilmStrip(universe: universe),
         ]),
 
         // ── Activité ──
         sec(4, [
-          const UniverseSectionTitle('Ton année en épisodes',
-              subtitle: 'Chaque cellule, un jour — touche pour le détail.'),
+          const UniverseSectionTitle(
+            'Ton année en épisodes',
+            subtitle: 'Chaque cellule, un jour — touche pour le détail.',
+          ),
           if (universe != null) ...[
             StreakRow(
               current: universe.currentStreak,
@@ -210,15 +228,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
         // ── Badges ──
         sec(6, [
-          const UniverseSectionTitle('Trophées',
-              subtitle: 'Débloque-les en explorant ton univers.'),
+          const UniverseSectionTitle(
+            'Trophées',
+            subtitle: 'Débloque-les en explorant ton univers.',
+          ),
           if (universe != null) BadgeWall(badges: universe.badges),
         ]),
 
         // ── Liste de lecture ──
         sec(7, [
-          const UniverseSectionTitle('Liste de lecture',
-              subtitle: 'À voir prochainement.'),
+          const UniverseSectionTitle(
+            'Liste de lecture',
+            subtitle: 'À voir prochainement.',
+          ),
           WatchlistStrip(movies: movies, shows: shows),
           const SizedBox(height: 16),
           Center(
@@ -303,8 +325,11 @@ class _GlassIconButton extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
             ),
-            child: Icon(icon,
-                size: 21, color: Colors.white.withValues(alpha: 0.85)),
+            child: Icon(
+              icon,
+              size: 21,
+              color: Colors.white.withValues(alpha: 0.85),
+            ),
           ),
         ),
       ),
@@ -387,8 +412,11 @@ class _UniverseHeader extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                Icon(Icons.edit_outlined,
-                    size: 16, color: Colors.white.withValues(alpha: 0.5)),
+                Icon(
+                  Icons.edit_outlined,
+                  size: 16,
+                  color: Colors.white.withValues(alpha: 0.5),
+                ),
               ],
             ),
           ),
@@ -407,7 +435,9 @@ class _UniverseHeader extends ConsumerWidget {
           Text(
             memberSince,
             style: TextStyle(
-                fontSize: 12, color: Colors.white.withValues(alpha: 0.45)),
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.45),
+            ),
           ),
         ],
       ),
@@ -415,7 +445,10 @@ class _UniverseHeader extends ConsumerWidget {
   }
 
   Future<void> _editName(
-      BuildContext context, WidgetRef ref, String current) async {
+    BuildContext context,
+    WidgetRef ref,
+    String current,
+  ) async {
     final controller = TextEditingController(text: current);
     final name = await showDialog<String>(
       context: context,
@@ -430,11 +463,13 @@ class _UniverseHeader extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuler')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, controller.text),
-              child: const Text('Enregistrer')),
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('Enregistrer'),
+          ),
         ],
       ),
     );
@@ -453,8 +488,10 @@ class _UniverseHeader extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Choisis ton avatar',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const Text(
+              'Choisis ton avatar',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 14),
             Wrap(
               spacing: 8,
@@ -511,8 +548,9 @@ class _HeroStats extends StatelessWidget {
               letterSpacing: -1.5,
               shadows: [
                 Shadow(
-                    color: TtColors.amber.withValues(alpha: 0.4),
-                    blurRadius: 24),
+                  color: TtColors.amber.withValues(alpha: 0.4),
+                  blurRadius: 24,
+                ),
               ],
             ),
           ),
@@ -528,13 +566,10 @@ class _HeroStats extends StatelessWidget {
           const SizedBox(height: 20),
           Row(
             children: [
-              _MiniStat(
-                  value: '${stats.episodeCount}', label: 'épisodes'),
+              _MiniStat(value: '${stats.episodeCount}', label: 'épisodes'),
               _MiniStat(value: '${stats.moviesSeen}', label: 'films'),
-              _MiniStat(
-                  value: '${stats.showCount}', label: 'séries'),
-              _MiniStat(
-                  value: '${stats.doneShowCount}', label: 'terminées'),
+              _MiniStat(value: '${stats.showCount}', label: 'séries'),
+              _MiniStat(value: '${stats.doneShowCount}', label: 'terminées'),
             ],
           ),
         ],
@@ -566,7 +601,9 @@ class _MiniStat extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-                fontSize: 11.5, color: Colors.white.withValues(alpha: 0.55)),
+              fontSize: 11.5,
+              color: Colors.white.withValues(alpha: 0.55),
+            ),
           ),
         ],
       ),
@@ -590,7 +627,9 @@ class _DataCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
-      child: Column(
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
         children: [
           _ActionTile(
             icon: Icons.ios_share,
@@ -614,6 +653,7 @@ class _DataCard extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -635,14 +675,25 @@ class _ActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, color: TtColors.amber),
-      title: Text(title,
-          style: const TextStyle(
-              fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
-      subtitle: Text(subtitle,
-          style: TextStyle(
-              fontSize: 12.5, color: Colors.white.withValues(alpha: 0.55))),
-      trailing: Icon(Icons.chevron_right,
-          color: Colors.white.withValues(alpha: 0.4)),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          fontSize: 12.5,
+          color: Colors.white.withValues(alpha: 0.55),
+        ),
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: Colors.white.withValues(alpha: 0.4),
+      ),
       onTap: onTap,
     );
   }
@@ -653,5 +704,8 @@ class _TileDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Divider(
-      height: 1, indent: 56, color: Colors.white.withValues(alpha: 0.08));
+    height: 1,
+    indent: 56,
+    color: Colors.white.withValues(alpha: 0.08),
+  );
 }

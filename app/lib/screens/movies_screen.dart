@@ -352,60 +352,63 @@ class _ReleaseRow extends StatelessWidget {
       child: InkWell(
         onTap: () => context.push('/movie/${m.id}', extra: m.title),
         child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 7, 16, 7),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: SizedBox(
-                width: 56,
-                height: 84,
-                child: MediaImage(
-                  sources: [m.poster],
-                  seed: m.title,
-                  icon: Icons.movie_outlined,
+          padding: const EdgeInsets.fromLTRB(16, 7, 16, 7),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 56,
+                  height: 84,
+                  child: MediaImage(
+                    sources: [m.poster],
+                    seed: m.title,
+                    icon: Icons.movie_outlined,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    m.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      height: 1.25,
-                      color: TtColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    frenchDate(upcoming.releaseDate),
-                    style: const TextStyle(fontSize: 12.5, color: TtColors.dim),
-                  ),
-                  if (days > 0) ...[
-                    const SizedBox(height: 2),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Text(
-                      days == 1 ? 'demain' : 'dans $days jours',
+                      m.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: TtColors.amber,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        height: 1.25,
+                        color: TtColors.text,
                       ),
                     ),
+                    const SizedBox(height: 3),
+                    Text(
+                      frenchDate(upcoming.releaseDate),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: TtColors.dim,
+                      ),
+                    ),
+                    if (days > 0) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        days == 1 ? 'demain' : 'dans $days jours',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: TtColors.amber,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

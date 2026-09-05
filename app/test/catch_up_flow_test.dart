@@ -186,10 +186,20 @@ void main() {
       addTearDown(db.close);
 
       await _openEpisodes(tester, db);
-      await _tap(tester, find.descendant(
-        of: find.ancestor(of: find.textContaining('10. Épisode 10'), matching: find.byType(InkWell)).first,
-        matching: find.byType(IconButton),
-      ).first);
+      await _tap(
+        tester,
+        find
+            .descendant(
+              of: find
+                  .ancestor(
+                    of: find.textContaining('10. Épisode 10'),
+                    matching: find.byType(InkWell),
+                  )
+                  .first,
+              matching: find.byType(IconButton),
+            )
+            .first,
+      );
 
       expect(
         find.text('Marquer les épisodes intermédiaires ?'),
@@ -208,10 +218,20 @@ void main() {
       addTearDown(db.close);
 
       await _openEpisodes(tester, db);
-      await _tap(tester, find.descendant(
-        of: find.ancestor(of: find.textContaining('10. Épisode 10'), matching: find.byType(InkWell)).first,
-        matching: find.byType(IconButton),
-      ).first);
+      await _tap(
+        tester,
+        find
+            .descendant(
+              of: find
+                  .ancestor(
+                    of: find.textContaining('10. Épisode 10'),
+                    matching: find.byType(InkWell),
+                  )
+                  .first,
+              matching: find.byType(IconButton),
+            )
+            .first,
+      );
       await _tap(tester, find.text('Tout marquer comme vu'));
 
       final rows = await db.select(db.watchedEpisodes).get();
@@ -227,10 +247,20 @@ void main() {
       addTearDown(db.close);
 
       await _openEpisodes(tester, db);
-      await _tap(tester, find.descendant(
-        of: find.ancestor(of: find.textContaining('10. Épisode 10'), matching: find.byType(InkWell)).first,
-        matching: find.byType(IconButton),
-      ).first);
+      await _tap(
+        tester,
+        find
+            .descendant(
+              of: find
+                  .ancestor(
+                    of: find.textContaining('10. Épisode 10'),
+                    matching: find.byType(InkWell),
+                  )
+                  .first,
+              matching: find.byType(IconButton),
+            )
+            .first,
+      );
       await _tap(tester, find.text('Seulement cet épisode'));
 
       final rows = await db.select(db.watchedEpisodes).get();
@@ -244,10 +274,20 @@ void main() {
       addTearDown(db.close);
 
       await _openEpisodes(tester, db);
-      await _tap(tester, find.descendant(
-        of: find.ancestor(of: find.textContaining('10. Épisode 10'), matching: find.byType(InkWell)).first,
-        matching: find.byType(IconButton),
-      ).first);
+      await _tap(
+        tester,
+        find
+            .descendant(
+              of: find
+                  .ancestor(
+                    of: find.textContaining('10. Épisode 10'),
+                    matching: find.byType(InkWell),
+                  )
+                  .first,
+              matching: find.byType(IconButton),
+            )
+            .first,
+      );
 
       expect(find.text('Tout marquer comme vu'), findsNothing);
       final rows = await db.select(db.watchedEpisodes).get();
@@ -261,10 +301,20 @@ void main() {
       addTearDown(db.close);
 
       await _openEpisodes(tester, db);
-      await _tap(tester, find.descendant(
-        of: find.ancestor(of: find.textContaining('10. Épisode 10'), matching: find.byType(InkWell)).first,
-        matching: find.byType(IconButton),
-      ).first);
+      await _tap(
+        tester,
+        find
+            .descendant(
+              of: find
+                  .ancestor(
+                    of: find.textContaining('10. Épisode 10'),
+                    matching: find.byType(InkWell),
+                  )
+                  .first,
+              matching: find.byType(IconButton),
+            )
+            .first,
+      );
 
       expect(find.text('Tout marquer comme vu'), findsNothing);
       final rows = await db.select(db.watchedEpisodes).get();
@@ -280,10 +330,20 @@ void main() {
       addTearDown(db.close);
 
       await _openEpisodes(tester, db);
-      await _tap(tester, find.descendant(
-        of: find.ancestor(of: find.textContaining('10. Épisode 10'), matching: find.byType(InkWell)).first,
-        matching: find.byType(IconButton),
-      ).first);
+      await _tap(
+        tester,
+        find
+            .descendant(
+              of: find
+                  .ancestor(
+                    of: find.textContaining('10. Épisode 10'),
+                    matching: find.byType(InkWell),
+                  )
+                  .first,
+              matching: find.byType(IconButton),
+            )
+            .first,
+      );
 
       expect(find.text('Tout marquer comme vu'), findsNothing);
       final rows = await db.select(db.watchedEpisodes).get();

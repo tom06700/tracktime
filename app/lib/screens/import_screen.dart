@@ -139,26 +139,27 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       _pct = 0;
     });
     try {
-    final summary = await runTvTimeImport(
-      ref.read(databaseProvider),
-      ref.read(tvdbClientProvider),
-      _parsed,
-      onProgress: (pct, line) {
-        if (!mounted) return;
-        setState(() {
-          _pct = pct;
-          if (line != null) _log.add(line);
-        });
-      },
-    );
-    if (!mounted) return;
-    setState(() {
-      _importing = false;
-      _log.add(
-          '🎉 Import terminé : ${summary.matched} trouvés, ${summary.failed} non résolus.');
-      _parsed.clear();
-    });
-    _toast('Import terminé 🎉');
+      final summary = await runTvTimeImport(
+        ref.read(databaseProvider),
+        ref.read(tvdbClientProvider),
+        _parsed,
+        onProgress: (pct, line) {
+          if (!mounted) return;
+          setState(() {
+            _pct = pct;
+            if (line != null) _log.add(line);
+          });
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _importing = false;
+        _log.add(
+          '🎉 Import terminé : ${summary.matched} trouvés, ${summary.failed} non résolus.',
+        );
+        _parsed.clear();
+      });
+      _toast('Import terminé 🎉');
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -194,16 +195,20 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Importer des données',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const Text(
+                  'Importer des données',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(height: 6),
                 const Text(
                   'Sélectionne une sauvegarde (JSON, restaurée '
                   'immédiatement) ou les fichiers de ton export TV Time '
                   '(CSV/JSON, mis en correspondance via TheTVDB).',
                   style: TextStyle(
-                      fontSize: 13, color: TtColors.dim, height: 1.6),
+                    fontSize: 13,
+                    color: TtColors.dim,
+                    height: 1.6,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Align(
@@ -239,9 +244,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Ancienne sauvegarde TrackTime',
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  Text(
+                    'Ancienne sauvegarde TrackTime',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
                   SizedBox(height: 6),
                   Text(
                     'Ses séries doivent être associées à leur fiche TheTVDB '
@@ -264,14 +270,16 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
-                        value: _pct,
-                        minHeight: 8,
-                        backgroundColor: TtColors.surfaceHi),
+                      value: _pct,
+                      minHeight: 8,
+                      backgroundColor: TtColors.surfaceHi,
+                    ),
                   ),
                   const SizedBox(height: 6),
-                  Text('Correspondance TheTVDB… ${(_pct * 100).round()} %',
-                      style:
-                          const TextStyle(fontSize: 13, color: TtColors.dim)),
+                  Text(
+                    'Correspondance TheTVDB… ${(_pct * 100).round()} %',
+                    style: const TextStyle(fontSize: 13, color: TtColors.dim),
+                  ),
                 ],
               ),
             ),
@@ -288,21 +296,25 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                     '(${_parsed.episodeCount} épisodes), '
                     '${_parsed.movies.length} films',
                     style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   if (_importing) ...[
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
-                          value: _pct,
-                          minHeight: 8,
-                          backgroundColor: TtColors.surfaceHi),
+                        value: _pct,
+                        minHeight: 8,
+                        backgroundColor: TtColors.surfaceHi,
+                      ),
                     ),
                     const SizedBox(height: 6),
-                    Text('Correspondance TheTVDB… ${(_pct * 100).round()} %',
-                        style: const TextStyle(
-                            fontSize: 13, color: TtColors.dim)),
+                    Text(
+                      'Correspondance TheTVDB… ${(_pct * 100).round()} %',
+                      style: const TextStyle(fontSize: 13, color: TtColors.dim),
+                    ),
                   ] else
                     Row(
                       children: [
@@ -328,7 +340,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               child: Text(
                 _log.reversed.take(40).join('\n'),
                 style: const TextStyle(
-                    fontSize: 12, color: TtColors.dim, height: 1.7),
+                  fontSize: 12,
+                  color: TtColors.dim,
+                  height: 1.7,
+                ),
               ),
             ),
           ),

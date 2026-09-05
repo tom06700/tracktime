@@ -18,7 +18,8 @@ class SettingsScreen extends ConsumerWidget {
 
   Future<void> _open(BuildContext context, String url) async {
     try {
-      if (await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication)) return;
+      if (await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication))
+        return;
     } catch (e) {
       debugPrint('Lien externe indisponible : $e');
     }
@@ -35,9 +36,10 @@ class SettingsScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Effacer toutes mes données ?'),
         content: const Text(
-            'Toutes tes séries, films et ton historique de visionnage seront '
-            'définitivement supprimés de cet appareil. Cette action est '
-            'irréversible.'),
+          'Toutes tes séries, films et ton historique de visionnage seront '
+          'définitivement supprimés de cet appareil. Cette action est '
+          'irréversible.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -57,7 +59,8 @@ class SettingsScreen extends ConsumerWidget {
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
-          const SnackBar(content: Text('Toutes tes données ont été effacées.')));
+        const SnackBar(content: Text('Toutes tes données ont été effacées.')),
+      );
   }
 
   @override
@@ -65,17 +68,25 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Réglages')),
       body: ListView(
-        padding: EdgeInsets.fromLTRB(0, 8, 0, MediaQuery.paddingOf(context).bottom + 16),
+        padding: EdgeInsets.fromLTRB(
+          0,
+          8,
+          0,
+          MediaQuery.paddingOf(context).bottom + 16,
+        ),
         children: [
           // Sauvegarder, puis restaurer, puis effacer : l'ordre du parcours.
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
-            child: Text('DONNÉES',
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                    color: TtColors.dim)),
+            child: Text(
+              'DONNÉES',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+                color: TtColors.dim,
+              ),
+            ),
           ),
           Card(
             child: _ExportTile(
@@ -84,13 +95,18 @@ class SettingsScreen extends ConsumerWidget {
           ),
           Card(
             child: ListTile(
-              leading: const Icon(Icons.download_outlined, color: TtColors.amber),
-              title: const Text('Importer des données',
-                  style:
-                      TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              leading: const Icon(
+                Icons.download_outlined,
+                color: TtColors.amber,
+              ),
+              title: const Text(
+                'Importer des données',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
               subtitle: const Text(
-                  'Sauvegarde Nitrate ou export TV Time',
-                  style: TextStyle(fontSize: 12.5, color: TtColors.dim)),
+                'Sauvegarde Nitrate ou export TV Time',
+                style: TextStyle(fontSize: 12.5, color: TtColors.dim),
+              ),
               trailing: const Icon(Icons.chevron_right, color: TtColors.dim),
               onTap: () => context.push('/import'),
             ),
@@ -99,25 +115,34 @@ class SettingsScreen extends ConsumerWidget {
           // ── Zone dangereuse ──
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 22, 20, 4),
-            child: Text('SUPPRESSION',
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                    color: TtColors.dim)),
+            child: Text(
+              'SUPPRESSION',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+                color: TtColors.dim,
+              ),
+            ),
           ),
           Card(
             child: ListTile(
-              leading: const Icon(Icons.delete_forever_outlined,
-                  color: Colors.redAccent),
-              title: const Text('Effacer toutes mes données',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.redAccent)),
+              leading: const Icon(
+                Icons.delete_forever_outlined,
+                color: Colors.redAccent,
+              ),
+              title: const Text(
+                'Effacer toutes mes données',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.redAccent,
+                ),
+              ),
               subtitle: const Text(
-                  'Supprime toutes les séries, films et l\'historique',
-                  style: TextStyle(fontSize: 12.5, color: TtColors.dim)),
+                'Supprime toutes les séries, films et l\'historique',
+                style: TextStyle(fontSize: 12.5, color: TtColors.dim),
+              ),
               onTap: () => _confirmClearAll(context, ref),
             ),
           ),
@@ -125,12 +150,15 @@ class SettingsScreen extends ConsumerWidget {
           // ── À propos + attribution TheTVDB (lien direct obligatoire) ──
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 22, 20, 4),
-            child: Text('À PROPOS',
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                    color: TtColors.dim)),
+            child: Text(
+              'À PROPOS',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+                color: TtColors.dim,
+              ),
+            ),
           ),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -140,8 +168,7 @@ class SettingsScreen extends ConsumerWidget {
               'Metadata provided by TheTVDB. Please consider adding missing '
               'information or subscribing. Nitrate n\'est ni approuvé ni '
               'certifié par TheTVDB.',
-              style:
-                  TextStyle(fontSize: 13, color: TtColors.dim, height: 1.6),
+              style: TextStyle(fontSize: 13, color: TtColors.dim, height: 1.6),
             ),
           ),
           Padding(
@@ -201,8 +228,11 @@ class _ExportTileState extends State<_ExportTile> {
       if (mounted) {
         ScaffoldMessenger.of(context)
           ..clearSnackBars()
-          ..showSnackBar(const SnackBar(
-              content: Text('Impossible de créer la sauvegarde. Réessaie.')));
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Impossible de créer la sauvegarde. Réessaie.'),
+            ),
+          );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -214,17 +244,22 @@ class _ExportTileState extends State<_ExportTile> {
     return ListTile(
       enabled: !_busy,
       leading: const Icon(Icons.ios_share_outlined, color: TtColors.amber),
-      title: const Text('Exporter mes données',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+      title: const Text(
+        'Exporter mes données',
+        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+      ),
       subtitle: const Text(
-          'Crée une sauvegarde Nitrate de tes séries, films et visionnages',
-          style: TextStyle(fontSize: 12.5, color: TtColors.dim)),
+        'Crée une sauvegarde Nitrate de tes séries, films et visionnages',
+        style: TextStyle(fontSize: 12.5, color: TtColors.dim),
+      ),
       trailing: _busy
           ? const SizedBox(
               width: 18,
               height: 18,
               child: CircularProgressIndicator(
-                  strokeWidth: 2, color: TtColors.amber),
+                strokeWidth: 2,
+                color: TtColors.amber,
+              ),
             )
           : const Icon(Icons.chevron_right, color: TtColors.dim),
       onTap: _run,
@@ -256,9 +291,10 @@ class _LinkChip extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: TtColors.amber),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: TtColors.amber,
+              ),
             ),
             const SizedBox(width: 4),
             const Icon(Icons.open_in_new, size: 13, color: TtColors.amber),
