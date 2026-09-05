@@ -181,13 +181,35 @@ class _ToWatchFeed extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('TON RENDEZ-VOUS CINÉMA', style: TextStyle(fontSize: 10, letterSpacing: 2.4, fontWeight: FontWeight.w700, color: TtColors.amber)),
-              const SizedBox(height: 10),
-              const Text('Encore un épisode.', style: TextStyle(fontSize: 32, letterSpacing: -1.2, height: 1.1, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 8),
-              Text('${feed.toWatch.length + feed.stale.length} séries à retrouver, à ton rythme.', style: const TextStyle(fontSize: 13, color: TtColors.dim)),
-            ]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'TON RENDEZ-VOUS CINÉMA',
+                  style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 2.4,
+                    fontWeight: FontWeight.w700,
+                    color: TtColors.amber,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Encore un épisode.',
+                  style: TextStyle(
+                    fontSize: 32,
+                    letterSpacing: -1.2,
+                    height: 1.1,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${feed.toWatch.length + feed.stale.length} séries à retrouver, à ton rythme.',
+                  style: const TextStyle(fontSize: 13, color: TtColors.dim),
+                ),
+              ],
+            ),
           ),
           if (hero != null)
             ContinueWatchingHero(
@@ -202,7 +224,10 @@ class _ToWatchFeed extends ConsumerWidget {
             ),
           if (next.isNotEmpty) ...[
             const SizedBox(height: 30),
-            const _SectionHeader('La suite du programme', subtitle: 'Tes prochains épisodes'),
+            const _SectionHeader(
+              'La suite du programme',
+              subtitle: 'Tes prochains épisodes',
+            ),
             _Carousel(
               height: 178 + (MediaQuery.textScalerOf(context).scale(32) - 32),
               itemCount: next.length,

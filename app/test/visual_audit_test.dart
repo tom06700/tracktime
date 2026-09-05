@@ -130,7 +130,7 @@ class _Request implements HttpClientRequest {
   HttpHeaders get headers => _Headers();
   @override
   Future<HttpClientResponse> close() async =>
-      _Response(await _pngFor(url.toString()));
+      _Response(_pngs['audit']!);
   @override
   dynamic noSuchMethod(Invocation i) => null;
 }
@@ -473,6 +473,8 @@ void main() {
       Directory(_out).createSync(recursive: true);
       debugNetworkImageHttpClientProvider = _Client.new;
       await tester.runAsync(_loadFonts);
+      // Decode fixture art outside the fake-async zone before image requests.
+      await tester.runAsync(() => _pngFor('audit'));
       debugPrint('Audit: fonts ready');
       SharedPreferences.setMockInitialValues({});
 

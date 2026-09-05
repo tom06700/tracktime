@@ -68,38 +68,93 @@ class _ContinueWatchingHeroState extends State<ContinueWatchingHero> {
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
-          boxShadow: [BoxShadow(color: TtColors.amber.withValues(alpha: .09), blurRadius: 48, offset: const Offset(0, 14))],
+          boxShadow: [
+            BoxShadow(
+              color: TtColors.amber.withValues(alpha: .09),
+              blurRadius: 48,
+              offset: const Offset(0, 14),
+            ),
+          ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),
           child: Stack(
             children: [
               Positioned.fill(
-                child: MediaImage(sources: [n.show.poster, n.still], seed: n.show.name, icon: Icons.tv),
+                child: MediaImage(
+                  sources: [n.show.poster, n.still],
+                  seed: n.show.name,
+                  icon: Icons.tv,
+                ),
               ),
-              Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(
-                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                  colors: [Colors.black.withValues(alpha: .08), const Color(0x66101013), const Color(0xF5101113), const Color(0xFF101113)],
-                  stops: const [0, .35, .65, 1]),
-              ))),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: .08),
+                        const Color(0x66101013),
+                        const Color(0xF5101113),
+                        const Color(0xFF101113),
+                      ],
+                      stops: const [0, .35, .65, 1],
+                    ),
+                  ),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: .65), borderRadius: BorderRadius.circular(30), border: Border.all(color: Colors.white.withValues(alpha: .2))),
-                      child: const Text('LA SUITE T’ATTEND', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 2)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: .65),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: .2),
+                        ),
+                      ),
+                      child: const Text(
+                        'LA SUITE T’ATTEND',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 150),
-                    _HeroText(next: n, remaining: remaining, onOpenShow: widget.onOpenShow, onOpen: widget.onOpen, confirmed: _confirmed, onMarkWatched: _markWatched),
+                    _HeroText(
+                      next: n,
+                      remaining: remaining,
+                      onOpenShow: widget.onOpenShow,
+                      onOpen: widget.onOpen,
+                      confirmed: _confirmed,
+                      onMarkWatched: _markWatched,
+                    ),
                   ],
                 ),
               ),
-              Positioned.fill(child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28), border: Border.all(color: Colors.white.withValues(alpha: .12)),
-              )))),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: .12),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -174,13 +229,19 @@ class _HeroText extends StatelessWidget {
           width: double.infinity,
           child: FilledButton.icon(
             onPressed: onOpen,
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFF4E8D3), foregroundColor: TtColors.bg, padding: const EdgeInsets.symmetric(vertical: 15)),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFF4E8D3),
+              foregroundColor: TtColors.bg,
+              padding: const EdgeInsets.symmetric(vertical: 15),
+            ),
             icon: const Icon(Icons.arrow_forward_rounded, size: 19),
             label: const Text('Ouvrir l’épisode'),
           ),
         ),
         const SizedBox(height: 10),
-        Center(child: _WatchedButton(confirmed: confirmed, onTap: onMarkWatched)),
+        Center(
+          child: _WatchedButton(confirmed: confirmed, onTap: onMarkWatched),
+        ),
       ],
     );
   }
@@ -239,15 +300,20 @@ class _WatchedButton extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Flexible(child: AnimatedDefaultTextStyle(
-                duration: duration,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: confirmed ? TtColors.bg : Colors.white,
+              Flexible(
+                child: AnimatedDefaultTextStyle(
+                  duration: duration,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: confirmed ? TtColors.bg : Colors.white,
+                  ),
+                  child: Text(
+                    confirmed ? 'Vu' : 'Marquer comme vu',
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                child: Text(confirmed ? 'Vu' : 'Marquer comme vu', textAlign: TextAlign.center),
-              )),
+              ),
             ],
           ),
         ),
