@@ -5,16 +5,25 @@ import 'package:flutter/material.dart';
 
 import '../motion.dart';
 import '../tmdb/artwork.dart';
-import 'media_image.dart';
+import '../brand/nitrate_brand.dart';
 
-/// The full-height hero needs substantially more pixels than a thumbnail.
-/// Allow modest device scaling, but never magnify a small still several times.
-bool artworkFitsHero(Size pixels, Size viewport, double pixelRatio) {
-  if (pixels.isEmpty || viewport.isEmpty) return false;
-  final scale = math.max(viewport.width * pixelRatio / pixels.width,
-      viewport.height * pixelRatio / pixels.height);
-  return scale <= 2;
+/// Height that can be filled without enlarging the decoded source pixels.
+/// A landscape source also retains at least 75% of its horizontal composition.
+double heroArtworkHeight(Size pixels, Size viewport, double pixelRatio) {
+  if (pixels.isEmpty ||
+      viewport.isEmpty ||
+      pixelRatio <= 0 ||
+      pixels.width < viewport.width * pixelRatio) {
+    return 0;
+  }
+  final natural = pixels.height / pixelRatio;
+  final composition = viewport.width * pixels.height / pixels.width / .75;
+  return math.min(viewport.height, math.min(natural, composition));
 }
+
+bool artworkFitsHero(Size pixels, Size viewport, double pixelRatio) =>
+    heroArtworkHeight(pixels, viewport, pixelRatio) >=
+    math.min(180, viewport.height);
 
 class HeroArtwork extends StatefulWidget {
   const HeroArtwork({super.key, required this.sources, required this.seed});
@@ -29,6 +38,7 @@ class _HeroArtworkState extends State<HeroArtwork> {
   ImageStream? _stream;
   ImageStreamListener? _listener;
   String? _selected;
+  double _imageHeight = 0;
   int _request = 0;
   Size? _viewport;
   double? _ratio;
@@ -75,7 +85,10 @@ class _HeroArtworkState extends State<HeroArtwork> {
         if (!mounted || request != _request) return;
         if (artworkFitsHero(pixels, _viewport!, _ratio!)) {
           _detach();
-          setState(() => _selected = urls[index]);
+          setState(() {
+            _selected = urls[index];
+            _imageHeight = heroArtworkHeight(pixels, _viewport!, _ratio!);
+          });
         } else {
           _trySource(urls, index + 1, request);
         }
@@ -112,19 +125,36 @@ class _HeroArtworkState extends State<HeroArtwork> {
             _scheduleLoad();
           }
           return Stack(fit: StackFit.expand, children: [
-            DecoratedBox(
-                decoration: BoxDecoration(gradient: seedGradient(widget.seed))),
+            const ColoredBox(color: NitrateBrand.ink),
             AnimatedSwitcher(
               duration: motionOf(context, Motion.normal),
               child: _selected == null
                   ? const SizedBox.expand()
-                  : SizedBox.expand(
+                  : Align(
                       key: ValueKey(_selected),
-                      child: Image.network(
-                        _selected!,
-                        fit: BoxFit.cover,
-                        filterQuality: FilterQuality.medium,
-                        errorBuilder: (_, _, _) => const SizedBox.expand(),
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: _imageHeight,
+                        child: ShaderMask(
+                          blendMode: BlendMode.dstIn,
+                          shaderCallback: (rect) => const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.white,
+                              Colors.white,
+                              Colors.transparent
+                            ],
+                            stops: [0, .72, 1],
+                          ).createShader(rect),
+                          child: Image.network(
+                            _selected!,
+                            fit: BoxFit.cover,
+                            filterQuality: FilterQuality.medium,
+                            errorBuilder: (_, _, _) => const SizedBox.expand(),
+                          ),
+                        ),
                       ),
                     ),
             ),

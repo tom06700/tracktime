@@ -8,8 +8,18 @@ void main() {
     const viewport = Size(390, 650);
     expect(artworkFitsHero(const Size(320, 180), viewport, 3), isFalse);
     expect(artworkFitsHero(const Size(1920, 1080), viewport, 3), isTrue);
-    expect(artworkFitsHero(const Size(680, 1000), viewport, 3), isTrue);
+    expect(artworkFitsHero(const Size(680, 1000), viewport, 3), isFalse);
     expect(artworkFitsHero(Size.zero, viewport, 3), isFalse);
+  });
+  test('Nouvelle École Retina : pas de zoom, au moins 75 % du cadre conservé',
+      () {
+    const source = Size(1920, 1080);
+    const viewport = Size(390, 650);
+    final height = heroArtworkHeight(source, viewport, 3);
+    expect(height, closeTo(292.5, .01));
+    expect(height * 3, lessThanOrEqualTo(source.height));
+    expect(viewport.width / height, closeTo(source.aspectRatio * .75, .01));
+    expect(heroArtworkHeight(const Size(680, 1000), viewport, 3), 0);
   });
   test('le fond le plus résolu du bon type prime sur le premier résultat', () {
     final data = {

@@ -55,7 +55,7 @@ class _ContinueWatchingHeroState extends State<ContinueWatchingHero> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: largeText ? 100 : (width * .48).clamp(145.0, 220.0)),
+          SizedBox(height: largeText ? 100 : (width * .30).clamp(100.0, 150.0)),
           EntranceFade(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
