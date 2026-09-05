@@ -172,9 +172,7 @@ TvdbClient _tvdb() => TvdbClient(
     if (p.endsWith('/login')) {
       return http.Response('{"data":{"token":"t"}}', 200);
     }
-    if (p.endsWith('/search')) {
-      return _ok([_hit(81797, 'One Piece', '1999')]);
-    }
+    if (p.endsWith('/search')) return _ok([_hit(81797, 'One Piece', '1999')]);
     if (p.contains('/series/filter')) {
       return _ok([
         _hit(81797, 'One Piece', '1999'),
@@ -446,10 +444,12 @@ void main() {
   testWidgets(
     'audit visuel',
     skip: Platform.environment['NITRATE_AUDIT'] != '1',
+    timeout: const Timeout(Duration(minutes: 3)),
     (tester) async {
-      await Directory(_out).create(recursive: true);
+      Directory(_out).createSync(recursive: true);
       debugNetworkImageHttpClientProvider = _Client.new;
       await tester.runAsync(_loadFonts);
+      debugPrint('Audit: fonts ready');
       SharedPreferences.setMockInitialValues({});
 
       tester.view.physicalSize = const Size(390 * 3, 844 * 3);
@@ -458,6 +458,7 @@ void main() {
       addTearDown(tester.view.reset);
 
       final db = await _seed();
+      debugPrint('Audit: seed ready');
       addTearDown(db.close);
 
       await tester.pumpWidget(
@@ -565,7 +566,7 @@ void main() {
       await _settleReal(tester, 900);
       await _shot(tester, '20-explorer-recherche');
 
-      await File('$_out/issues.txt').writeAsString(_issues.join('\n'));
+      File('$_out/issues.txt').writeAsStringSync(_issues.join('\n'));
       debugNetworkImageHttpClientProvider = null;
       // Démontage propre.
       await tester.pumpWidget(const SizedBox.shrink());

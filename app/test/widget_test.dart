@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:tracktime/db/database.dart';
 import 'package:tracktime/main.dart';
+import 'package:tracktime/widgets/nav_bar.dart';
 import 'package:tracktime/providers.dart';
 import 'package:tracktime/settings/prefs.dart';
 import 'package:tracktime/tmdb/tvdb.dart';
@@ -30,7 +31,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Séries'), findsOneWidget);
+    expect(find.descendant(of: find.byType(NitrateNavBar), matching: find.text('Séries')), findsOneWidget);
     expect(find.text('Films'), findsOneWidget);
     expect(find.text('Explorer'), findsOneWidget);
     expect(find.text('Profil'), findsOneWidget);

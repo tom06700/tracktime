@@ -38,5 +38,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(await db.movieById(42), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 1));
   });
 }
