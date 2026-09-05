@@ -13,7 +13,7 @@ import 'package:tracktime/tmdb/tvdb.dart';
 
 void main() {
   testWidgets('affiche la coquille avec les 4 onglets', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'nitrate.welcome.v1': true});
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
 
@@ -31,7 +31,10 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.descendant(of: find.byType(NitrateNavBar), matching: find.text('Séries')), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byType(NitrateNavBar), matching: find.text('Séries')),
+        findsOneWidget);
     expect(find.text('Films'), findsOneWidget);
     expect(find.text('Explorer'), findsOneWidget);
     expect(find.text('Profil'), findsOneWidget);

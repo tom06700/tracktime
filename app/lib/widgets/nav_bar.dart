@@ -40,7 +40,7 @@ class NitrateNavBar extends StatelessWidget {
 
     final bar = DecoratedBox(
       decoration: BoxDecoration(
-        color: TtColors.bg.withValues(alpha: opaque ? 1 : 0.82),
+        color: TtColors.bg.withValues(alpha: opaque ? 1 : 0.76),
         borderRadius: BorderRadius.circular(34),
         border: Border.all(
           color: Colors.white.withValues(alpha: .12),
@@ -50,8 +50,7 @@ class NitrateNavBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: SizedBox(
-          height:
-              _height +
+          height: _height +
               (MediaQuery.textScalerOf(context).scale(11) - 11).clamp(
                 0.0,
                 22.0,
@@ -108,7 +107,7 @@ class _NavTab extends StatelessWidget {
 
   /// Plus clair que TtColors.dim : les icônes doivent rester lisibles
   /// au-dessus du décor animé du Profil (contraste ≥ 4.5:1).
-  static const _inactive = Color(0xFF9BA3B7);
+  static const _inactive = Color(0xFFB0B1A6);
 
   @override
   Widget build(BuildContext context) {
@@ -132,35 +131,51 @@ class _NavTab extends StatelessWidget {
                 ? Duration.zero
                 : const Duration(milliseconds: 150),
             curve: Curves.easeOut,
-            builder: (context, color, _) => Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(item.icon, size: 22, color: color),
-                const SizedBox(height: 4),
-                Text(
-                  item.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.1,
-                    color: color,
+            builder: (context, color, _) => AnimatedContainer(
+              duration: reduceMotion
+                  ? Duration.zero
+                  : const Duration(milliseconds: 180),
+              margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+              decoration: BoxDecoration(
+                color: selected
+                    ? NitrateBrand.ivory.withValues(alpha: .10)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(
+                    color: selected
+                        ? NitrateBrand.ivory.withValues(alpha: .13)
+                        : Colors.transparent),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(item.icon, size: 22, color: color),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.1,
+                      color: color,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                AnimatedContainer(
-                  duration: reduceMotion
-                      ? Duration.zero
-                      : const Duration(milliseconds: 180),
-                  height: 3,
-                  width: selected ? 12 : 3,
-                  decoration: BoxDecoration(
-                    color: selected ? NitrateBrand.ivory : Colors.transparent,
-                    borderRadius: BorderRadius.circular(4),
+                  const SizedBox(height: 4),
+                  AnimatedContainer(
+                    duration: reduceMotion
+                        ? Duration.zero
+                        : const Duration(milliseconds: 180),
+                    height: 3,
+                    width: selected ? 12 : 3,
+                    decoration: BoxDecoration(
+                      color: selected ? NitrateBrand.ivory : Colors.transparent,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

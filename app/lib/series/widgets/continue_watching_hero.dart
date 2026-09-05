@@ -55,11 +55,19 @@ class _ContinueWatchingHeroState extends State<ContinueWatchingHero> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: largeText ? 140 : (width * .38).clamp(130.0, 210.0)),
+          SizedBox(height: largeText ? 100 : (width * .48).clamp(145.0, 220.0)),
           EntranceFade(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text('À L’AFFICHE DANS TA LISTE',
+                    style: TextStyle(
+                      fontSize: 10,
+                      letterSpacing: 2,
+                      fontWeight: FontWeight.w600,
+                      color: NitrateBrand.ivory,
+                    )),
+                const SizedBox(height: 12),
                 Semantics(
                   button: true,
                   label: 'Ouvrir la série ${n.show.name}',
@@ -70,7 +78,7 @@ class _ContinueWatchingHeroState extends State<ContinueWatchingHero> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: NitrateBrand.display(
-                        n.show.name.length > 22 ? 44 : 58,
+                        n.show.name.length > 22 ? 42 : 56,
                       ),
                     ),
                   ),

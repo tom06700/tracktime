@@ -51,9 +51,9 @@ void _openShow(BuildContext context, int id, String name) =>
     context.push('/show/$id', extra: name);
 
 void _openEpisode(BuildContext context, NextUp n) => context.push(
-  '/episode/${n.show.id}/${n.season}/${n.episode}',
-  extra: {'name': n.show.name, 'poster': n.show.poster},
-);
+      '/episode/${n.show.id}/${n.season}/${n.episode}',
+      extra: {'name': n.show.name, 'poster': n.show.poster},
+    );
 
 Future<void> _markWatched(WidgetRef ref, NextUp n) => ref
     .read(databaseProvider)
@@ -92,7 +92,7 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
             right: 0,
             child: IgnorePointer(
               child: SizedBox(
-                height: MediaQuery.paddingOf(context).top + 540,
+                height: MediaQuery.paddingOf(context).top + 590,
                 child: AnimatedBuilder(
                   animation: _scroll,
                   builder: (context, _) {
@@ -125,12 +125,12 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [
-                                  Color(0xC0080C0B),
-                                  Color(0xC0080C0B),
-                                  Color(0xDD080C0B),
+                                  Color(0xA0080C0B),
+                                  Color(0x18080C0B),
+                                  Color(0xDE080C0B),
                                   NitrateBrand.ink,
                                 ],
-                                stops: [0, .28, .72, 1],
+                                stops: [0, .30, .76, 1],
                               ),
                             ),
                           ),
@@ -175,7 +175,7 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen> {
                   labelColor: NitrateBrand.ivory,
                   unselectedLabelColor: TtColors.dim,
                   indicatorColor: NitrateBrand.ivory,
-                  indicatorWeight: 3,
+                  indicatorWeight: 2,
                   indicatorSize: TabBarIndicatorSize.label,
                   dividerColor: Colors.transparent,
                   labelStyle: const TextStyle(
@@ -230,8 +230,7 @@ class _ToWatchTab extends ConsumerWidget {
         debugPrint('Séries — chargement du fil impossible : $e\n$st');
         return ErrorRetry(
           title: 'Impossible de charger tes séries',
-          message:
-              'Tes données sont toujours là. '
+          message: 'Tes données sont toujours là. '
               'Réessaie dans un instant.',
           onRetry: () => ref.invalidate(showsProvider),
         );
@@ -292,7 +291,7 @@ class _ToWatchFeed extends ConsumerWidget {
               onMarkWatched: () => _markWatched(ref, hero),
             ),
           if (next.isNotEmpty) ...[
-            const SizedBox(height: 30),
+            const SizedBox(height: 32),
             const _SectionHeader('Dans ta liste'),
             _Carousel(
               height: 205 + (MediaQuery.textScalerOf(context).scale(30) - 30),
@@ -305,7 +304,7 @@ class _ToWatchFeed extends ConsumerWidget {
             ),
           ],
           if (feed.history.isNotEmpty) ...[
-            const SizedBox(height: 30),
+            const SizedBox(height: 32),
             _HistoryLink(),
           ],
         ],
@@ -362,12 +361,7 @@ class _SectionHeader extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    letterSpacing: -.6,
-                    fontWeight: FontWeight.w700,
-                    color: TtColors.text,
-                  ),
+                  style: NitrateBrand.display(30),
                 ),
               ],
             ),
@@ -446,8 +440,7 @@ class _UpcomingTabState extends ConsumerState<_UpcomingTab> {
         debugPrint('Séries — chargement des sorties impossible : $e\n$st');
         return ErrorRetry(
           title: 'Impossible de charger les prochaines sorties',
-          message:
-              'Tes données sont toujours là. '
+          message: 'Tes données sont toujours là. '
               'Réessaie dans un instant.',
           onRetry: () => ref.invalidate(showsProvider),
         );
@@ -459,8 +452,7 @@ class _UpcomingTabState extends ConsumerState<_UpcomingTab> {
             onAction: () => _refresh(context, ref),
             icon: Icons.event_outlined,
             title: 'Rien d\'annoncé',
-            message:
-                'Ajoute des séries en cours de diffusion — '
+            message: 'Ajoute des séries en cours de diffusion — '
                 'leurs prochaines dates apparaîtront ici.',
           );
         }
@@ -670,38 +662,39 @@ class _QueuePoster extends StatelessWidget {
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 112,
-    child: Semantics(
-      button: true,
-      label: '${next.show.name}, ${next.code}',
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(9),
-              child: SizedBox(
-                height: 164,
-                width: 112,
-                child: MediaImage(
-                  sources: [next.show.poster, next.still],
-                  seed: next.show.name,
+        width: 112,
+        child: Semantics(
+          button: true,
+          label: '${next.show.name}, ${next.code}',
+          child: GestureDetector(
+            onTap: onTap,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(9),
+                  child: SizedBox(
+                    height: 164,
+                    width: 112,
+                    child: MediaImage(
+                      sources: [next.show.poster, next.still],
+                      seed: next.show.name,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 8),
+                Text(
+                  next.show.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              next.show.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-          ],
+          ),
         ),
-      ),
-    ),
-  );
+      );
 }
 
 class _CinemaEmpty extends StatelessWidget {
@@ -709,53 +702,53 @@ class _CinemaEmpty extends StatelessWidget {
   final VoidCallback onExplore;
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-    padding: EdgeInsets.only(bottom: bottomNavInset(context)),
-    child: Column(
-      children: [
-        SizedBox(
-          height: 290,
-          width: double.infinity,
-          child: Image.asset(
-            'assets/images/empty_cinema.webp',
-            fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
-          ),
+        padding: EdgeInsets.only(bottom: bottomNavInset(context)),
+        child: Column(
+          children: [
+            SizedBox(
+              height: 290,
+              width: double.infinity,
+              child: Image.asset(
+                'assets/images/empty_cinema.webp',
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Column(
+                children: [
+                  Text(
+                    'Ta liste est vide',
+                    textAlign: TextAlign.center,
+                    style: NitrateBrand.display(42),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Les histoires restent.\nRetrouve ici celles que tu veux suivre.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      height: 1.5,
+                      color: TtColors.dim,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: onExplore,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Explorer les séries'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: NitrateBrand.ivory,
+                      foregroundColor: NitrateBrand.ink,
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: const StadiumBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            children: [
-              Text(
-                'Ta liste est vide',
-                textAlign: TextAlign.center,
-                style: NitrateBrand.display(42),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Les histoires restent.\nRetrouve ici celles que tu veux suivre.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  height: 1.5,
-                  color: TtColors.dim,
-                ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: onExplore,
-                icon: const Icon(Icons.add),
-                label: const Text('Explorer les séries'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: NitrateBrand.ivory,
-                  foregroundColor: NitrateBrand.ink,
-                  minimumSize: const Size(double.infinity, 50),
-                  shape: const StadiumBorder(),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
+      );
 }

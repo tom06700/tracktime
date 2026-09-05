@@ -18,7 +18,8 @@ class SettingsScreen extends ConsumerWidget {
 
   Future<void> _open(BuildContext context, String url) async {
     try {
-      if (await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication)) {
+      if (await launchUrl(Uri.parse(url),
+          mode: LaunchMode.externalApplication)) {
         return;
       }
     } catch (e) {
@@ -110,6 +111,17 @@ class SettingsScreen extends ConsumerWidget {
               ),
               trailing: const Icon(Icons.chevron_right, color: TtColors.dim),
               onTap: () => context.push('/import'),
+            ),
+          ),
+
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.auto_awesome_motion_outlined,
+                  color: TtColors.amber),
+              title: const Text('Découvrir Nitrate'),
+              subtitle: const Text('Revoir le générique d’ouverture'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/welcome'),
             ),
           ),
 

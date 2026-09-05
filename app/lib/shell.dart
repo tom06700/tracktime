@@ -7,7 +7,7 @@ import 'screens/movies_screen.dart';
 import 'screens/profile_screen.dart';
 import 'providers.dart';
 import 'screens/shows_screen.dart';
-import 'theme.dart';
+import 'brand/nitrate_brand.dart';
 import 'widgets/nav_bar.dart';
 
 /// Coquille principale : 4 onglets (Séries · Films · Explorer · Profil) dans
@@ -46,12 +46,7 @@ class HomeShell extends ConsumerWidget {
           : AppBar(
               title: Text(
                 ['Nitrate', 'Films', 'Explorer', 'Profil'][tab],
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.7,
-                  color: TtColors.text,
-                ),
+                style: NitrateBrand.display(36),
               ),
               actions: [
                 if (tab == HomeTab.series)
