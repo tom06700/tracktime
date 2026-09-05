@@ -56,5 +56,18 @@ notamment pour les gestes système, le clavier et le partage natif.
 La CI standard exécute l'analyse et les tests. Le workflow de captures sur la
 branche de revue UI exporte également les PNG comme artefact GitHub Actions.
 Le build iOS signé et l'envoi TestFlight sont configurés dans `../codemagic.yaml`.
+Les changements sont regroupés en PR vers `main`. Après fusion, un push sur
+`main` touchant l'app ou `codemagic.yaml` déclenche automatiquement l'analyse,
+les tests, le build signé et l'envoi TestFlight. Les changements uniquement
+documentaires sont exclus. Un échec d'analyse ou de test bloque l'envoi.
+Les pushs directs sur `main` déclenchent aussi ce circuit ; les branches de PR
+ne publient pas sur TestFlight. Le lancement manuel reste possible.
+
+Prérequis : le webhook GitHub doit être actif dans Codemagic → application →
+Webhooks (« Update webhook » si nécessaire), ainsi que la signature et
+l'intégration App Store Connect. Après la première fusion, vérifier le webhook,
+le build `ios-testflight`, puis sa disponibilité après traitement dans TestFlight.
+Ce circuit permet de modifier le code sur un Mac sans Flutter récent, avec les
+analyses et builds exécutés à distance. Il ne fournit pas de hot reload.
 
 Metadata provided by TheTVDB. Nitrate n'est ni approuvé ni certifié par TheTVDB.
