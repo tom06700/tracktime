@@ -13,7 +13,9 @@ double heroArtworkHeight(Size pixels, Size viewport, double pixelRatio) {
   if (pixels.isEmpty ||
       viewport.isEmpty ||
       pixelRatio <= 0 ||
-      pixels.width < viewport.width * pixelRatio) return 0;
+      pixels.width < viewport.width * pixelRatio) {
+    return 0;
+  }
   final natural = pixels.height / pixelRatio;
   final composition = viewport.width * pixels.height / pixels.width / .75;
   return math.min(viewport.height, math.min(natural, composition));

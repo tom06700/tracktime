@@ -10,10 +10,13 @@ sur 1,8 s, déplacement d’un pas sur 6 s, jointure périodique. Le mot-symbole
 se révèle après 35 % de l’entrée. Le texte de l’écran et les boutons ne bougent
 pas. Animation arrêtée en arrière-plan et en réduction des animations.
 
-Le dessin repose sur des courbes et cadres vectoriels modifiables en code.
-L’éditeur gratuit Glaxnimate est en cours de vérification sur ce Mac ; aucune
-prétention à un export Lottie créé dans cet éditeur tant que son installation
-et son ouverture ne sont pas vérifiées. Pas de dépendance Rive/Lottie ajoutée.
+Le dessin SVG modifiable `filmstrip.svg` est généré par
+`scripts/build_filmstrip_source.py` à partir des mêmes points de contrôle.
+Glaxnimate 0.6.0 Intel est installé dans ~/Applications/glaxnimate.app : minimum
+macOS 13 vérifié, signature et notarisation Apple acceptées, export PNG exécuté
+et dessin SVG ouvert dans l’éditeur. Le PNG inspecté est une étude vectorielle,
+pas une capture de l’app. L’animation runtime reste en Flutter ; aucun export
+Lottie animé ni plugin MCP n’est utilisé.
 
 Validation artistique native encore requise : la validité du dessin et des
 calculs ne prouve ni sa finition visuelle ni sa fluidité sur iPhone.

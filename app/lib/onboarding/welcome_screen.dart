@@ -179,7 +179,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     .clamp(160.0, 300.0),
                                 width: double.infinity,
                                 child: CustomPaint(
-                                    painter: _ProjectionPainter(
+                                    painter: FilmstripPainter(
                                         _controller, _ambient)),
                               ),
                             ),
