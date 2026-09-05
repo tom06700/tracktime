@@ -26,7 +26,13 @@ for alias,title,year in [(1406,'Dune','2021'),(496243,'Parasite','2019'),(27205,
  query=urllib.parse.urlencode({'query':title,'type':'movie','year':year})
  req=urllib.request.Request('https://api4.thetvdb.com/v4/search?'+query,headers={'Authorization':'Bearer '+token})
  with urllib.request.urlopen(req,timeout=30) as r:hits=json.load(r)['data']
- hit=next(h for h in hits if str(h.get('year'))==year)
+ if not hits:
+  query=urllib.parse.urlencode({'query':' '.join(title.split()[:4]),'type':'movie'})
+  req=urllib.request.Request('https://api4.thetvdb.com/v4/search?'+query,headers={'Authorization':'Bearer '+token})
+  with urllib.request.urlopen(req,timeout=30) as r:hits=json.load(r)['data']
+ if not hits:raise ValueError('No catalogue match for '+title)
+ hit=next((h for h in hits if str(h.get('year'))==year),hits[0])
+ print('Artwork:',title,'->',hit.get('name'),hit.get('year'),flush=True)
  url=hit.get('image_url') or hit.get('thumbnail')
  with urllib.request.urlopen(url,timeout=30) as r:content=r.read()
  (out/f'movie-{alias}.jpg').write_bytes(content)
