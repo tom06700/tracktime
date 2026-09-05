@@ -10,8 +10,8 @@
 #     sur developer.apple.com. `ios_signing` le RÉCUPÈRE mais ne le crée pas :
 #     sans lui, le build échoue dès la configuration de l'environnement avec
 #     « No matching profiles found ».
-#  5. Lancer à la main (Start new build) : pas de déclenchement automatique,
-#     les pushs sur main servent au déploiement Vercel.
+#  5. Codemagic > application > Webhooks : vérifier le webhook GitHub
+#     (Update webhook si nécessaire). Les pushs sur main déclenchent TestFlight.
 
 workflows:
   ios-testflight:
@@ -21,6 +21,25 @@ workflows:
 
     # L'app Flutter vit dans app/, pas à la racine du dépôt.
     working_directory: app
+
+    # Les changements sont regroupés en PR ; la fusion déclenche un push main.
+    # Les branches de travail ne publient pas de build TestFlight.
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+      cancel_previous_builds: true
+
+    when:
+      changeset:
+        includes:
+          - 'app/**'
+          - 'codemagic.yaml'
+        excludes:
+          - '**/*.md'
 
     integrations:
       app_store_connect: chez-nous-asc

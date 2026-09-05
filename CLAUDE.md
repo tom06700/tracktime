@@ -3,7 +3,8 @@
 Suivi de séries/films, 100 % local, métadonnées TheTVDB.
 
 **Le développement ne porte que sur l'app Flutter (iOS et Android).** Les
-pushs vont directement sur `main`, sans PR.
+changements sont regroupés en PR cohérentes vers `main`. La CI vérifie les
+branches et PR ; après fusion, Codemagic construit et publie sur TestFlight.
 
 ## Layout
 
@@ -16,8 +17,17 @@ récupérable dans l'historique git si besoin.
 
 ## Livraison iOS
 
-`codemagic.yaml` à la racine : build signé + envoi TestFlight, déclenché à la
-main depuis Codemagic. Le numéro de build vient du compteur Codemagic.
+`codemagic.yaml` à la racine : build signé + envoi TestFlight automatique sur
+push dans `main` pour les changements de l'app ou du workflow. Les changements
+uniquement documentaires sont exclus. Un push direct dans `main` déclenche
+aussi le workflow ; utiliser les PR pour regrouper les évolutions. Le numéro
+de build vient du compteur Codemagic. Analyse et tests bloquent la publication
+en cas d'échec. Le lancement manuel reste disponible.
+
+La liaison nécessite un webhook GitHub actif : dans l'application Codemagic,
+onglet Webhooks, utiliser « Update webhook » si nécessaire. Vérifier ensuite
+la livraison du webhook, le build `ios-testflight` et son arrivée dans TestFlight.
+Une configuration YAML seule ne confirme pas que cette liaison est active.
 
 Prérequis déjà en place côté Codemagic : clé App Store Connect
 « chez-nous-asc », certificat de distribution partagé au niveau de l'équipe,

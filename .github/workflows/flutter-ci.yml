@@ -10,6 +10,7 @@ on:
   pull_request:
     paths:
       - 'app/**'
+      - 'codemagic.yaml'
       - '.github/workflows/flutter-ci.yml'
   # Toutes les branches, pas seulement main : ce projet pousse directement sur
   # des branches sans passer par une pull request, qui n'auraient donc reçu
@@ -17,6 +18,7 @@ on:
   push:
     paths:
       - 'app/**'
+      - 'codemagic.yaml'
       - '.github/workflows/flutter-ci.yml'
 
 # Un seul run par référence : les pushs rapprochés annulent le précédent.
