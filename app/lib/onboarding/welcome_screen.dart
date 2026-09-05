@@ -65,7 +65,7 @@ class _WelcomeGateState extends State<WelcomeGate> {
   }
 }
 
-/// An opening iris followed by a seamless ambient loop; text stays still.
+/// A film ribbon enters, then flows continuously; reading remains still.
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key, required this.onFinish});
   final Future<void> Function() onFinish;
@@ -139,6 +139,24 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     }
   }
 
+  Widget _reveal(
+          {required double begin,
+          required double end,
+          required Widget child}) =>
+      AnimatedBuilder(
+        animation: _controller,
+        child: child,
+        builder: (context, child) {
+          final t = Interval(begin, end, curve: Curves.easeOutCubic)
+              .transform(_controller.value);
+          return Opacity(
+            opacity: t,
+            child: Transform.translate(
+                offset: Offset(0, (1 - t) * 12), child: child),
+          );
+        },
+      );
+
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: NitrateBrand.ink,
@@ -185,19 +203,27 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             ),
                           ),
                           const SizedBox(height: 28),
-                          Text(
-                            'Les histoires passent.\nLes émotions restent.',
-                            textAlign: TextAlign.center,
-                            style:
-                                NitrateBrand.display(44).copyWith(height: 1.04),
-                          ),
+                          _reveal(
+                              begin: .10,
+                              end: .55,
+                              child: Text(
+                                'Les histoires passent.\nLes émotions restent.',
+                                textAlign: TextAlign.center,
+                                style: NitrateBrand.display(44)
+                                    .copyWith(height: 1.04),
+                              )),
                           const SizedBox(height: 20),
-                          const Text(
-                            'Tes films. Tes séries. Ton regard.\nUn endroit pour garder le fil.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 16, height: 1.6, color: TtColors.dim),
-                          ),
+                          _reveal(
+                              begin: .32,
+                              end: .72,
+                              child: const Text(
+                                'Tes films. Tes séries. Ton regard.\nUn endroit pour garder le fil.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    height: 1.6,
+                                    color: TtColors.dim),
+                              )),
                         ],
                       ),
                     ),

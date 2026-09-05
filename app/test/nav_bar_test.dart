@@ -11,14 +11,14 @@ void main() {
   ];
 
   Widget host(int selected, ValueChanged<int> onSelected) => MaterialApp(
-    home: Scaffold(
-      bottomNavigationBar: NitrateNavBar(
-        items: items,
-        selectedIndex: selected,
-        onSelected: onSelected,
-      ),
-    ),
-  );
+        home: Scaffold(
+          bottomNavigationBar: NitrateNavBar(
+            items: items,
+            selectedIndex: selected,
+            onSelected: onSelected,
+          ),
+        ),
+      );
 
   testWidgets('taper un autre onglet le notifie', (tester) async {
     final taps = <int>[];
@@ -63,6 +63,18 @@ void main() {
       ),
     );
     handle.dispose();
+  });
+
+  testWidgets('le socle couvre les marges et la safe area sous la navigation',
+      (tester) async {
+    await tester.pumpWidget(host(0, (_) {}));
+    final foundation = find.byKey(const ValueKey('navigation-foundation'));
+    final rect = tester.getRect(foundation);
+    final screen = tester.getSize(find.byType(Scaffold));
+    expect(rect.left, 0);
+    expect(rect.right, screen.width);
+    expect(rect.bottom, screen.height);
+    expect(tester.widget<ColoredBox>(foundation).color.a, 1);
   });
 
   testWidgets('les zones tactiles dépassent 44 px', (tester) async {

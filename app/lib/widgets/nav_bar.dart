@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../theme.dart';
 import '../brand/nitrate_brand.dart';
+import 'press_response.dart';
 
 class NavItem {
   const NavItem({required this.icon, required this.label});
@@ -86,9 +87,15 @@ class NitrateNavBar extends StatelessWidget {
               child: bar,
             ),
           );
-    return Padding(
-      padding: EdgeInsets.fromLTRB(14, 8, 14, bottomSafe + 8),
-      child: glass,
+    // Cover the entire footer, including the gaps beside the floating glass
+    // and the home indicator. Scrolled titles cannot leak below the capsule.
+    return ColoredBox(
+      key: const ValueKey('navigation-foundation'),
+      color: NitrateBrand.ink,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(14, 8, 14, bottomSafe + 8),
+        child: glass,
+      ),
     );
   }
 }
@@ -119,8 +126,7 @@ class _NavTab extends StatelessWidget {
       selected: selected,
       inMutuallyExclusiveGroup: true,
       label: item.label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: PressTarget(
         onTap: onTap,
         child: ExcludeSemantics(
           // Une seule couche animée pour l'onglet entier : la couleur pilote

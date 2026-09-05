@@ -46,3 +46,11 @@ profil créé sur developer.apple.com doit y être importé pour être vu.
   `pubspec.lock` référencerait un chemin local.
 - Pas de simulateur iOS ici (conteneur Linux). Pour un contrôle visuel, passer
   par des tests golden plutôt que par un build web, désormais supprimé.
+
+## Autorisation de livraison
+
+Le propriétaire autorise la fusion dans `main` des PR terminées, vérifiées et
+regroupant un lot cohérent, sans nouvelle confirmation à chaque fois. Les
+limites de validation visuelle doivent rester explicites ; la CI verte ne
+constitue pas une validation artistique. Éviter les petites livraisons répétées
+qui consomment inutilement des minutes Codemagic.

@@ -15,7 +15,8 @@ import 'package:tracktime/theme.dart';
 
 /// Monte l'écran Séries sur une base en mémoire, sans réseau : le fil se
 /// recompose depuis la base comme dans l'app.
-Future<AppDatabase> _pump(WidgetTester tester, {bool seed = true}) async {
+Future<AppDatabase> _pump(WidgetTester tester,
+    {bool seed = true, int otherShows = 0}) async {
   final db = AppDatabase.forTesting(NativeDatabase.memory());
   addTearDown(db.close);
 
@@ -38,6 +39,19 @@ Future<AppDatabase> _pump(WidgetTester tester, {bool seed = true}) async {
         name: const Value('Trojan\'s Horse'),
         airDate: Value(DateTime.now().subtract(const Duration(days: 23))),
       ),
+    ]);
+  }
+
+  for (var i = 0; i < otherShows; i++) {
+    final id = 100 + i;
+    await db.upsertShow(ShowsCompanion.insert(id: Value(id), name: 'Série $i'));
+    await db.upsertEpisodes([
+      EpisodesCompanion.insert(
+        showId: id,
+        season: 1,
+        episode: 1,
+        airDate: Value(DateTime.now().subtract(const Duration(days: 1))),
+      )
     ]);
   }
 
@@ -92,6 +106,29 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     expect(opacity(), 1);
+    await _settle(tester);
+  });
+
+  testWidgets('le décor disparaît en descendant et revient en remontant',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 500);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await _pump(tester, otherShows: 3);
+    final list = find.byKey(const PageStorageKey('to-watch-feed'));
+    double opacity() => tester
+        .widget<Opacity>(find.byKey(const ValueKey('featured-artwork-opacity')))
+        .opacity;
+    final scrollable =
+        find.descendant(of: list, matching: find.byType(Scrollable)).first;
+    final position = tester.state<ScrollableState>(scrollable).position;
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pump();
+    expect(opacity(), 0);
+    position.jumpTo(0);
+    await tester.pump();
+    expect(opacity(), 1);
+    expect(tester.takeException(), isNull);
     await _settle(tester);
   });
 
