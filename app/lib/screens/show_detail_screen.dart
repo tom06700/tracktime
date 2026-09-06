@@ -10,6 +10,7 @@ import '../db/database.dart';
 import '../providers.dart';
 import '../motion.dart';
 import '../series/catch_up.dart';
+import '../series/feed.dart' show hasAiredByDay;
 import '../series/widgets/catch_up_sheet.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
@@ -341,13 +342,18 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
     final candidates = all.where((e) {
       final air = _episodeDates[e.season]?[e.episode];
       return !watched.contains('S${e.season}E${e.episode}') &&
-          (air == null || !air.isAfter(DateTime.now()));
+          hasAiredByDay(air, DateTime.now());
     });
     // Regular episodes drive resumption; specials remain explicitly accessible.
-    final next = candidates.where((e) => e.season > 0).firstOrNull ??
-        candidates.firstOrNull;
+    final next = candidates.where((e) => e.season > 0).firstOrNull;
+    final nextSeason = all
+        .where((e) =>
+            e.season > 0 && !watched.contains('S${e.season}E${e.episode}'))
+        .firstOrNull
+        ?.season;
     final selected = _selectedSeason ??
         next?.season ??
+        nextSeason ??
         _seasonNumbers.where((s) => s > 0).firstOrNull ??
         _seasonNumbers.firstOrNull;
     final numbers = _episodesBySeason[selected] ?? <int>[];

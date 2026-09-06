@@ -46,10 +46,9 @@ class HomeShell extends ConsumerWidget {
       appBar: immersive
           ? null
           : AppBar(
-              title: Text(
-                ['Nitrate', 'Films', 'Explorer', 'Profil'][tab],
-                style: NitrateBrand.display(36),
-              ),
+              titleSpacing: 20,
+              toolbarHeight: 72,
+              title: const NitrateWordmark(size: 22),
               actions: [
                 if (tab == HomeTab.series)
                   IconButton(

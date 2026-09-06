@@ -7,7 +7,7 @@ import tempfile
 
 root = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else 'app/build/modern-audit').resolve()
 sequences = [('motion-intro-', 1000 / 33), ('motion-departure-', 1000 / 33),
-             ('episode-motion-', 20)]
+             ('episode-motion-', 20), ('pellicule-motion-', 1000 / 33)]
 sequences += [(f'motion-control-{name}-', 20) for name in ['softCheck', 'attach', 'nextUp', 'surprise']]
 sequences += [(f'edge-{name}-', 20) for name in ['Profil', 'Séries', 'À venir', 'À voir']]
 sequences += [('global-series-enter-', 20), ('global-series-tabs-', 20)]
@@ -26,7 +26,7 @@ for prefix, fps in sequences:
 
 # Portable review gallery, bundled with the original PNG frames and MP4s.
 import html
-stills = ['01-intro', '05-notifications', '01-series', '02-series-a-venir',
+stills = ['pellicule-initial', 'pellicule-selected', '01-intro', '05-notifications', '01-series', '02-series-a-venir',
           '09-fiche-serie', '10-fiche-serie-episodes', '11-fiche-serie-non-vus',
           'episode-1155', '07-fiche-film', '12-fiche-film-titre-long',
           '04-explorer', '20-explorer-recherche', '05-profil', '06-profil-bas']

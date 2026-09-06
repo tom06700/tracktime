@@ -186,11 +186,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
         // ── Pellicule de genres ──
         sec(3, [
-          const UniverseSectionTitle(
-            'Ta pellicule',
-            subtitle:
-                'Chaque photogramme, un genre — à la mesure du temps passé.',
-          ),
           if (universe != null) GenreFilmStrip(universe: universe),
         ]),
 
