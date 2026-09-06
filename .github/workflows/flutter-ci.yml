@@ -77,6 +77,20 @@ jobs:
           NITRATE_DESIGN_AUDIT: '1'
         run: flutter test test/modern_reference_audit_test.dart
 
+      - name: Capturer les parcours existants
+        env:
+          NITRATE_AUDIT: '1'
+        run: |
+          python3 ../scripts/prepare_cinema_audit.py
+          export NITRATE_AUDIT_FONTS="$FLUTTER_ROOT/bin/cache/artifacts/material_fonts"
+          flutter test test/visual_audit_test.dart --timeout 10m
+          cp build/audit/*.png build/modern-audit/
+
+      - name: Capturer les prototypes fournis
+        run: |
+          google-chrome --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,844 --virtual-time-budget=3000 --screenshot=build/modern-audit/reference-intro.png "file://$GITHUB_WORKSPACE/design/validated-handoff/previews/intro.html"
+          google-chrome --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,1600 --virtual-time-budget=1000 --screenshot=build/modern-audit/reference-controls.png "file://$GITHUB_WORKSPACE/design/validated-handoff/previews/controls.html"
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

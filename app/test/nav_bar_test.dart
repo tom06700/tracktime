@@ -46,6 +46,10 @@ void main() {
       matchesSemantics(
         label: 'Explorer',
         isButton: true,
+        isFocusable: true,
+        isEnabled: true,
+        hasEnabledState: true,
+        hasFocusAction: true,
         isSelected: true,
         hasTapAction: true,
         hasSelectedState: true,
@@ -57,6 +61,10 @@ void main() {
       matchesSemantics(
         label: 'Séries',
         isButton: true,
+        isFocusable: true,
+        isEnabled: true,
+        hasEnabledState: true,
+        hasFocusAction: true,
         hasTapAction: true,
         hasSelectedState: true,
         isInMutuallyExclusiveGroup: true,

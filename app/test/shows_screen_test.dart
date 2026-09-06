@@ -188,6 +188,8 @@ void main() {
     final db = await _pump(tester);
 
     await tester.ensureVisible(find.text('Marquer vu'));
+    await tester.pump();
+    expect(find.text('Marquer vu').hitTestable(), findsOneWidget);
     await tester.tap(find.text('Marquer vu'));
     await tester.pump();
 

@@ -1,0 +1,106 @@
+<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><body style="margin:0;background:black"><div id="nitrate-flight">
+ <div class="nf-phone">
+  <section class="nf-welcome">
+   <header class="nf-header"><span class="nf-brand">nitrate</span><button type="button" data-action="enter" class="nf-skip">Passer</button></header>
+   <div class="nf-space"><canvas class="nf-canvas" role="img" aria-label="Des objets de cinéma, de science-fiction et d’anime s’envolent sur un fond noir."></canvas></div>
+   <div class="nf-copy"><h1>Tes films. Tes séries.<br>Ton univers.</h1><p>Garde le fil de ce que tu regardes.</p></div>
+   <footer class="nf-footer"><button type="button" class="nf-enter" data-action="enter"><span class="nf-fill"></span><span class="nf-btn-label">C’est parti</span><span class="nf-btn-arrow" aria-hidden="true"><i>↗</i><b>↗</b></span><span class="nf-glint"></span></button><span class="nf-privacy">Sans compte. Ta collection reste sur ton appareil.</span></footer>
+  </section>
+  <section class="nf-home" hidden aria-label="Aperçu de l’accueil"><header><span class="nf-brand">nitrate</span><span class="nf-avatar">t.</span></header><h2>À reprendre.</h2><p>Juste un épisode de plus.</p><div class="nf-home-art"><img src="" alt="Affiche One Piece"><div><span>ANIME · ÉPISODE 03</span><h2>One Piece</h2></div></div><button type="button" class="nf-watch" data-action="watch" aria-pressed="false"><span class="nf-check" aria-hidden="true">✓</span><span class="nf-watch-label">Marquer vu</span><span aria-hidden="true">↗</span></button><span class="nf-home-note">Progression de démonstration.</span></section>
+ </div>
+ <div class="nf-tools"><span class="nf-status" role="status" aria-live="polite">Objets en mouvement · teste le bouton d’entrée.</span><button type="button" data-action="replay">↺ Rejouer</button></div>
+ <details class="nf-credits"><summary>Crédits visuels</summary>Objets : <a href="https://github.com/microsoft/fluentui-emoji" target="_blank" rel="noopener noreferrer">Microsoft Fluent Emoji</a> (MIT). Affiche : <a href="https://www.media-paten.com/sprecherkartei/synchronsprecher-filme/One-Piece/" target="_blank" rel="noopener noreferrer">One Piece</a>.</details>
+</div>
+<style>
+@font-face{font-family:Inter;src:url('../../../app/assets/fonts/Inter.ttf');font-weight:100 900}
+#nitrate-flight{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:#f5f5f7;font-size:14px;line-height:1.5}
+#nitrate-flight *{box-sizing:border-box}
+#nitrate-flight [hidden]{display:none!important}
+#nitrate-flight button{font:inherit;cursor:pointer;border:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#nitrate-flight .nf-phone{max-width:440px;margin:auto;background:#000;border:1px solid #202023;border-radius:31px;overflow:hidden;position:relative;isolation:isolate;color-scheme:dark}
+#nitrate-flight .nf-welcome{padding:18px 26px 24px}
+#nitrate-flight .nf-header{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:3;gap:15px}
+#nitrate-flight .nf-brand{font-size:25px;letter-spacing:-1.35px;font-weight:500;color:#f5f5f7}
+#nitrate-flight .nf-skip{min-height:44px;background:transparent;padding:10px 0 10px 16px;color:#9b9ba2;font-size:12px}
+#nitrate-flight .nf-space{height:403px;margin:-4px -26px 0;position:relative;isolation:isolate}
+#nitrate-flight .nf-canvas{display:block;width:100%;height:100%;touch-action:pan-y}
+#nitrate-flight .nf-copy{text-align:center;position:relative;z-index:2;transition:opacity .4s,transform .6s cubic-bezier(.2,.8,.2,1);margin:-2px 0 0}
+#nitrate-flight .nf-copy h1{font-family:inherit;font-weight:500;font-size:31px;letter-spacing:-1.3px;line-height:1.15;margin:0;color:#f1f1f5}
+#nitrate-flight .nf-copy p{font-size:13px;line-height:1.55;color:#8d8d97;font-weight:400;margin:17px 0 0}
+#nitrate-flight .nf-footer{display:flex;flex-direction:column;gap:15px;padding-top:48px;position:relative;z-index:4}
+#nitrate-flight .nf-enter{position:relative;isolation:isolate;display:flex;align-items:center;justify-content:center;width:100%;min-height:59px;border-radius:32px;padding:16px 54px;background:#f3f2f9;color:#202128;overflow:hidden;transition:transform .2s cubic-bezier(.2,1.2,.3,1),background .3s;box-shadow:inset 0 1px 0 #fff}
+#nitrate-flight .nf-enter:active{transform:scale(.974);background:#e7e7ed}
+#nitrate-flight .nf-enter:disabled{cursor:wait}
+#nitrate-flight .nf-btn-label{font-size:15px;font-weight:500;position:relative;z-index:2;transition:transform .3s}
+#nitrate-flight .nf-btn-arrow{position:absolute;right:22px;top:17px;width:24px;height:25px;overflow:hidden;z-index:3}
+#nitrate-flight .nf-btn-arrow i,#nitrate-flight .nf-btn-arrow b{position:absolute;inset:0;display:grid;place-items:center;font-size:20px;font-weight:400;font-style:normal;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+#nitrate-flight .nf-btn-arrow b{transform:translate(-24px,24px)}
+#nitrate-flight .nf-enter:hover .nf-btn-arrow i,#nitrate-flight .nf-enter.running .nf-btn-arrow i{transform:translate(24px,-24px)}
+#nitrate-flight .nf-enter:hover .nf-btn-arrow b,#nitrate-flight .nf-enter.running .nf-btn-arrow b{transform:translate(0,0)}
+#nitrate-flight .nf-glint{position:absolute;inset:-20px;z-index:1;pointer-events:none;background:linear-gradient(115deg,transparent 40%,#fff 50%,transparent 60%);transform:translateX(-140%);animation:nf-glint 6.5s 1.5s ease-in-out infinite;opacity:.65}
+@keyframes nf-glint{0%,68%{transform:translateX(-140%)}90%,100%{transform:translateX(140%)}}
+#nitrate-flight .nf-fill{position:absolute;left:0;right:0;bottom:0;height:3px;background:#a9b7de;transform:scaleX(0);transform-origin:left;transition:transform .8s cubic-bezier(.2,.75,.2,1);z-index:2}
+#nitrate-flight .nf-enter.running .nf-fill{transform:scaleX(1)}
+#nitrate-flight .nf-privacy{text-align:center;font-size:10px;color:#75757f;line-height:1.5}
+#nitrate-flight .nf-tools{max-width:440px;margin:11px auto 0;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px;color:light-dark(#626570,#a5a9b5)}
+#nitrate-flight .nf-tools button{min-height:44px;border-radius:22px;background:light-dark(#eceef2,#25272e);color:light-dark(#313641,#e4e6ee);padding:9px 14px;flex:none}
+#nitrate-flight .nf-credits{max-width:440px;margin:7px auto 0;color:light-dark(#626570,#a5a9b5);font-size:11px}
+#nitrate-flight .nf-credits summary{cursor:pointer}
+#nitrate-flight.leaving .nf-copy{opacity:0;transform:translateY(-10px)}
+#nitrate-flight.leaving .nf-btn-label{transform:translateX(-5px)}
+#nitrate-flight .nf-home{padding:23px 25px 28px;min-height:693px;animation:nf-home .6s cubic-bezier(.2,.8,.2,1)}
+@keyframes nf-home{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+#nitrate-flight .nf-home header{display:flex;align-items:center;justify-content:space-between;margin-bottom:29px}
+#nitrate-flight .nf-avatar{width:41px;height:41px;display:grid;place-items:center;background:#cab7ff;color:#302343;border-radius:15px;transform:rotate(6deg)}
+#nitrate-flight .nf-home h2{font:500 29px/1.15 'Inter',sans-serif;letter-spacing:-1.1px;margin:0;color:#f4f4f8}
+#nitrate-flight .nf-home>p{color:#9f9fac;font-size:13px;margin:7px 0 20px}
+#nitrate-flight .nf-home-art{height:340px;position:relative;border-radius:24px;overflow:hidden;background:#191c24}
+#nitrate-flight .nf-home-art img{width:100%;height:100%;object-fit:cover;object-position:center 34%}
+#nitrate-flight .nf-home-art>div{position:absolute;bottom:0;left:0;right:0;padding:55px 20px 21px;background:linear-gradient(transparent,#11151b);display:flex;flex-direction:column;gap:7px}
+#nitrate-flight .nf-home-art>div>span{font-size:11px;letter-spacing:.04em;color:#d4f5a0}
+#nitrate-flight .nf-watch{display:flex;align-items:center;gap:12px;padding:8px;margin-top:13px;width:100%;min-height:58px;background:#293426;color:#e8f7d4;border-radius:30px;transition:background .5s,color .5s}
+#nitrate-flight .nf-check{width:42px;height:42px;display:grid;place-items:center;flex:none;border-radius:50%;background:#d4f5a0;color:#344923;transition:transform .6s}
+#nitrate-flight .nf-watch>span:last-child{margin-left:auto;margin-right:14px}
+#nitrate-flight .nf-watch[aria-pressed=true]{background:#d4f5a0;color:#293b1c}
+#nitrate-flight .nf-watch[aria-pressed=true] .nf-check{background:#bbdc94;transform:rotate(360deg)}
+#nitrate-flight .nf-home-note{display:block;color:#9195a2;font-size:12px;margin-top:18px}
+#nitrate-flight.paused *,#nitrate-flight.paused *:before,#nitrate-flight.paused *:after{animation-play-state:paused!important}
+@media(max-width:380px){#nitrate-flight .nf-welcome{padding:16px 21px 23px}#nitrate-flight .nf-space{height:363px;margin-inline:-21px}#nitrate-flight .nf-copy h1{font-size:28px;letter-spacing:-1.1px}#nitrate-flight .nf-footer{padding-top:38px}#nitrate-flight .nf-home{padding:21px;min-height:640px}}
+@media(prefers-reduced-motion:reduce){#nitrate-flight *,#nitrate-flight *:after,#nitrate-flight *:before{animation:none!important;transition:none!important}}
+</style>
+<script>
+(()=>{
+const root=document.getElementById('nitrate-flight');
+const canvas=root.querySelector('.nf-canvas'),space=root.querySelector('.nf-space'),ctx=canvas.getContext('2d');
+const welcome=root.querySelector('.nf-welcome'),home=root.querySelector('.nf-home'),status=root.querySelector('.nf-status');
+const motion=typeof matchMedia==='function'?matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};
+const sources=["../../../app/assets/objects/clapper_board.png", "../../../app/assets/objects/popcorn.png", "../../../app/assets/objects/crossed_swords.png", "../../../app/assets/objects/television.png", "../../../app/assets/objects/dragon.png", "../../../app/assets/objects/admission_tickets.png", "../../../app/assets/objects/flying_saucer.png", "../../../app/assets/objects/movie_camera.png", "../../../app/assets/objects/crystal_ball.png", "../../../app/assets/objects/magic_wand.png", "../../../app/assets/objects/film_frames.png", "../../../app/assets/objects/japanese_castle.png"];
+let sprites=[],width=440,height=403,clock=0,raf=0,prev=0,visible=true,leaving=false,away=false,timeout=null,boost=0;
+let pointer={x:0,y:0},target={x:0,y:0};
+const random=(i)=>{const n=Math.sin(i*127.1+311.7)*43758.5453;return n-Math.floor(n);};
+const items=Array.from({length:21},(_,i)=>({idx:i%sources.length,phase:random(i+3),period:11+random(i+21)*8,side:random(i+41)*Math.PI*2,size:31+random(i+12)*32,angle:random(i+67)*2-1,depth:random(i+32)}));
+function resize(){const r=space.getBoundingClientRect();if(!r.width||!r.height)return;width=r.width;height=r.height;const dpr=Math.min(typeof devicePixelRatio==='number'?devicePixelRatio:1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx?.setTransform(dpr,0,0,dpr,0,0);draw();}
+function draw(){if(!ctx)return;ctx.clearRect(0,0,width,height);ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
+for(let i=0;i<69;i++){const x=random(i+100)*width,y=random(i+230)*height;ctx.fillStyle='rgba(220,223,245,'+(0.08+random(i+50)*.15)+')';ctx.beginPath();ctx.arc(x,y,random(i+500)>.92?1:.55,0,Math.PI*2);ctx.fill();}
+const sourceY=height*.87,cx=width*.5;
+if(!leaving||boost<.7){const alpha=Math.max(0,1-boost);ctx.save();ctx.globalAlpha=alpha;const glow=ctx.createRadialGradient(cx,sourceY,14,cx,sourceY,47);glow.addColorStop(0,'rgba(188,203,244,.09)');glow.addColorStop(.66,'rgba(160,177,224,.06)');glow.addColorStop(1,'rgba(140,162,215,0)');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(cx,sourceY,47,0,Math.PI*2);ctx.fill();const sphere=ctx.createRadialGradient(cx-12,sourceY-17,1,cx,sourceY,33);sphere.addColorStop(0,'#3b3e45');sphere.addColorStop(.35,'#202228');sphere.addColorStop(.86,'#14151a');sphere.addColorStop(1,'#434750');ctx.fillStyle=sphere;ctx.beginPath();ctx.arc(cx,sourceY,31,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#c5c8d43d';ctx.lineWidth=1;ctx.stroke();ctx.font='500 18px Inter, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#dddfe7';ctx.fillText('n',cx,sourceY-1);ctx.restore();}
+const objects=items.map((o,i)=>{const t=(clock/o.period+o.phase)%1;const fade=Math.min(1,t/0.09,(1-t)/.13);const sway=Math.sin(t*6.5+o.side)*(.27*width)*Math.sin(Math.PI*Math.min(t*1.2,1));const x=cx+sway+Math.sin(t*12+o.side)*15+pointer.x*(.1+.3*o.depth);const y=sourceY-t*(sourceY+70)-boost*(80+o.depth*110);return {o,i,t,fade,x,y,size:o.size*(width/440)*(.65+Math.sin(t*Math.PI)*.5)};}).sort((a,b)=>a.o.depth-b.o.depth);
+for(const p of objects){const img=sprites[p.o.idx];if(!img||!img.complete||!img.naturalWidth)continue;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.o.angle*.7+Math.sin(clock*.24+p.o.side)*.38+p.t*p.o.angle);ctx.globalAlpha=Math.max(0,p.fade*(.68+.32*p.o.depth)*(1-boost*.65));const scaleX=.92+.08*Math.cos(clock*.3+p.o.side);ctx.scale(scaleX,1);ctx.drawImage(img,-p.size/2,-p.size/2,p.size,p.size);ctx.restore();}
+}
+function frame(now){raf=0;if(away||!visible||document.hidden)return;const dt=prev?Math.min((now-prev)/1000,.06):0;prev=now;clock+=dt*(leaving?4.8:1);pointer.x+=(target.x-pointer.x)*.035;pointer.y+=(target.y-pointer.y)*.035;if(leaving)boost=Math.min(1,boost+dt*1.45);draw();if(!motion.matches)raf=requestAnimationFrame(frame);}
+function start(){if(raf||away||!visible||document.hidden)return;prev=0;if(motion.matches){draw();return;}raf=requestAnimationFrame(frame);}
+function stop(){if(raf)cancelAnimationFrame(raf);raf=0;prev=0;}
+function replay(){clearTimeout(timeout);stop();away=false;leaving=false;boost=0;clock=0;home.hidden=true;welcome.hidden=false;root.classList.remove('leaving');const btn=root.querySelector('.nf-enter');btn.classList.remove('running');btn.querySelector('.nf-btn-label').textContent='C’est parti';root.querySelectorAll('[data-action="enter"]').forEach(b=>b.disabled=false);root.querySelector('[data-action="watch"]').setAttribute('aria-pressed','false');root.querySelector('.nf-watch-label').textContent='Marquer vu';root.querySelector('.nf-home-note').textContent='Progression de démonstration.';status.textContent=motion.matches?'Version sans mouvement.':'Objets en mouvement · teste le bouton d’entrée.';resize();start();}
+function enter(){if(leaving||away)return;leaving=true;root.classList.add('leaving');root.querySelectorAll('[data-action="enter"]').forEach(b=>b.disabled=true);const btn=root.querySelector('.nf-enter');btn.classList.add('running');btn.querySelector('.nf-btn-label').textContent='On y va';status.textContent='Les objets s’envolent…';const reveal=()=>{away=true;stop();welcome.hidden=true;home.hidden=false;root.classList.remove('leaving');status.textContent='Accueil de démonstration.';};if(motion.matches)reveal();else timeout=setTimeout(reveal,900);}
+root.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;switch(b.dataset.action){case 'enter':enter();break;case 'replay':replay();break;case 'watch':{const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(on));b.querySelector('.nf-watch-label').textContent=on?'Épisode vu':'Marquer vu';root.querySelector('.nf-home-note').textContent=on?'Visionnage simulé · rappuie pour annuler.':'Progression de démonstration.';break;}}});
+space.addEventListener('pointermove',e=>{if(e.pointerType==='touch'||motion.matches)return;const r=space.getBoundingClientRect();target.x=(e.clientX-r.left-r.width/2)*.3;});
+space.addEventListener('pointerleave',()=>{target.x=0;target.y=0;});
+document.addEventListener('visibilitychange',()=>{root.classList.toggle('paused',document.hidden);document.hidden?stop():start();});
+if(motion.addEventListener)motion.addEventListener('change',()=>{stop();draw();start();});
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(space);else resize();
+if(typeof IntersectionObserver!=='undefined'){const observer=new IntersectionObserver(es=>{visible=es.some(e=>e.isIntersecting);root.classList.toggle('paused',!visible);visible?start():stop();},{threshold:.05});observer.observe(root);}
+sprites=sources.map(src=>{const img=new Image();img.onload=()=>{draw();start();};img.src=src;return img;});
+resize();start();
+})();
+</script>
+</body></html>

@@ -399,7 +399,8 @@ class GlideControl extends StatelessWidget {
                           children: List.generate(
                               labels.length,
                               (i) => Expanded(
-                                      child: Semantics(
+                                      child: MergeSemantics(
+                                          child: Semantics(
                                     selected: index == i,
                                     inMutuallyExclusiveGroup: true,
                                     child: TextButton(
@@ -440,7 +441,7 @@ class GlideControl extends StatelessWidget {
                                                       fontWeight:
                                                           FontWeight.w500)),
                                             ])),
-                                  )))),
+                                  ))))),
                     ]))));
       });
 }

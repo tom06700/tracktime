@@ -204,12 +204,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             padding: const EdgeInsets.fromLTRB(26, 10, 26, 24),
             child: Column(children: [
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                const Text('nitrate',
-                    style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 25,
-                        letterSpacing: -1.35,
-                        fontWeight: FontWeight.w500)),
+                const Flexible(
+                    child: Text('nitrate',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 25,
+                            letterSpacing: -1.35,
+                            fontWeight: FontWeight.w500))),
                 TextButton(
                     onPressed: _busy ? null : _finish,
                     child: const Text('Passer',

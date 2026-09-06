@@ -1,0 +1,118 @@
+<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><body style="margin:0;background:#101113"><div id="nitrate-fresh">
+ <header class="nf-header"><span class="nf-brand">nitrate<span class="nf-dot">●</span></span><span class="nf-muted">motion studies / 04</span></header>
+ <div class="nf-grid">
+  <section class="nf-card"><div class="nf-top"><span>01 — soft check</span><span class="nf-state">à voir</span></div><div class="nf-stage"><button type="button" class="nf-check" data-action="check" aria-pressed="false"><span class="nf-wash"></span><span class="nf-orb"><span class="nf-tick"></span></span><span class="nf-label">Marquer vu</span><span class="nf-end">↗</span></button></div><div class="nf-caption">Un épisode terminé. Un geste satisfaisant.</div></section>
+  <section class="nf-card"><div class="nf-top"><span>02 — attach</span><span class="nf-state">à découvrir</span></div><div class="nf-stage"><button type="button" class="nf-add" data-action="add" aria-pressed="false"><span class="nf-add-body"><span class="nf-label">Ma liste</span><span class="nf-mini-dot"></span></span><span class="nf-plus"><i></i><b></b></span></button></div><div class="nf-caption">Ajouter une œuvre. Les formes se rejoignent.</div></section>
+  <section class="nf-card"><div class="nf-top"><span>03 — next up</span><span class="nf-state">épisode 03</span></div><div class="nf-stage"><button type="button" class="nf-next" data-action="next"><span class="nf-stack nf-back"></span><span class="nf-stack nf-mid"></span><span class="nf-next-face"><span class="nf-next-copy"><span class="nf-label">Épisode suivant</span><span class="nf-small">One Piece · <span class="nf-number">03 → 04</span></span></span><span class="nf-arrow">↗</span></span></button></div><div class="nf-caption">La prochaine fiche vient au premier plan.</div></section>
+  <section class="nf-card"><div class="nf-top"><span>04 — glide</span><span class="nf-state">à voir</span></div><div class="nf-stage"><div class="nf-segment" role="group" aria-label="Épisodes à voir ou à venir"><span class="nf-slide"></span><button type="button" data-action="tab" data-index="0" aria-pressed="true">À voir<span class="nf-count">12</span></button><button type="button" data-action="tab" data-index="1" aria-pressed="false">À venir<span class="nf-count">4</span></button></div></div><div class="nf-caption">Une capsule souple accompagne le changement.</div></section>
+  <section class="nf-card"><div class="nf-top"><span>05 — surprise me</span><span class="nf-state">ce soir ?</span></div><div class="nf-stage"><button type="button" class="nf-pick" data-action="pick"><span class="nf-flower" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></span><span class="nf-pick-copy"><span class="nf-label">Choisis pour moi</span><span class="nf-small">Dans ma liste</span></span><span class="nf-pick-end">↗</span></button></div><div class="nf-caption">Une touche de jeu pour choisir quoi regarder.</div></section>
+  <section class="nf-card"><div class="nf-top"><span>06 — navigation</span><span class="nf-state">séries</span></div><div class="nf-stage"><nav class="nf-nav" aria-label="Navigation Nitrate"><span class="nf-nav-pill"></span><button type="button" data-action="nav" data-index="0" aria-label="Séries" aria-pressed="true"><i data-lucide="layers-2" aria-hidden="true"></i><span>Séries</span></button><button type="button" data-action="nav" data-index="1" aria-label="Films" aria-pressed="false"><i data-lucide="film" aria-hidden="true"></i><span>Films</span></button><button type="button" data-action="nav" data-index="2" aria-label="Explorer" aria-pressed="false"><i data-lucide="search" aria-hidden="true"></i><span>Explorer</span></button><button type="button" data-action="nav" data-index="3" aria-label="Profil" aria-pressed="false"><i data-lucide="user-round" aria-hidden="true"></i><span>Profil</span></button></nav></div><div class="nf-caption">Repère mobile, icône et libellé toujours visibles.</div></section>
+ </div>
+ <div class="nf-feedback" role="status" aria-live="polite">Appuie pour essayer. Données de démonstration.</div>
+</div>
+<style>
+#nitrate-fresh{--nf-bg:#101113;--nf-card:#1a1b1f;--nf-ink:#f2f3f5;--nf-muted:#a6a7ae;--nf-lime:#d4f5a0;--nf-lilac:#cab7ff;color:var(--nf-ink);font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;color-scheme:dark}
+#nitrate-fresh *{box-sizing:border-box}
+#nitrate-fresh .nf-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:22px 23px;margin-bottom:10px;background:var(--nf-bg);border-radius:28px}
+#nitrate-fresh .nf-brand{font-weight:500;letter-spacing:-.06em;display:flex;align-items:center;gap:7px}
+#nitrate-fresh .nf-dot{color:var(--nf-lime)}
+#nitrate-fresh .nf-muted{color:var(--nf-muted)}
+#nitrate-fresh .nf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#nitrate-fresh .nf-card{background:var(--nf-card);border-radius:28px;min-width:0;overflow:hidden}
+#nitrate-fresh .nf-top{padding:20px 22px 0;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;color:#e8e8ee}
+#nitrate-fresh .nf-state{color:var(--nf-muted)}
+#nitrate-fresh .nf-stage{display:flex;align-items:center;justify-content:center;min-height:180px;padding:28px 16px;perspective:650px}
+#nitrate-fresh .nf-caption{padding:0 22px 20px;color:var(--nf-muted)}
+#nitrate-fresh button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#nitrate-fresh .nf-stage>button{position:relative;max-width:100%;flex:none;isolation:isolate;transition:scale .16s}
+#nitrate-fresh .nf-stage>button:active{scale:.95}
+#nitrate-fresh button:disabled{cursor:wait}
+#nitrate-fresh .nf-label{font-weight:500}
+#nitrate-fresh .nf-check{display:flex;align-items:center;gap:12px;width:258px;height:72px;padding:9px;border-radius:40px;background:#30332e;overflow:hidden;color:#e9f3de}
+#nitrate-fresh .nf-check .nf-label{z-index:2;position:relative;transition:color .5s}
+#nitrate-fresh .nf-orb{width:54px;height:54px;display:grid;place-items:center;flex:none;background:var(--nf-lime);border-radius:50%;position:relative;z-index:2;transition:transform .65s cubic-bezier(.2,1.6,.4,1),background .4s}
+#nitrate-fresh .nf-tick{width:20px;height:20px;border:2px solid #455e33;border-radius:50%;position:relative;transition:border-color .25s}
+#nitrate-fresh .nf-tick:after{content:'';position:absolute;left:2px;top:2px;width:12px;height:7px;border-left:2.5px solid #344c24;border-bottom:2.5px solid #344c24;transform:rotate(-45deg) scale(0);transition:transform .35s cubic-bezier(.2,1.7,.3,1)}
+#nitrate-fresh .nf-wash{position:absolute;width:300px;height:300px;border-radius:50%;left:-120px;top:-114px;background:var(--nf-lime);transform:scale(0);transition:transform .7s cubic-bezier(.2,.85,.25,1)}
+#nitrate-fresh .nf-check[aria-pressed=true] .nf-wash{transform:scale(2)}
+#nitrate-fresh .nf-check[aria-pressed=true] .nf-label{color:#26371b}
+#nitrate-fresh .nf-check[aria-pressed=true] .nf-orb{background:#b4dc81;transform:rotate(360deg)}
+#nitrate-fresh .nf-check[aria-pressed=true] .nf-tick{border-color:transparent}
+#nitrate-fresh .nf-check[aria-pressed=true] .nf-tick:after{transform:rotate(-45deg) scale(1)}
+#nitrate-fresh .nf-end{margin-left:auto;margin-right:12px;color:#bccdaf;z-index:2;transition:opacity .3s,transform .4s}
+#nitrate-fresh .nf-check[aria-pressed=true] .nf-end{opacity:0;transform:translate(10px,-10px)}
+#nitrate-fresh .nf-add{width:255px;height:74px;padding:0;background:transparent}
+#nitrate-fresh .nf-add-body{position:absolute;left:0;top:0;width:175px;height:74px;border-radius:26px;background:var(--nf-lilac);color:#342453;display:flex;align-items:center;justify-content:center;gap:20px;transition:width .65s cubic-bezier(.2,1.5,.4,1),border-radius .6s}
+#nitrate-fresh .nf-mini-dot{width:5px;height:5px;border-radius:50%;background:#8362bd}
+#nitrate-fresh .nf-plus{position:absolute;right:0;top:0;width:66px;height:74px;border-radius:26px;background:#cab7ff;transition:transform .65s cubic-bezier(.2,1.6,.4,1),border-radius .6s,background .5s}
+#nitrate-fresh .nf-plus i,#nitrate-fresh .nf-plus b{position:absolute;left:23px;top:36px;width:20px;height:2px;border-radius:3px;background:#443060;transition:transform .4s,width .4s,left .4s,top .4s}
+#nitrate-fresh .nf-plus b{transform:rotate(90deg)}
+#nitrate-fresh .nf-add[aria-pressed=true] .nf-add-body{width:221px;border-radius:26px 16px 16px 26px}
+#nitrate-fresh .nf-add[aria-pressed=true] .nf-plus{transform:translateX(-8px) rotate(360deg);background:#b39ae9;border-radius:50%;width:60px;height:60px;top:7px}
+#nitrate-fresh .nf-add[aria-pressed=true] .nf-plus i{left:16px;top:32px;width:11px;transform:rotate(45deg)}
+#nitrate-fresh .nf-add[aria-pressed=true] .nf-plus b{left:23px;top:28px;width:20px;transform:rotate(-48deg)}
+#nitrate-fresh .nf-add[aria-pressed=true] .nf-add-body .nf-label{transform:translateX(-17px)}
+#nitrate-fresh .nf-add[aria-pressed=true] .nf-mini-dot{opacity:0}
+#nitrate-fresh .nf-next{width:252px;height:82px;background:transparent;padding:0;margin-top:10px}
+#nitrate-fresh .nf-stack{position:absolute;inset:0;border-radius:25px;background:#434751;transition:transform .5s}
+#nitrate-fresh .nf-back{transform:translateY(-13px) scale(.86);background:#33353e}
+#nitrate-fresh .nf-mid{transform:translateY(-7px) scale(.94);background:#626774}
+#nitrate-fresh .nf-next-face{display:flex;align-items:center;gap:12px;position:absolute;inset:0;background:#e9ecf3;border-radius:25px;padding:16px 17px;color:#272c37;box-shadow:0 5px 14px #0002}
+#nitrate-fresh .nf-next-copy{display:flex;flex-direction:column;gap:5px;text-align:left}
+#nitrate-fresh .nf-small{color:#687084}
+#nitrate-fresh .nf-arrow{display:grid;place-items:center;width:39px;height:39px;border-radius:50%;background:#cdd6eb;margin-left:auto;flex:none}
+#nitrate-fresh .nf-next.nf-fire .nf-next-face{animation:nf-deal .7s cubic-bezier(.2,.8,.3,1)}
+@keyframes nf-deal{0%{transform:translateX(0) rotate(0)}38%{transform:translateX(38px) rotate(8deg);opacity:0}39%{transform:translateY(-15px) scale(.9);opacity:0}100%{transform:translate(0) scale(1);opacity:1}}
+#nitrate-fresh .nf-next.nf-fire .nf-mid{transform:translateY(0) scale(1)}
+#nitrate-fresh .nf-segment{display:flex;position:relative;isolation:isolate;background:#2d2e34;width:267px;height:72px;padding:6px;border-radius:40px;--slot:0}
+#nitrate-fresh .nf-slide{position:absolute;left:6px;top:6px;bottom:6px;width:calc((100% - 12px)/2);border-radius:35px;background:#f3b99d;transform:translateX(calc(var(--slot)*100%));transition:transform .7s cubic-bezier(.2,1.35,.35,1)}
+#nitrate-fresh .nf-segment button{flex:1;min-width:0;position:relative;z-index:2;border-radius:36px;background:transparent;display:flex;justify-content:center;align-items:center;gap:7px;color:#b7b7c1;transition:color .3s}
+#nitrate-fresh .nf-segment button[aria-pressed=true]{color:#4b2f25}
+#nitrate-fresh .nf-count{display:grid;place-items:center;min-width:24px;height:24px;border-radius:12px;background:#ffffff0c;font-variant-numeric:tabular-nums}
+#nitrate-fresh .nf-segment button[aria-pressed=true] .nf-count{background:#ac6e4c25}
+#nitrate-fresh .nf-segment.nf-fire .nf-slide{animation:nf-soft .7s}
+@keyframes nf-soft{0%,100%{scale:1 1}35%{scale:1.12 .88}70%{scale:.96 1.04}}
+#nitrate-fresh .nf-pick{display:flex;align-items:center;gap:13px;width:267px;height:82px;background:#ff9989;border-radius:28px;padding:12px;color:#592d28;overflow:hidden}
+#nitrate-fresh .nf-flower{width:53px;height:53px;position:relative;flex:none}
+#nitrate-fresh .nf-flower i{position:absolute;left:6px;top:6px;width:26px;height:26px;border-radius:50%;background:#a7473d;transform-origin:20px 20px;transform:rotate(calc(var(--i)*90deg));transition:border-radius .5s}
+#nitrate-fresh .nf-flower b{position:absolute;left:20px;top:20px;width:13px;height:13px;background:#ffc7ad;border-radius:50%;z-index:2}
+#nitrate-fresh .nf-pick-copy{display:flex;flex-direction:column;gap:4px;text-align:left}
+#nitrate-fresh .nf-pick .nf-small{color:#7e443b}
+#nitrate-fresh .nf-pick-end{margin-left:auto}
+#nitrate-fresh .nf-pick.nf-fire .nf-flower{animation:nf-bloom 1s cubic-bezier(.2,.7,.2,1)}
+@keyframes nf-bloom{0%{transform:rotate(0) scale(1)}25%{transform:rotate(90deg) scale(.75)}65%{transform:rotate(290deg) scale(1.13)}100%{transform:rotate(360deg) scale(1)}}
+#nitrate-fresh .nf-pick.nf-fire .nf-label{animation:nf-label .2s 4}
+@keyframes nf-label{0%{transform:translateY(9px);opacity:0}50%{opacity:1}100%{transform:translateY(-9px);opacity:0}}
+#nitrate-fresh .nf-nav{width:100%;max-width:300px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:6px;background:#2b2c33;border-radius:28px;position:relative;isolation:isolate;--slot:0}
+#nitrate-fresh .nf-nav-pill{position:absolute;left:6px;top:6px;bottom:6px;width:calc((100% - 12px)/4);background:#e7ebf2;border-radius:22px;transform:translateX(calc(var(--slot)*100%));transition:transform .65s cubic-bezier(.22,1.25,.3,1)}
+#nitrate-fresh .nf-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;position:relative;z-index:2;min-height:67px;min-width:0;padding:8px 1px;border-radius:22px;background:transparent;color:#b6b8c1;transition:color .3s}
+#nitrate-fresh .nf-nav button[aria-pressed=true]{color:#252a37}
+#nitrate-fresh .nf-nav svg{width:21px;height:21px;transition:transform .4s cubic-bezier(.2,1.7,.4,1)}
+#nitrate-fresh .nf-nav button[aria-pressed=true] svg{transform:translateY(-2px) rotate(-7deg)}
+#nitrate-fresh .nf-nav.nf-fire .nf-nav-pill{animation:nf-soft .65s}
+#nitrate-fresh .nf-feedback{padding:16px 3px 3px;color:light-dark(#4e5b40,#b9cca3)}
+@media(max-width:600px){#nitrate-fresh .nf-grid{grid-template-columns:1fr}#nitrate-fresh .nf-stage{min-height:157px}#nitrate-fresh .nf-header{padding:20px}#nitrate-fresh .nf-top{padding-top:19px}}
+@media(prefers-reduced-motion:reduce){#nitrate-fresh *,#nitrate-fresh *:after,#nitrate-fresh *:before{animation:none!important;transition:none!important}}
+</style>
+<script>
+(()=>{
+const root=document.getElementById('nitrate-fresh');
+root.querySelectorAll('.nf-flower i').forEach((el,i)=>el.style.setProperty('--i',i));
+const status=root.querySelector('.nf-feedback');let ep=3,pick=0;
+const titles=['One Piece','Severance','Dark'];
+function fire(el,ms=750){el.classList.remove('nf-fire');void el.offsetWidth;el.classList.add('nf-fire');setTimeout(()=>el.classList.remove('nf-fire'),ms);}
+root.addEventListener('click',e=>{
+const b=e.target.closest('button');if(!b||b.disabled)return;
+const card=b.closest('.nf-card'),state=card.querySelector('.nf-state');
+const on=b.getAttribute('aria-pressed')!=='true';
+switch(b.dataset.action){
+case 'check':b.setAttribute('aria-pressed',String(on));b.querySelector('.nf-label').textContent=on?'Épisode vu':'Marquer vu';state.textContent=on?'terminé':'à voir';status.textContent=on?'Épisode marqué vu · rappuie pour annuler.':'Épisode remis à voir.';break;
+case 'add':b.setAttribute('aria-pressed',String(on));b.querySelector('.nf-label').textContent=on?'Ajouté':'Ma liste';state.textContent=on?'dans ta liste':'à découvrir';status.textContent=on?'Œuvre ajoutée à la liste de démonstration.':'Animation remise à zéro.';break;
+case 'next':b.disabled=true;fire(b);setTimeout(()=>{ep=ep===12?1:ep+1;b.querySelector('.nf-number').textContent=String(ep).padStart(2,'0')+' → '+String(ep+1).padStart(2,'0');state.textContent='épisode '+String(ep).padStart(2,'0');},280);setTimeout(()=>{b.disabled=false;status.textContent='Épisode '+ep+' sélectionné, sans le marquer vu.';},700);break;
+case 'tab':case 'nav':{const group=b.parentElement;group.style.setProperty('--slot',b.dataset.index);group.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));fire(group);const label=b.getAttribute('aria-label')||(b.dataset.index==='0'?'À voir':'À venir');state.textContent=label.toLowerCase();status.textContent=label+' sélectionné.';break;}
+case 'pick':b.disabled=true;fire(b,1050);state.textContent='un instant…';for(let i=0;i<4;i++)setTimeout(()=>b.querySelector('.nf-label').textContent=titles[(pick+i)%3],i*200);setTimeout(()=>{const title=titles[pick++%3];b.querySelector('.nf-label').textContent=title;b.querySelector('.nf-small').textContent='Appuie pour relancer';state.textContent='pour ce soir';b.disabled=false;status.textContent='Sélection fictive : '+title;},1000);break;
+}
+});
+})();
+</script>
+</body></html>
