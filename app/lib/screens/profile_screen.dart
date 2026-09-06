@@ -1,3 +1,6 @@
+import '../brand/nitrate_brand.dart';
+import '../profile/identity_editor.dart';
+import '../widgets/media_image.dart';
 import '../widgets/modern_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,7 +9,6 @@ import 'package:go_router/go_router.dart';
 
 import '../backup/backup.dart';
 import '../db/database.dart';
-import '../profile/cinema.dart';
 import '../profile/genre_sync.dart';
 import '../profile/profile.dart';
 import '../profile/reveal.dart';
@@ -30,8 +32,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends ConsumerState<ProfileScreen>
-    with SingleTickerProviderStateMixin {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   static const _months = [
     'janvier',
     'février',
@@ -49,31 +50,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   bool _backfillStarted = false;
 
-  /// Horloge du fond vivant (poussières, scintillement) : 30 s en boucle.
-  late final AnimationController _drive = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 30),
-  );
   final _scrollCtrl = ScrollController();
 
   static String memberSince(DateTime since) =>
       'Membre depuis ${_months[since.month - 1]} ${since.year}';
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    if (reduce) {
-      _drive.stop();
-      _drive.value = 0;
-    } else if (!_drive.isAnimating) {
-      _drive.repeat();
-    }
-  }
-
-  @override
   void dispose() {
-    _drive.dispose();
     _scrollCtrl.dispose();
     super.dispose();
   }
@@ -87,42 +70,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     }
 
     final universe = ref.watch(universeProvider).value;
-    final palette = universe?.palette ?? const [Color(0xFF818B73)];
-    final seed = universe?.seed ?? 7;
-
-    final safeTop = MediaQuery.paddingOf(context).top;
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.25,
-              child: CinemaBackground(
-                seed: seed,
-                palette: palette,
-                drive: _drive,
-                scroll: _scrollCtrl,
-              ),
-            ),
-          ),
-          Positioned.fill(child: _content(context, universe)),
-          // Réglages : bouton flottant discret dans la safe area.
-          Positioned(
-            top: safeTop + 6,
-            right: 8,
-            child: _GlassIconButton(
-              icon: Icons.settings_outlined,
-              tooltip: 'Réglages',
-              onTap: () => context.push('/settings'),
-            ),
-          ),
-        ],
-      ),
-    );
+        value: SystemUiOverlayStyle.light,
+        child: ColoredBox(
+            color: ModernPalette.background,
+            child: _content(context, universe)));
   }
 
   Widget _content(BuildContext context, Universe? universe) {
@@ -146,11 +98,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
     // Pas d'AppBar sur le Profil : le décor remplit tout, le contenu démarre
     // juste sous la safe area (en laissant la place au bouton Réglages).
-    final topInset = MediaQuery.paddingOf(context).top + 44;
+    final topInset = MediaQuery.paddingOf(context).top + 20;
     return ListView(
       controller: _scrollCtrl,
       padding: EdgeInsets.fromLTRB(0, topInset, 0, bottomNavInset(context)),
       children: [
+        Padding(
+            padding: const EdgeInsets.fromLTRB(22, 0, 22, 27),
+            child: Row(children: [
+              const Expanded(child: NitrateWordmark(size: 22)),
+              IconButton.filledTonal(
+                  tooltip: 'Réglages',
+                  onPressed: () => context.push('/settings'),
+                  icon: const Icon(Icons.tune, size: 19))
+            ])),
+
         // ── Identité cosmique ──
         sec(0, [
           profileAsync.when(
@@ -182,6 +144,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ),
         ]),
 
+        Padding(
+            padding: const EdgeInsets.fromLTRB(22, 24, 22, 0),
+            child: ModernCommand(
+                shape: CommandShape.surprise,
+                label: 'Quoi regarder ce soir ?',
+                subtitle: 'Un choix dans ta propre collection.',
+                onPressed: () => showTonightPicker(context, tonight))),
+        _RecentStories(),
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22),
+            child: Column(children: [
+              ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Modifier mon profil',
+                      style: TextStyle(fontSize: 12)),
+                  trailing: const Icon(Icons.north_east, size: 17),
+                  onTap: profileAsync.value == null
+                      ? null
+                      : () => editProfile(context, profileAsync.value!)),
+              ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Réglages & données',
+                      style: TextStyle(fontSize: 12)),
+                  trailing: const Icon(Icons.north_east, size: 17),
+                  onTap: () => context.push('/settings')),
+            ])),
         // ── À l'affiche (aperçu, la page dédiée montre tout) ──
         sec(2, [
           UniverseSectionTitle(
@@ -251,15 +239,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ),
           WatchlistStrip(movies: movies, shows: shows),
           const SizedBox(height: 16),
-          Center(
-            child: ModernCommand(
-                shape: CommandShape.surprise,
-                label: 'Quoi regarder ce soir ?',
-                subtitle: 'Dans ma liste',
-                onPressed: tonight.isEmpty
-                    ? null
-                    : () => showTonightPicker(context, tonight)),
-          ),
         ]),
 
         // ── Données & réglages ──
@@ -307,318 +286,164 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 }
 
 /// Petit bouton rond « verre » flottant (Réglages), lisible sur le décor.
-class _GlassIconButton extends StatelessWidget {
-  const _GlassIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.black.withValues(alpha: 0.28),
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-            ),
-            child: Icon(
-              icon,
-              size: 21,
-              color: Colors.white.withValues(alpha: 0.85),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────── Identité cosmique ─────────────────────────────
-
 class _UniverseHeader extends ConsumerWidget {
-  const _UniverseHeader({
-    required this.profile,
-    required this.tagline,
-    required this.palette,
-    required this.memberSince,
-  });
-
+  const _UniverseHeader(
+      {required this.profile,
+      required this.tagline,
+      required this.palette,
+      required this.memberSince});
   final Profile profile;
-  final String tagline;
+  final String tagline, memberSince;
   final List<Color> palette;
-  final String memberSince;
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Teinte chaude « projecteur » dérivée de la palette du profil.
-    final spot = Color.lerp(palette.first, const Color(0xFFF5D9A0), 0.45)!;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-      child: Column(
-        children: [
-          // Avatar mis en lumière : halo doux du projecteur + anneau net,
-          // reflet en haut (la lumière qui tombe dessus).
-          GestureDetector(
-            onTap: () => _pickEmoji(context, ref),
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: const Color(0xFF080C0B),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: spot.withValues(alpha: 0.55),
-                  width: 1.5,
-                ),
-                gradient: RadialGradient(
-                  center: const Alignment(0, -0.7),
-                  radius: 1.1,
-                  colors: [
-                    spot.withValues(alpha: 0.22),
-                    const Color(0xFF080C0B),
-                  ],
-                  stops: const [0, 0.75],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: spot.withValues(alpha: 0.32),
-                    blurRadius: 34,
-                    spreadRadius: -6,
-                  ),
-                ],
-              ),
-              alignment: Alignment.center,
-              child: Text(profile.emoji, style: const TextStyle(fontSize: 46)),
-            ),
-          ),
-          const SizedBox(height: 14),
-          GestureDetector(
-            onTap: () => _editName(context, ref, profile.name),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  profile.displayName,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: -0.5,
-                    shadows: [Shadow(color: Color(0xAA000000), blurRadius: 12)],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.edit_outlined,
-                  size: 16,
-                  color: Colors.white.withValues(alpha: 0.5),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            tagline,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.4,
-              fontStyle: FontStyle.italic,
-              color: Colors.white.withValues(alpha: 0.78),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            memberSince,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.45),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _editName(
-    BuildContext context,
-    WidgetRef ref,
-    String current,
-  ) async {
-    final controller = TextEditingController(text: current);
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Ton nom'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 24,
-          decoration: const InputDecoration(hintText: 'Ex. Thomas'),
-          onSubmitted: (v) => Navigator.pop(ctx, v),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
-            child: const Text('Enregistrer'),
-          ),
-        ],
-      ),
-    );
-    if (name != null) {
-      await ref.read(profileProvider.notifier).setName(name);
-    }
-  }
-
-  Future<void> _pickEmoji(BuildContext context, WidgetRef ref) async {
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: TtColors.surface,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Choisis ton avatar',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final e in avatarChoices)
-                  GestureDetector(
-                    onTap: () => Navigator.pop(ctx, e),
-                    child: Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: e == profile.emoji
-                            ? TtColors.amber.withValues(alpha: 0.18)
-                            : TtColors.surfaceHi,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(e, style: const TextStyle(fontSize: 26)),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-    if (choice != null) {
-      await ref.read(profileProvider.notifier).setEmoji(choice);
-    }
-  }
+  Widget build(BuildContext context, WidgetRef ref) => Padding(
+      padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+      child: Column(children: [
+        Row(children: [
+          Transform.rotate(
+              angle: -.105,
+              child: Material(
+                  color: ModernPalette.lilac,
+                  borderRadius: BorderRadius.circular(24),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                      onTap: () => editProfile(context, profile),
+                      child: SizedBox(
+                          width: 68,
+                          height: 68,
+                          child: Center(
+                              child: Text(profile.emoji,
+                                  style: const TextStyle(fontSize: 32))))))),
+          const SizedBox(width: 15),
+          Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                const Text('TON CARNET DE BORD',
+                    style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 1.7,
+                        color: Color(0xFFC1ADC9))),
+                Text(profile.displayName,
+                    style: const TextStyle(
+                        fontSize: 31,
+                        height: 1.1,
+                        letterSpacing: -1.2,
+                        fontWeight: FontWeight.w400)),
+                const SizedBox(height: 6),
+                const Text('Chaque histoire laisse une trace.',
+                    style: TextStyle(fontSize: 11, color: Color(0xFFB09FBB))),
+              ])),
+        ]),
+        const SizedBox(height: 8),
+        Align(
+            alignment: Alignment.centerLeft,
+            child: Text(memberSince,
+                style:
+                    const TextStyle(fontSize: 10, color: Color(0xFF93889F)))),
+      ]));
 }
-
-// ─────────────────────────────── Chiffres ──────────────────────────────────
 
 class _HeroStats extends StatelessWidget {
   const _HeroStats({required this.stats});
-
   final WatchStats stats;
-
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
-      child: Column(
-        children: [
-          Text(
-            fmtTime(stats.totalMinutes),
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w900,
-              color: TtColors.amber,
-              letterSpacing: -1.5,
-              shadows: [
-                Shadow(
-                  color: TtColors.amber.withValues(alpha: 0.4),
-                  blurRadius: 24,
-                ),
-              ],
-            ),
-          ),
-          Text(
-            'TEMPS DE VISIONNAGE',
-            style: TextStyle(
-              fontSize: 10.5,
-              letterSpacing: 2,
-              fontWeight: FontWeight.w700,
-              color: Colors.white.withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              _MiniStat(value: '${stats.episodeCount}', label: 'épisodes'),
-              _MiniStat(value: '${stats.moviesSeen}', label: 'films'),
-              _MiniStat(value: '${stats.showCount}', label: 'séries'),
-              _MiniStat(value: '${stats.doneShowCount}', label: 'terminées'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.fromLTRB(22, 20, 22, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+                color: const Color(0xFFD2BFF8),
+                borderRadius: BorderRadius.circular(27)),
+            child: Stack(children: [
+              Positioned(
+                  right: -50,
+                  bottom: -75,
+                  child: Container(
+                      width: 140,
+                      height: 140,
+                      decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              width: 26, color: const Color(0xA6B499DE))))),
+              Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 23, vertical: 24),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('TEMPS DE VISIONNAGE ESTIMÉ',
+                            style: TextStyle(
+                                fontSize: 9,
+                                letterSpacing: 1.7,
+                                color: Color(0xFF645174))),
+                        const SizedBox(height: 14),
+                        Text(fmtTime(stats.totalMinutes),
+                            style: const TextStyle(
+                                fontSize: 49,
+                                height: 1.1,
+                                letterSpacing: -2,
+                                fontWeight: FontWeight.w400,
+                                color: Color(0xFF32233F))),
+                        const SizedBox(height: 9),
+                        const Text(
+                            'Calculé à partir de tes films et épisodes vus.',
+                            style: TextStyle(
+                                fontSize: 11, color: Color(0xFF645172))),
+                      ]))
+            ])),
+        const SizedBox(height: 15),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _MiniStat(
+              value: '${stats.episodeCount}',
+              label: 'épisodes vus',
+              onTap: () => context.push('/history')),
+          const SizedBox(width: 7),
+          _MiniStat(
+              value: '${stats.moviesSeen}',
+              label: 'films vus',
+              onTap: () => context.push('/movie-history')),
+          const SizedBox(width: 7),
+          _MiniStat(
+              value: '${stats.showCount}',
+              label: 'séries suivies',
+              onTap: () => context.push('/series')),
+        ]),
+        const SizedBox(height: 10),
+        Text('${stats.doneShowCount} séries terminées',
+            style: const TextStyle(fontSize: 11, color: Color(0xFFAD9CB8))),
+      ]));
 }
 
 class _MiniStat extends StatelessWidget {
-  const _MiniStat({required this.value, required this.label});
-
-  final String value;
-  final String label;
-
+  const _MiniStat(
+      {required this.value, required this.label, required this.onTap});
+  final String value, label;
+  final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11.5,
-              color: Colors.white.withValues(alpha: 0.55),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Expanded(
+      child: Material(
+          color: const Color(0xFF222028),
+          borderRadius: BorderRadius.circular(18),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+              onTap: onTap,
+              child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 7),
+                  child: Column(children: [
+                    Text(value,
+                        style: const TextStyle(
+                            fontSize: 25,
+                            height: 1.2,
+                            fontWeight: FontWeight.w400)),
+                    const SizedBox(height: 6),
+                    Text(label,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontSize: 10, color: Color(0xFFAD9CB8)))
+                  ])))));
 }
 
 // ──────────────────────────────── Données ──────────────────────────────────
@@ -718,4 +543,75 @@ class _TileDivider extends StatelessWidget {
         indent: 56,
         color: Colors.white.withValues(alpha: 0.08),
       );
+}
+
+class _RecentStories extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final episodes = ref.watch(watchHistoryProvider).value ?? [];
+    final movies = ref.watch(moviesProvider).value ?? [];
+    final entries = <({
+      String title,
+      String subtitle,
+      String? image,
+      DateTime at,
+      String route,
+      Object? extra
+    })>[
+      for (final e in episodes.take(3))
+        (
+          title: e.show.name,
+          subtitle: '${e.code} · ${frenchDate(e.watchedAt)}',
+          image: e.show.poster,
+          at: e.watchedAt,
+          route: '/episode/${e.show.id}/${e.season}/${e.episode}',
+          extra: {'name': e.show.name}
+        ),
+      for (final m in movies.where((m) => m.watchedAt != null))
+        (
+          title: m.title,
+          subtitle: 'Film vu · ${frenchDate(m.watchedAt!)}',
+          image: m.poster,
+          at: m.watchedAt!,
+          route: '/movie/${m.id}',
+          extra: m.title
+        ),
+    ]..sort((a, b) => b.at.compareTo(a.at));
+    return Padding(
+        padding: const EdgeInsets.fromLTRB(22, 25, 22, 12),
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            const Expanded(
+                child: Text('Dernières histoires',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w500))),
+            TextButton(
+                onPressed: () => context.push('/history'),
+                child: const Text('Tout voir'))
+          ]),
+          if (entries.isEmpty)
+            const Text('Ton premier visionnage apparaîtra ici.',
+                style: TextStyle(color: TtColors.dim)),
+          for (final e in entries.take(3))
+            ListTile(
+                contentPadding: EdgeInsets.zero,
+                onTap: () => context.push(e.route, extra: e.extra),
+                leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(11),
+                    child: SizedBox(
+                        width: 43,
+                        height: 57,
+                        child: MediaImage(
+                            sources: [e.image],
+                            seed: e.title,
+                            icon: Icons.movie_outlined))),
+                title: Text(e.title, style: const TextStyle(fontSize: 12)),
+                subtitle: Text(e.subtitle,
+                    style: const TextStyle(
+                        fontSize: 10, color: Color(0xFFAA9BB4))),
+                trailing: const Icon(Icons.north_east,
+                    size: 16, color: ModernPalette.lilac)),
+        ]));
+  }
 }

@@ -12,15 +12,14 @@ import '../brand/nitrate_brand.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
-import '../widgets/editorial_heading.dart';
 import '../widgets/modern_controls.dart';
 import '../tmdb/add.dart';
 import '../tmdb/search_result.dart';
 import '../tmdb/tvdb.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
-import '../widgets/skeleton.dart';
 import '../widgets/states.dart';
+import '../profile/profile.dart';
 
 /// Ouvre la fiche du média. La navigation porte l'identifiant TheTVDB choisi,
 /// jamais le titre : deux « One Piece » distincts doivent charger chacun le
@@ -30,7 +29,8 @@ void openMediaDetail(
   required int id,
   required bool isSeries,
   required String title,
-}) => context.push(isSeries ? '/show/$id' : '/movie/$id', extra: title);
+}) =>
+    context.push(isSeries ? '/show/$id' : '/movie/$id', extra: title);
 
 /// Filtre appliqué aux résultats de recherche.
 enum SearchFilter { all, series, movies }
@@ -109,577 +109,332 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   /// Le filtre s'applique localement : la requête a déjà tout ramené, inutile
   /// de rappeler l'API pour restreindre.
   List<MediaSearchResult> get _filtered => switch (_filter) {
-    SearchFilter.all => _results,
-    SearchFilter.series =>
-      _results.where((r) => r.type == SearchMediaType.series).toList(),
-    SearchFilter.movies =>
-      _results.where((r) => r.type == SearchMediaType.movie).toList(),
-  };
+        SearchFilter.all => _results,
+        SearchFilter.series =>
+          _results.where((r) => r.type == SearchMediaType.series).toList(),
+        SearchFilter.movies =>
+          _results.where((r) => r.type == SearchMediaType.movie).toList(),
+      };
 
   @override
   Widget build(BuildContext context) {
     final searching = _controller.text.trim().isNotEmpty;
-
-    return Column(
-      children: [
-        _SearchField(
-          controller: _controller,
-          onChanged: _onChanged,
-          onSubmitted: _search,
-          onClear: () {
-            _controller.clear();
-            _search('');
-          },
-        ),
-        if (searching)
-          _FilterRow(
-            value: _filter,
-            onChanged: (f) => setState(() => _filter = f),
-          ),
-        Expanded(
-          // Passer de la découverte aux résultats ne doit pas remplacer
-          // l'écran d'un coup. Fondu seul : un glissement latéral suggérerait
-          // une navigation, alors qu'on reste au même endroit.
-          child: AnimatedSwitcher(
-            duration: motionOf(context, Motion.normal),
-            switchInCurve: Motion.enter,
-            child: searching
-                ? _SearchResults(
-                    key: const ValueKey('resultats'),
-                    results: _filtered,
-                    loading: _loading,
-                    error: _error,
-                    onRetry: () => _search(_controller.text),
-                  )
-                : const _Discovery(key: ValueKey('decouverte')),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SearchField extends StatelessWidget {
-  const _SearchField({
-    required this.controller,
-    required this.onChanged,
-    required this.onSubmitted,
-    required this.onClear,
-  });
-
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<String> onSubmitted;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: TextField(
-        controller: controller,
-        autocorrect: false,
-        textInputAction: TextInputAction.search,
-        onChanged: onChanged,
-        onSubmitted: onSubmitted,
-        style: const TextStyle(fontSize: 15),
-        decoration: InputDecoration(
-          hintText: 'Chercher une série ou un film…',
-          prefixIcon: const Icon(Icons.search, size: 20, color: TtColors.dim),
-          suffixIcon: controller.text.isEmpty
-              ? null
-              : IconButton(
-                  icon: const Icon(Icons.close, size: 19, color: TtColors.dim),
-                  tooltip: 'Effacer',
-                  onPressed: onClear,
-                ),
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(vertical: 13),
-          filled: true,
-          fillColor: TtColors.surface,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(13),
-            borderSide: BorderSide.none,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Les filtres réutilisent la capsule Glide validée.
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({required this.value, required this.onChanged});
-
-  final SearchFilter value;
-  final ValueChanged<SearchFilter> onChanged;
-
-  static const _labels = {
-    SearchFilter.all: 'Tout',
-    SearchFilter.series: 'Séries',
-    SearchFilter.movies: 'Films',
-  };
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-    child: GlideControl(labels: SearchFilter.values.map((f) => _labels[f]!).toList(),
-      index: value.index, onSelected: (i) => onChanged(SearchFilter.values[i])));
-}
-
-// ───────────────────────────── Découverte ─────────────────────────────
-
-class _Discovery extends ConsumerWidget {
-  const _Discovery({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ListView(
-      padding: EdgeInsets.only(top: 4, bottom: bottomNavInset(context)),
-      children: [
-        const EditorialHeading(
-          eyebrow: 'Le prochain coup de cœur',
-          title: 'Laisse-toi surprendre.',
-          description: 'Des histoires à découvrir, une collection à inventer.',
-        ),
-        const _TonightCard(),
-        _DiscoveryRow(
+    final series = ref.watch(popularSeriesProvider),
+        films = ref.watch(popularMoviesProvider),
+        upcoming = ref.watch(upcomingReleasesProvider);
+    final groups = [
+      if (_filter != SearchFilter.movies)
+        (
           title: 'Séries populaires',
+          data: series,
           provider: popularSeriesProvider,
-          isSeries: true,
+          type: SearchMediaType.series
         ),
-        _DiscoveryRow(
+      if (_filter != SearchFilter.series)
+        (
           title: 'Films populaires',
+          data: films,
           provider: popularMoviesProvider,
-          isSeries: false,
+          type: SearchMediaType.movie
         ),
-        _DiscoveryRow(
+      if (_filter != SearchFilter.series)
+        (
           title: 'Sorties annoncées',
+          data: upcoming,
           provider: upcomingReleasesProvider,
-          isSeries: false,
-        ),
-      ],
-    );
+          type: SearchMediaType.movie
+        )
+    ];
+    final found = <String>{};
+    final discovery = <MediaSearchResult>[];
+    for (final g in groups)
+      for (final m in g.data.value ?? <Map<String, dynamic>>[]) {
+        final id = (m['id'] as num?)?.toInt();
+        final name = '${m['name'] ?? ''}';
+        if (!found.add('${g.type}-$id-$name')) continue;
+        discovery.add(MediaSearchResult(
+            tvdbId: id,
+            name: name,
+            type: g.type,
+            aliases: const [],
+            image: m['image'] as String?,
+            year: m['year']?.toString()));
+      }
+    final items = searching ? _filtered : discovery;
+    final featured = discovery
+        .where((m) => m.type == SearchMediaType.series && m.tvdbId != null)
+        .firstOrNull;
+    final profile = ref.watch(profileProvider).value;
+    final scale = MediaQuery.textScalerOf(context).scale(1);
+    final columns = scale > 1.6
+        ? 1
+        : MediaQuery.sizeOf(context).width > 600
+            ? 3
+            : 2;
+    final width =
+        (MediaQuery.sizeOf(context).width - 44 - (columns - 1) * 13) / columns;
+    final tonight = watchlistItems(ref.watch(moviesProvider).value ?? [],
+        ref.watch(showsProvider).value ?? []);
+    return CustomScrollView(
+        key: const PageStorageKey('explorer-feed'),
+        slivers: [
+          SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                  22, MediaQuery.paddingOf(context).top + 20, 22, 0),
+              sliver: SliverToBoxAdapter(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                    Row(children: [
+                      const Expanded(child: NitrateWordmark(size: 22)),
+                      IconButton.filledTonal(
+                          tooltip: 'Ouvrir mon profil',
+                          onPressed: () => ref
+                              .read(homeTabProvider.notifier)
+                              .select(HomeTab.profile),
+                          style: IconButton.styleFrom(
+                              backgroundColor: ModernPalette.lilac),
+                          icon: Text(profile?.emoji ?? '🍿',
+                              style: const TextStyle(fontSize: 20)))
+                    ]),
+                    const SizedBox(height: 27),
+                    const Text('LA PROCHAINE HISTOIRE',
+                        style: TextStyle(
+                            fontSize: 10,
+                            letterSpacing: 1.7,
+                            color: Color(0xFFC1ADC9))),
+                    const SizedBox(height: 9),
+                    const Text('Tu pars où ?',
+                        style: TextStyle(
+                            fontSize: 36,
+                            height: 1.1,
+                            letterSpacing: -1.7,
+                            fontWeight: FontWeight.w400)),
+                    const SizedBox(height: 11),
+                    const Text('Films, séries et anime. Suis ton envie.',
+                        style:
+                            TextStyle(fontSize: 12, color: Color(0xFFA79BAD))),
+                    const SizedBox(height: 24),
+                    TextField(
+                        controller: _controller,
+                        autocorrect: false,
+                        textInputAction: TextInputAction.search,
+                        onChanged: _onChanged,
+                        onSubmitted: _search,
+                        decoration: InputDecoration(
+                            hintText: 'Un titre, une nouvelle obsession…',
+                            prefixIcon: const Icon(Icons.search, size: 18),
+                            suffixIcon: _controller.text.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: 'Effacer',
+                                    onPressed: () {
+                                      _controller.clear();
+                                      _search('');
+                                    },
+                                    icon: const Icon(Icons.close)),
+                            filled: true,
+                            fillColor: const Color(0xFF25212C),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(21),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFF41354E))),
+                            enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(21),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFF41354E))))),
+                    const SizedBox(height: 15),
+                    GlideControl(
+                        labels: const ['Tout', 'Séries', 'Films'],
+                        index: _filter.index,
+                        onSelected: (i) =>
+                            setState(() => _filter = SearchFilter.values[i])),
+                    const SizedBox(height: 22),
+                    if (!searching && featured != null)
+                      Padding(
+                          padding: const EdgeInsets.only(bottom: 23),
+                          child: Material(
+                              borderRadius: BorderRadius.circular(24),
+                              clipBehavior: Clip.antiAlias,
+                              child: InkWell(
+                                  onTap: () => openMediaDetail(context,
+                                      id: featured.tvdbId!,
+                                      isSeries: true,
+                                      title: featured.name),
+                                  child: SizedBox(
+                                      height: 150,
+                                      child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            MediaImage(
+                                                sources: [featured.image],
+                                                seed: featured.name,
+                                                icon: Icons.tv),
+                                            const DecoratedBox(
+                                                decoration: BoxDecoration(
+                                                    gradient: LinearGradient(
+                                                        colors: [
+                                                  Color(0xE615141E),
+                                                  Color(0x55000000)
+                                                ]))),
+                                            const Padding(
+                                                padding: EdgeInsets.all(20),
+                                                child: Row(children: [
+                                                  Expanded(
+                                                      child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .center,
+                                                          children: [
+                                                        Text('À DÉCOUVRIR',
+                                                            style: TextStyle(
+                                                                fontSize: 9,
+                                                                letterSpacing:
+                                                                    1.5)),
+                                                        SizedBox(height: 6),
+                                                        Text(
+                                                            'Change\nd’univers.',
+                                                            style: TextStyle(
+                                                                fontSize: 24,
+                                                                height: 1.15,
+                                                                letterSpacing:
+                                                                    -.7))
+                                                      ])),
+                                                  Icon(Icons.north_east)
+                                                ]))
+                                          ]))))),
+                    Row(children: [
+                      Expanded(
+                          child: Text(searching ? 'Résultats' : 'À explorer',
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w500))),
+                      Text('${items.length} titres',
+                          style: const TextStyle(
+                              fontSize: 11, color: Color(0xFFB5A6C1)))
+                    ]),
+                    const SizedBox(height: 12),
+                    if (searching && _error != null)
+                      ErrorRetry(
+                          title: 'Recherche indisponible',
+                          message: 'Vérifie ta connexion et réessaie.',
+                          onRetry: () => _search(_controller.text)),
+                    if (!searching)
+                      for (final g in groups)
+                        if (g.data.hasError)
+                          ListTile(
+                              title: Text(g.title),
+                              subtitle: const Text('Chargement indisponible'),
+                              trailing: IconButton(
+                                  tooltip: 'Réessayer : ${g.title}',
+                                  onPressed: () => ref.invalidate(g.provider),
+                                  icon: const Icon(Icons.refresh))),
+                    if (searching
+                        ? _loading
+                        : groups.any((g) => g.data.isLoading))
+                      const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: LinearProgressIndicator()),
+                    if (items.isEmpty &&
+                        !(searching
+                            ? _loading
+                            : groups.any((g) => g.data.isLoading)))
+                      Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                              searching
+                                  ? 'Aucun résultat. Essaie une autre orthographe.'
+                                  : 'Aucun titre disponible pour le moment.',
+                              textAlign: TextAlign.center)),
+                  ]))),
+          SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              sliver: SliverGrid.builder(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      crossAxisSpacing: 13,
+                      mainAxisSpacing: 23,
+                      mainAxisExtent: width * 1.325 + 72 * scale),
+                  itemCount: items.length,
+                  itemBuilder: (context, i) => EntranceFade(
+                      key: ValueKey(
+                          '${items[i].type}-${items[i].tvdbId}-${items[i].name}'),
+                      child: _CatalogueCard(result: items[i])))),
+          if (!searching && tonight.length >= 2)
+            SliverToBoxAdapter(
+                child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: ModernCommand(
+                        shape: CommandShape.surprise,
+                        label: 'Quoi regarder ce soir ?',
+                        subtitle: 'Dans ta propre collection',
+                        onPressed: () => showTonightPicker(context, tonight)))),
+          SliverToBoxAdapter(child: SizedBox(height: bottomNavInset(context))),
+        ]);
   }
 }
 
-/// Carte signature « Quoi regarder ce soir ». Elle réutilise le tirage du
-/// Profil et n'apparaît que si la liste contient de quoi choisir.
-class _TonightCard extends ConsumerWidget {
-  const _TonightCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final movies = ref.watch(moviesProvider).value ?? const [];
-    final shows = ref.watch(showsProvider).value ?? const [];
-    final items = watchlistItems(movies, shows);
-    if (items.length < 2) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
-        decoration: BoxDecoration(
-          color: TtColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.movie_filter_outlined,
-              size: 26,
-              color: TtColors.amber,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Qu\'est-ce qu\'on regarde ce soir ?',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: TtColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Laisse Nitrate choisir dans ta liste.',
-                    style: const TextStyle(fontSize: 12.5, color: TtColors.dim),
-                  ),
-                  const SizedBox(height: 10),
-                  TextButton(
-                    onPressed: () => showTonightPicker(context, items),
-                    style: TextButton.styleFrom(
-                      foregroundColor: TtColors.amber,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      backgroundColor: TtColors.amber.withValues(alpha: 0.12),
-                      textStyle: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    child: const Text('Choisir pour moi'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DiscoveryRow extends ConsumerWidget {
-  const _DiscoveryRow({
-    required this.title,
-    required this.provider,
-    required this.isSeries,
-  });
-
-  final String title;
-  final FutureProvider<List<Map<String, dynamic>>> provider;
-  final bool isSeries;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(provider);
-
-    // Une rangée qui a échoué ne doit pas condamner tout l'écran : les autres
-    // restent utilisables, celle-ci disparaît simplement.
-    if (async.hasError) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        child: Card(
-          margin: EdgeInsets.zero,
-          child: ListTile(
-            leading: const Icon(Icons.cloud_off_outlined),
-            title: Text(title),
-            subtitle: const Text('Chargement indisponible'),
-            trailing: IconButton(
-              tooltip: 'Réessayer : $title',
-              icon: const Icon(Icons.refresh),
-              onPressed: () => ref.invalidate(provider),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-          child: Text(
-            title,
-            style: NitrateBrand.display(28),
-          ),
-        ),
-        SizedBox(
-          height: 254 + (MediaQuery.textScalerOf(context).scale(32) - 32),
-          child: async.when(
-            loading: () => ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: 4,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (_, _) => const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SkeletonBox(width: 128, height: 192, radius: 12),
-                  SizedBox(height: 8),
-                  SkeletonBox(width: 100, height: 12, radius: 4),
-                ],
-              ),
-            ),
-            error: (_, _) => const SizedBox.shrink(),
-            data: (list) => ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: list.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (_, i) =>
-                  _DiscoveryCard(item: list[i], isSeries: isSeries),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DiscoveryCard extends ConsumerWidget {
-  const _DiscoveryCard({required this.item, required this.isSeries});
-
-  final Map<String, dynamic> item;
-  final bool isSeries;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final id = (item['id'] as num?)?.toInt();
-    final name = '${item['name'] ?? ''}';
-    final year = '${item['year'] ?? ''}';
-    final poster = item['image'] as String?;
-
-    final shows = ref.watch(showsProvider).value ?? const [];
-    final movies = ref.watch(moviesProvider).value ?? const [];
-    final already =
-        id != null &&
-        (isSeries
-            ? shows.any((s) => s.show.id == id)
-            : movies.any((m) => m.id == id));
-
-    return SizedBox(
-      width: 128,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            children: [
-              Semantics(
-                button: true,
-                label: 'Ouvrir la fiche de $name',
-                child: GestureDetector(
-                  onTap: id == null
-                      ? null
-                      : () => openMediaDetail(
-                          context,
-                          id: id,
-                          isSeries: isSeries,
-                          title: name,
-                        ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: 128,
-                      height: 192,
-                      child: MediaImage(
-                        sources: [poster],
-                        seed: name,
-                        icon: isSeries ? Icons.tv : Icons.movie_outlined,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              if (id != null)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: AddButton(
-                    id: id,
-                    isSeries: isSeries,
-                    name: name,
-                    already: already,
-                    compact: true,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Flexible(
-            child: Text(
-              name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                height: 1.25,
-                color: TtColors.text,
-              ),
-            ),
-          ),
-          if (year.isNotEmpty)
-            Text(
-              year,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11.5, color: TtColors.dim),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────── Résultats de recherche ───────────────────────────
-
-class _SearchResults extends StatelessWidget {
-  const _SearchResults({
-    super.key,
-    required this.results,
-    required this.loading,
-    required this.error,
-    required this.onRetry,
-  });
-
-  final List<MediaSearchResult> results;
-  final bool loading;
-  final String? error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    if (error != null) {
-      return ErrorRetry(
-        title: 'Recherche indisponible',
-        message: 'Vérifie ta connexion et réessaie.',
-        onRetry: onRetry,
-      );
-    }
-    if (loading) {
-      return ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: 6,
-        itemBuilder: (_, _) => const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              SkeletonBox(width: 52, height: 78, radius: 10),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SkeletonBox(height: 15, radius: 4),
-                    SizedBox(height: 7),
-                    SkeletonBox(width: 90, height: 12, radius: 4),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-    if (results.isEmpty) {
-      return const EmptyPrompt(
-        icon: Icons.search_off,
-        title: 'Aucun résultat',
-        message: 'Essaie une autre orthographe, ou le titre original.',
-      );
-    }
-    return ListView.builder(
-      padding: EdgeInsets.only(bottom: bottomNavInset(context)),
-      itemCount: results.length,
-      itemBuilder: (_, i) => _ResultRow(result: results[i]),
-    );
-  }
-}
-
-class _ResultRow extends ConsumerWidget {
-  const _ResultRow({required this.result});
-
+class _CatalogueCard extends ConsumerWidget {
+  const _CatalogueCard({required this.result});
   final MediaSearchResult result;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final r = result;
-    final isSeries = r.type == SearchMediaType.series;
-
-    final shows = ref.watch(showsProvider).value ?? const [];
-    final movies = ref.watch(moviesProvider).value ?? const [];
-    final already =
-        r.tvdbId != null &&
-        (isSeries
-            ? shows.any((s) => s.show.id == r.tvdbId)
-            : movies.any((m) => m.id == r.tvdbId));
-
-    // La zone média ouvre la fiche ; le bouton d'ajout vit à côté, hors de
-    // cette zone, pour qu'un tap dessus n'ouvre pas la fiche au passage.
-    final media = Semantics(
-      button: true,
-      label: 'Ouvrir la fiche de ${r.name}',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: r.tvdbId == null
-            ? null
-            : () => openMediaDetail(
-                context,
-                id: r.tvdbId!,
-                isSeries: isSeries,
-                title: r.name,
-              ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: SizedBox(
-                width: 52,
-                height: 78,
-                child: MediaImage(
-                  sources: [r.image],
-                  seed: r.name,
-                  icon: isSeries ? Icons.tv : Icons.movie_outlined,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    r.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      height: 1.25,
-                      color: TtColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    [
-                      isSeries ? 'Série' : 'Film',
-                      ?r.year,
-                      // Titre d'origine en clair : beaucoup d'animés sont
-                      // catalogués sous leur nom japonais.
-                      ?r.originalName,
-                    ].join(' · '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12.5, color: TtColors.dim),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-      child: Row(
-        children: [
-          Expanded(child: media),
-          const SizedBox(width: 8),
-          // Sans identifiant exploitable la carte reste visible, seul l'ajout
-          // est indisponible.
-          if (r.canAdd)
-            AddButton(
-              id: r.tvdbId!,
-              isSeries: isSeries,
-              name: r.name,
-              already: already,
-            ),
-        ],
-      ),
-    );
+    final r = result, isSeries = r.type == SearchMediaType.series;
+    final already = isSeries
+        ? (ref.watch(showsProvider).value ?? [])
+            .any((s) => s.show.id == r.tvdbId)
+        : (ref.watch(moviesProvider).value ?? []).any((m) => m.id == r.tvdbId);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      AspectRatio(
+          aspectRatio: 2 / 2.65,
+          child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Stack(fit: StackFit.expand, children: [
+                Semantics(
+                    button: true,
+                    label: 'Ouvrir la fiche de ${r.name}',
+                    child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: r.tvdbId == null
+                            ? null
+                            : () => openMediaDetail(context,
+                                id: r.tvdbId!,
+                                isSeries: isSeries,
+                                title: r.name),
+                        child: MediaImage(
+                            sources: [r.image],
+                            seed: r.name,
+                            icon: isSeries ? Icons.tv : Icons.movie_outlined))),
+                if (r.canAdd)
+                  Positioned(
+                      right: 9,
+                      bottom: 9,
+                      child: AddButton(
+                          id: r.tvdbId!,
+                          isSeries: isSeries,
+                          name: r.name,
+                          already: already,
+                          compact: true)),
+              ]))),
+      const SizedBox(height: 9),
+      Text(r.name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+              fontSize: 13, fontWeight: FontWeight.w500, height: 1.3)),
+      const SizedBox(height: 4),
+      Text(
+          [
+            isSeries ? 'Série' : 'Film',
+            if (r.year != null) r.year!,
+            if (r.originalName != null) r.originalName!
+          ].join(' · '),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 10, color: Color(0xFFA397AE))),
+    ]);
   }
 }
 
@@ -735,9 +490,8 @@ class _AddButtonState extends ConsumerState<AddButton> {
   @override
   Widget build(BuildContext context) {
     final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    final duration = reduceMotion
-        ? Duration.zero
-        : const Duration(milliseconds: 200);
+    final duration =
+        reduceMotion ? Duration.zero : const Duration(milliseconds: 200);
 
     final label = widget.already
         ? 'Déjà dans ta liste : ${widget.name}'
@@ -752,7 +506,7 @@ class _AddButtonState extends ConsumerState<AddButton> {
       );
     } else if (widget.already) {
       content = widget.compact
-          ? const Icon(Icons.check, size: 18, color: TtColors.bg)
+          ? const Icon(Icons.check, size: 18, color: ModernPalette.lilac)
           : Row(
               mainAxisSize: MainAxisSize.min,
               children: const [
@@ -772,7 +526,7 @@ class _AddButtonState extends ConsumerState<AddButton> {
       content = Icon(
         Icons.add,
         size: widget.compact ? 18 : 20,
-        color: TtColors.amber,
+        color: const Color(0xFF332144),
       );
     }
 
@@ -793,9 +547,9 @@ class _AddButtonState extends ConsumerState<AddButton> {
                   : const EdgeInsets.all(7),
               decoration: BoxDecoration(
                 color: widget.already
-                    ? TtColors.amber
-                    : Colors.black.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(widget.compact ? 30 : 10),
+                    ? const Color(0xED1A1A21)
+                    : ModernPalette.lilac,
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: widget.already
                       ? TtColors.amber

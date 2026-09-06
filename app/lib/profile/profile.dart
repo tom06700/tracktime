@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+const _identityKey = 'profile_identity_v1';
 const _nameKey = 'profile_name';
 const _emojiKey = 'profile_emoji';
 const _sinceKey = 'profile_since';
@@ -9,9 +11,30 @@ const defaultAvatar = '🍿';
 
 /// Palette d'avatars proposée (aucun upload : 100 % local, léger).
 const avatarChoices = <String>[
-  '🍿', '🎬', '📺', '🎭', '🦸', '👾', '🐉', '🚀',
-  '🎃', '🕵️', '🧙', '🤖', '👽', '🧛', '🐺', '🌙',
-  '⭐', '🔥', '🎯', '🎲', '🍕', '🎸', '🌈', '🦄',
+  '🍿',
+  '🎬',
+  '📺',
+  '🎭',
+  '🦸',
+  '👾',
+  '🐉',
+  '🚀',
+  '🎃',
+  '🕵️',
+  '🧙',
+  '🤖',
+  '👽',
+  '🧛',
+  '🐺',
+  '🌙',
+  '⭐',
+  '🔥',
+  '🎯',
+  '🎲',
+  '🍕',
+  '🎸',
+  '🌈',
+  '🦄',
 ];
 
 class Profile {
@@ -37,33 +60,40 @@ class ProfileNotifier extends AsyncNotifier<Profile> {
       sinceMs = DateTime.now().millisecondsSinceEpoch;
       await prefs.setInt(_sinceKey, sinceMs);
     }
+    final encoded = prefs.getString(_identityKey);
+    Map<String, dynamic>? identity;
+    if (encoded != null) {
+      try {
+        identity = jsonDecode(encoded) as Map<String, dynamic>;
+      } catch (_) {}
+    }
     return Profile(
-      name: prefs.getString(_nameKey) ?? '',
-      emoji: prefs.getString(_emojiKey) ?? defaultAvatar,
+      name: identity?['name'] as String? ?? prefs.getString(_nameKey) ?? '',
+      emoji: identity?['emoji'] as String? ??
+          prefs.getString(_emojiKey) ??
+          defaultAvatar,
       since: DateTime.fromMillisecondsSinceEpoch(sinceMs),
     );
   }
 
-  Future<void> setName(String name) async {
-    final prefs = await SharedPreferences.getInstance();
+  Future<void> saveIdentity(
+      {required String name, required String emoji}) async {
+    final current = state.value ?? await future;
+    if (!avatarChoices.contains(emoji)) throw ArgumentError('Avatar inconnu');
     final trimmed = name.trim();
-    await prefs.setString(_nameKey, trimmed);
-    final current = state.value;
-    if (current != null) {
-      state = AsyncData(Profile(
-          name: trimmed, emoji: current.emoji, since: current.since));
-    }
+    if (trimmed.length > 24) throw ArgumentError('Prénom trop long');
+    final prefs = await SharedPreferences.getInstance();
+    final ok = await prefs.setString(
+        _identityKey, jsonEncode({'name': trimmed, 'emoji': emoji}));
+    if (!ok) throw StateError('Enregistrement impossible');
+    state =
+        AsyncData(Profile(name: trimmed, emoji: emoji, since: current.since));
   }
 
-  Future<void> setEmoji(String emoji) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_emojiKey, emoji);
-    final current = state.value;
-    if (current != null) {
-      state = AsyncData(
-          Profile(name: current.name, emoji: emoji, since: current.since));
-    }
-  }
+  Future<void> setName(String name) async =>
+      saveIdentity(name: name, emoji: (state.value ?? await future).emoji);
+  Future<void> setEmoji(String emoji) async =>
+      saveIdentity(name: (state.value ?? await future).name, emoji: emoji);
 }
 
 final profileProvider =

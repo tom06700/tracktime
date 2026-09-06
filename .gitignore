@@ -6,3 +6,6 @@ nitrate-codex-handoff/
 
 # Pack complémentaire original, conservé localement.
 nitrate-notifications-codex/
+
+# Extracted global reference pack; archive and manifest are versioned.
+design/global-handoff/nitrate-design-global/
