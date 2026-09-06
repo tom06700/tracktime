@@ -20,6 +20,9 @@ void main() {
     await (FontLoader('Inter')
           ..addFont(rootBundle.load('assets/fonts/Inter.ttf')))
         .load();
+    await (FontLoader('MaterialIcons')
+          ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf')))
+        .load();
     final out = Directory('build/modern-audit')..createSync(recursive: true);
     Future<void> capture(String name) async {
       final boundary =
@@ -40,11 +43,13 @@ void main() {
         .runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
     for (var i = 0; i < 90; i++) {
       await tester.pump(const Duration(milliseconds: 33));
+      if (i % 6 == 0) await capture('motion-intro-${i ~/ 6}');
     }
     await capture('01-intro');
     await tester.tap(find.text('C’est parti'));
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 33));
+      if (i % 2 == 0) await capture('motion-departure-${i ~/ 2}');
     }
     await capture('02-departure');
     await tester.pump(const Duration(seconds: 1));

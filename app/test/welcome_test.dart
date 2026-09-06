@@ -43,6 +43,8 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     expect(find.text('Ma collection'), findsNothing);
     await tester.ensureVisible(find.text('C’est parti'));
+    await tester.pump();
+    expect(find.text('C’est parti').hitTestable(), findsOneWidget);
     await tester.tap(find.text('C’est parti'));
     await tester.pumpAndSettle();
     expect(find.text('Ma collection'), findsOneWidget);
@@ -80,6 +82,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     await tester.ensureVisible(find.text('C’est parti'));
+    await tester.pump();
+    expect(find.text('C’est parti').hitTestable(), findsOneWidget);
     await tester.tap(find.text('C’est parti'));
     await tester.pumpAndSettle();
     expect(finished, isTrue);

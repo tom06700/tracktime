@@ -34,9 +34,7 @@ void main() {
     expect(taps, isEmpty);
   });
 
-  // Pas d'attente `isFocusable` : les onglets ne sont pas dans l'arbre de
-  // focus clavier, ce dont VoiceOver n'a pas besoin — il balaie les nœuds par
-  // label et action.
+  // La sélection et les actions natives restent sur le même nœud accessible.
   testWidgets('chaque onglet expose sa sélection à VoiceOver', (tester) async {
     final handle = tester.ensureSemantics();
     await tester.pumpWidget(host(2, (_) {}));

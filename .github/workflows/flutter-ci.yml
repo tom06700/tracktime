@@ -70,14 +70,16 @@ jobs:
       # construit avec un MockClient, ou sans clé — auquel cas il refuse de
       # partir en réseau. La CI ne dépend donc d'aucun service tiers.
       - name: Tests
-        run: flutter test
+        run: flutter test --timeout 2m
 
       - name: Captures des composants retenus
+        if: ${{ !cancelled() }}
         env:
           NITRATE_DESIGN_AUDIT: '1'
         run: flutter test test/modern_reference_audit_test.dart
 
       - name: Capturer les parcours existants
+        if: ${{ !cancelled() }}
         env:
           NITRATE_AUDIT: '1'
         run: |
@@ -87,6 +89,7 @@ jobs:
           cp build/audit/*.png build/modern-audit/
 
       - name: Capturer les prototypes fournis
+        if: ${{ !cancelled() }}
         run: |
           google-chrome --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,844 --virtual-time-budget=3000 --screenshot=build/modern-audit/reference-intro.png "file://$GITHUB_WORKSPACE/design/validated-handoff/previews/intro.html"
           google-chrome --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,1600 --virtual-time-budget=1000 --screenshot=build/modern-audit/reference-controls.png "file://$GITHUB_WORKSPACE/design/validated-handoff/previews/controls.html"

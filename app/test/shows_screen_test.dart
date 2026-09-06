@@ -193,7 +193,7 @@ void main() {
     await tester.tap(find.text('Marquer vu'));
     await tester.pump();
 
-    // Confirmation immédiate, avant même l'écriture.
+    // La confirmation attend une écriture réussie.
     expect(find.text('Vu !'), findsNothing); // No success before persistence.
     await tester.pump(const Duration(milliseconds: 100));
 
