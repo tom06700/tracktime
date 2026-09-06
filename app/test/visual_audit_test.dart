@@ -533,7 +533,11 @@ void main() {
 
       final db = await _seed();
       debugPrint('Audit: seed ready');
-      addTearDown(db.close);
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 1));
+        await db.close();
+      });
 
       await tester.pumpWidget(
         ProviderScope(

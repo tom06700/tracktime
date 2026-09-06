@@ -96,15 +96,17 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
         _error = null;
       });
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() =>
             _error = 'Impossible de charger les épisodes de cette saison.');
+      }
     }
   }
 
   Future<void> _select(int index) async {
-    if (_busy || _pages == null || index < 0 || index >= _episodes!.length)
+    if (_busy || _pages == null || index < 0 || index >= _episodes!.length) {
       return;
+    }
     if ((index - _current).abs() > 1 || reduceMotionOf(context)) {
       _pages!.jumpToPage(index);
     } else {
@@ -149,8 +151,9 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
   }
 
   void _message(String text) {
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    }
   }
 
   Future<void> _toggle(int number, bool watched) => _run(() async {
@@ -313,11 +316,12 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
                                               if (!_busy) _drag.stop();
                                             },
                                             onDragUpdate: (d) {
-                                              if (!_busy)
+                                              if (!_busy) {
                                                 setState(() => _offset =
                                                     (_offset + d.delta.dy)
                                                         .clamp(0.0,
                                                             double.infinity));
+                                              }
                                             },
                                             onDragEnd: _endDrag)),
                                   Positioned(
@@ -374,7 +378,22 @@ class _EpisodePage extends ConsumerStatefulWidget {
   ConsumerState<_EpisodePage> createState() => _EpisodePageState();
 }
 
-class _EpisodePageState extends ConsumerState<_EpisodePage> {
+class _EpisodePageState extends ConsumerState<_EpisodePage>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _confirmation = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 500));
+  @override
+  void dispose() {
+    _confirmation.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (reduceMotionOf(context)) _confirmation.value = 0;
+  }
+
   bool _revealed = false;
   @override
   void didUpdateWidget(_EpisodePage old) {
@@ -389,6 +408,18 @@ class _EpisodePageState extends ConsumerState<_EpisodePage> {
         .watch(watchedEpisodeProvider(
             (showId: widget.showId, season: widget.season, episode: number)))
         .value;
+    ref.listen(
+        watchedEpisodeProvider(
+            (showId: widget.showId, season: widget.season, episode: number)),
+        (before, after) {
+      if (before != null &&
+          before.hasValue &&
+          before.value == null &&
+          after.value != null &&
+          !reduceMotionOf(context)) {
+        _confirmation.forward(from: 0);
+      }
+    });
     final overview = '${widget.data['overview'] ?? ''}'.trim();
     final title = '${widget.data['name'] ?? ''}'.trim();
     final air = DateTime.tryParse('${widget.data['aired'] ?? ''}');
@@ -438,6 +469,11 @@ class _EpisodePageState extends ConsumerState<_EpisodePage> {
                               .35,
                               1
                             ]))),
+                        Positioned.fill(
+                            child: IgnorePointer(
+                                child: ExcludeSemantics(
+                                    child: CustomPaint(
+                                        painter: _WatchFlash(_confirmation))))),
                         Positioned(
                             left: gap,
                             top: 19,
@@ -638,6 +674,7 @@ class _EpisodePageState extends ConsumerState<_EpisodePage> {
                         const SizedBox(height: 23),
                         ModernCommand(
                             shape: CommandShape.softCheck,
+                            height: 66,
                             label:
                                 watched == null ? 'Marquer vu' : 'Épisode vu',
                             selected: watched != null,
@@ -701,6 +738,8 @@ class _EpisodePageState extends ConsumerState<_EpisodePage> {
                               Expanded(
                                   child: ModernCommand(
                                       shape: CommandShape.nextUp,
+                                      height: 64,
+                                      subtitleAbove: true,
                                       label: widget.nextNumber == null
                                           ? 'Fin de cette saison'
                                           : 'Épisode ${widget.nextNumber}',
@@ -829,4 +868,27 @@ class _EpisodePickerState extends ConsumerState<_EpisodePicker> {
                       }, childCount: widget.episodes.length))),
                 ]))));
   }
+}
+
+class _WatchFlash extends CustomPainter {
+  _WatchFlash(this.animation) : super(repaint: animation);
+  final Animation<double> animation;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final t = animation.value;
+    if (t <= 0 || t >= 1) return;
+    final opacity = (t < .25 ? t / .25 : (1 - t) / .75) * .9;
+    final paint = Paint()
+      ..color = const Color(0xFFECFFD7).withValues(alpha: opacity)
+      ..strokeWidth = 2;
+    for (var i = 0; i < 3; i++) {
+      final y = size.height * [.35, .43, .55][i];
+      final width = size.width * [.45, .31, .23][i];
+      final end = Offset(size.width * 1.05 + 40 - 110 * t, y);
+      canvas.drawLine(end - Offset(width, -width * .4), end, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WatchFlash old) => old.animation != animation;
 }

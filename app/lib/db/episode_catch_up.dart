@@ -72,8 +72,9 @@ class EpisodeCatchUp {
   Future<CatchUpReceipt> apply(CatchUpPlan plan) => db.transaction(() async {
         final current = await prepare(plan.showId, plan.season, plan.episode);
         if (current.keys.length != plan.keys.length ||
-            !current.keys.toSet().containsAll(plan.keys))
+            !current.keys.toSet().containsAll(plan.keys)) {
           throw CatchUpChanged();
+        }
         await _ownership();
         final random = Random.secure();
         final token = List.generate(24,

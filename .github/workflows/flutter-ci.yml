@@ -80,6 +80,7 @@ jobs:
         run: flutter test test/modern_reference_audit_test.dart
 
       - name: Capturer les parcours existants
+        timeout-minutes: 3
         if: ${{ !cancelled() }}
         env:
           NITRATE_AUDIT: '1'
