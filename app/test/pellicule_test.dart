@@ -36,6 +36,26 @@ void main() {
   tearDown(() {
     TestWidgetsFlutterBinding.instance.platformDispatcher.clearAllTestValues();
   });
+  testWidgets('le symbole pour cent reste aligné et le panneau ne saute pas',
+      (tester) async {
+    addTearDown(tester.view.reset);
+    await host(tester);
+    final counter = find.byKey(const ValueKey('pellicule-counter-window'));
+    final symbol = find.byKey(const ValueKey('pellicule-percent-symbol'));
+    final initial = tester.getRect(counter);
+    expect(
+        (tester.getBottomLeft(symbol).dy - initial.bottom).abs(), lessThan(10));
+    await tester.tap(segment('genre:Drame'));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(tester.getTopLeft(counter).dy, initial.top);
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(counter).dy, initial.top);
+    expect(
+        (tester.getBottomLeft(symbol).dy - tester.getRect(counter).bottom)
+            .abs(),
+        lessThan(10));
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
       'le compteur garde la largeur de l’ancien nombre pendant le roulement',
       (tester) async {

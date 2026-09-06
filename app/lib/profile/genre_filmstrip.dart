@@ -505,9 +505,7 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
                               ]),
                               const SizedBox(height: 12),
                               Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.baseline,
-                                  textBaseline: TextBaseline.alphabetic,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Flexible(
                                         child: ClipRect(
@@ -600,8 +598,11 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
                                                               ]))),
                                                 ])))),
                                     const Padding(
-                                        padding: EdgeInsets.only(left: 6),
+                                        padding:
+                                            EdgeInsets.only(left: 6, bottom: 3),
                                         child: Text('%',
+                                            key: const ValueKey(
+                                                'pellicule-percent-symbol'),
                                             style: TextStyle(
                                                 fontSize: 25,
                                                 height: 1.1,
