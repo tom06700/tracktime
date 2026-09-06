@@ -79,7 +79,15 @@ jobs:
           NITRATE_DESIGN_AUDIT: '1'
         run: flutter test test/modern_reference_audit_test.dart
 
+      - name: Capturer la fiche épisode et les longues saisons
+        if: ${{ !cancelled() }}
+        timeout-minutes: 3
+        env:
+          NITRATE_EPISODE_AUDIT: '1'
+        run: flutter test test/episode_detail_test.dart --timeout 2m
+
       - name: Capturer les parcours existants
+        timeout-minutes: 3
         if: ${{ !cancelled() }}
         env:
           NITRATE_AUDIT: '1'
@@ -95,6 +103,8 @@ jobs:
           google-chrome --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,844 --virtual-time-budget=3000 --screenshot=build/modern-audit/reference-intro.png "file://$GITHUB_WORKSPACE/design/validated-handoff/previews/intro.html"
           google-chrome --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,1600 --virtual-time-budget=1000 --screenshot=build/modern-audit/reference-controls.png "file://$GITHUB_WORKSPACE/design/validated-handoff/previews/controls.html"
           google-chrome --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,900 --virtual-time-budget=2000 --screenshot=build/modern-audit/reference-notifications.png "file://$GITHUB_WORKSPACE/design/validated-handoff/previews/notifications.html"
+
+          google-chrome --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,1200 --virtual-time-budget=2000 --screenshot=build/modern-audit/reference-episode.png "file://$GITHUB_WORKSPACE/design/validated-handoff/episode-detail/preview.html"
 
       - uses: actions/upload-artifact@v4
         if: always()

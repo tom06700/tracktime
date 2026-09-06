@@ -26,12 +26,16 @@ class ModernCommand extends StatefulWidget {
       required this.onPressed,
       this.selected = false,
       this.subtitle,
-      this.compact = false});
+      this.compact = false,
+      this.height,
+      this.subtitleAbove = false});
   final CommandShape shape;
   final String label;
   final String? subtitle;
   final FutureOr<void> Function()? onPressed;
   final bool selected, compact;
+  final double? height;
+  final bool subtitleAbove;
   @override
   State<ModernCommand> createState() => _ModernCommandState();
 }
@@ -114,14 +118,19 @@ class _ModernCommandState extends State<ModernCommand>
             : next
                 ? const Color(0xFF272C37)
                 : const Color(0xFF592D28);
-    final height = widget.compact
-        ? 56.0
-        : check
-            ? 72.0
-            : attach
-                ? 74.0
-                : 82.0;
-    final orb = widget.compact ? 41.0 : 54.0;
+    final height = widget.height ??
+        (widget.compact
+            ? 56.0
+            : check
+                ? 72.0
+                : attach
+                    ? 74.0
+                    : 82.0);
+    final orb = widget.height != null
+        ? height - 16
+        : widget.compact
+            ? 41.0
+            : 54.0;
     return AnimatedBuilder(
         animation: _motion,
         builder: (context, _) {
@@ -150,13 +159,13 @@ class _ModernCommandState extends State<ModernCommand>
                     child: Stack(alignment: Alignment.center, children: [
                       if (check)
                         Positioned(
-                            left: -120,
-                            top: -114,
+                            left: -100,
+                            top: -140,
                             child: Transform.scale(
-                                scale: 2 * t,
+                                scale: 1.6 * t,
                                 child: Container(
-                                    width: 300,
-                                    height: 300,
+                                    width: 380,
+                                    height: 380,
                                     decoration: const BoxDecoration(
                                         color: ModernPalette.lime,
                                         shape: BoxShape.circle)))),
@@ -261,6 +270,17 @@ class _ModernCommandState extends State<ModernCommand>
                                                 ? CrossAxisAlignment.center
                                                 : CrossAxisAlignment.start,
                                             children: [
+                                              if (widget.subtitle != null &&
+                                                  widget.subtitleAbove) ...[
+                                                Text(widget.subtitle!,
+                                                    style: TextStyle(
+                                                        fontSize: 9,
+                                                        letterSpacing: 1.4,
+                                                        color: foreground
+                                                            .withValues(
+                                                                alpha: .7))),
+                                                const SizedBox(height: 2),
+                                              ],
                                               Text(
                                                   _busy && !check
                                                       ? 'Un instant…'
@@ -272,7 +292,8 @@ class _ModernCommandState extends State<ModernCommand>
                                                       fontWeight:
                                                           FontWeight.w500,
                                                       color: textColor)),
-                                              if (widget.subtitle != null) ...[
+                                              if (widget.subtitle != null &&
+                                                  !widget.subtitleAbove) ...[
                                                 const SizedBox(height: 5),
                                                 Text(widget.subtitle!,
                                                     style: TextStyle(
