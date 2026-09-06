@@ -17,6 +17,7 @@ abstract final class TtColors {
 ThemeData buildTheme() {
   final base = ThemeData(
     brightness: Brightness.dark,
+    fontFamily: 'Inter',
     useMaterial3: true,
     scaffoldBackgroundColor: TtColors.bg,
     colorScheme: const ColorScheme.dark(
@@ -35,9 +36,10 @@ ThemeData buildTheme() {
       contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       iconColor: TtColors.amber,
       textColor: TtColors.text,
-      titleTextStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-      subtitleTextStyle:
-          TextStyle(fontSize: 13, height: 1.5, color: TtColors.dim),
+      titleTextStyle: TextStyle(
+          fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w600),
+      subtitleTextStyle: TextStyle(
+          fontFamily: 'Inter', fontSize: 13, height: 1.5, color: TtColors.dim),
     ),
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: TtColors.surface,
@@ -123,7 +125,8 @@ ThemeData buildTheme() {
         foregroundColor: const Color(0xFF131313),
         minimumSize: const Size(48, 52),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(
+            fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w600),
         shape: const StadiumBorder(),
       ).copyWith(foregroundBuilder: buttonPressResponse),
     ),

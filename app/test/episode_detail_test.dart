@@ -140,6 +140,20 @@ void main() {
     });
   }
 
+  episodeTest('une série absente exige un ajout explicite avant visionnage',
+      (tester) async {
+    final db = await mount(tester, EpisodeFixture([1155]));
+    await db.deleteShow(1);
+    await tester.pump();
+    await tap(tester, find.text('Marquer vu'));
+    expect(find.text('Ajouter à ma liste'), findsOneWidget);
+    expect(await db.showById(1), isNull);
+    expect(await db.allWatchedEpisodes(), isEmpty);
+    await tap(tester, find.text('Annuler'));
+    expect(await db.showById(1), isNull);
+    expect(await db.allWatchedEpisodes(), isEmpty);
+  });
+
   episodeTest(
       '1200 épisodes, résumé protégé, accès direct et navigation sans écriture',
       (tester) async {

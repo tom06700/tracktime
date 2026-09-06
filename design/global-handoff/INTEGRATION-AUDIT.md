@@ -55,3 +55,50 @@ Portage en cours : ce fichier ne certifie aucune validation native. Flutter loca
 ne s’exécute pas sur ce Mac avec le SDK courant ; analyse, tests et captures de
 widgets passent par GitHub Actions. Captures et vidéos à produire et comparer ;
 fluidité réelle, masques du lanceur et splash sur appareil restent à contrôler.
+
+## Ajustements issus de la revue
+
+- Bouton Attach compact recalculé pour garder « Ajouté » entier ; variante
+  marque-page autonome pour la fiche film. Onglets denses et filtres lilas des
+  références 06/07, sans modifier les identifiants de navigation.
+- Titres et commandes en Inter. Cadrage vertical des images à 30/33 %, zoom et
+  révélation à 900/1 100 ms ; hauteur du hero mesurée pour les titres longs.
+- Ajout série/film explicite, séparé du visionnage. L’ancienne auto-inscription
+  depuis une fiche épisode est remplacée par une proposition d’ajout confirmée.
+  Annuler laisse la base intacte ; ajouter ne marque aucun épisode ou film vu.
+- Reprise sur le premier épisode régulier non vu déjà diffusé si la date est
+  connue ; spéciaux consultables séparément, puis proposés si aucun régulier ne
+  reste. Numéros officiels, sans comblement artificiel des trous.
+- Saison complète : confirmation avant passage vu/non vu ; marquer vu conserve
+  les dates existantes. Le rattrapage facultatif et celui de la fiche épisode
+  gardent leurs portées respectives.
+- Historique du profil réunit films et épisodes et ouvre leurs fiches ; les
+  historiques spécialisés et leurs actions restent accessibles via les stats.
+- Identité locale enregistrée en un document, lecture des anciennes préférences
+  conservée. Les préférences mal formées ne remplacent pas une identité valide.
+
+## Preuves reproductibles
+
+Le workflow Flutter produit une galerie `index.html`, les captures PNG originales
+et 13 MP4 dans l’artefact `nitrate-modern-reference`. Les séquences couvrent
+l’envol continu et le départ, les quatre familles de commandes, les déplacements
+aux extrémités des capsules, la confirmation épisode et la fiche série.
+`scripts/encode_motion_audit.py` encode les PNG selon le pas temporel des tests.
+Ce sont des animations Flutter échantillonnées, pas une mesure de FPS native.
+Les captures du navigateur sont des références HTML, pas une cible web de l’app.
+
+Écarts volontaires avec les fixtures : œuvres, compteurs, dates et durées réels ;
+logo ruban approuvé à la place du simple texte ; onglet À venir, bibliothèque,
+réglages et statistiques supplémentaires conservés ; navigation des fiches
+plein écran conservée ; avatars existants conservés. Les 6 lignes de la démo
+sont remplacées par une liste virtualisée. Les titres longs peuvent augmenter
+la hauteur du hero. Aucun sous-titre propre à Dune n’est inventé pour un autre film.
+L’autorisation de notifications utilise le canal natif ; aucun service d’envoi
+n’est ajouté par cette refonte. Les copies restent explicites à ce sujet.
+
+La comparaison a révélé et fait corriger le texte coupé d’Attach, les hauteurs
+excessives des onglets 06/07 et les arrière-plans masquant les effets tactiles.
+Les vidéos ont été examinées par séquences de frames : envol jusqu’au bord haut,
+déplacement et retour de Next Up, capsule restant dans son rail. La revue sur
+appareil doit encore vérifier la fluidité, le clavier, VoiceOver/TalkBack, le
+vrai dialogue de permission, les masques des lanceurs et le splash.

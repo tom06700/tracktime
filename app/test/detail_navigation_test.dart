@@ -51,6 +51,7 @@ class _Api {
             body = {
               'name': 'Dune',
               'runtime': 155,
+              'overview': 'Le voyage sur Arrakis.',
               'first_release': {'date': '2021-09-15'},
               'genres': [
                 {'name': 'Science-Fiction'},
@@ -586,6 +587,30 @@ void main() {
       await _settle(tester);
     });
   }
+
+  testWidgets('film : ajout explicite, visionnage unique, résumé et annulation',
+      (tester) async {
+    final db = _fkDb();
+    addTearDown(db.close);
+    await _pump(tester, db, _Api().client(),
+        const MovieDetailScreen(movieId: 1406, title: 'Dune'));
+    await _tapAndSettle(tester, find.text('Marquer vu'));
+    expect(find.text('Ajouter à ma liste'), findsOneWidget);
+    expect(await db.movieById(1406), isNull);
+    await _tapAndSettle(tester, find.text('Annuler'));
+    expect(await db.movieById(1406), isNull);
+    await _tapAndSettle(tester, find.text('Marquer vu'));
+    await _tapAndSettle(tester, find.text('Ajouter'));
+    expect((await db.movieById(1406))!.watchedAt, isNull);
+    await _tapAndSettle(tester, find.text('Marquer vu'));
+    expect((await db.movieById(1406))!.watchedAt, isNotNull);
+    expect(await db.select(db.movies).get(), hasLength(1));
+    expect(find.text('Film vu'), findsOneWidget);
+    await _tapAndSettle(tester, find.text('Annuler'));
+    expect((await db.movieById(1406))!.watchedAt, isNull);
+    expect(find.text('Film vu'), findsNothing);
+    await _settle(tester);
+  });
 
   testWidgets('openMediaDetail route selon le type, par identifiant', (
     tester,

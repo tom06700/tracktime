@@ -174,7 +174,7 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
         if (seasons.isNotEmpty) _seasonNumbers = seasons;
         _loadingEpisodes = false;
       });
-    } on TvdbException catch (e) {
+    } catch (e) {
       debugPrint('Épisodes de ${widget.showId} indisponibles : $e');
       // La fiche reste consultable : seul l'onglet Épisodes restera vide.
       _episodesRequested = false;
@@ -399,11 +399,14 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
           const Expanded(
               child: Text('Ton voyage',
                   style: TextStyle(fontSize: 11, color: Color(0xFFC9C4D0)))),
-          Text(
-              all.isEmpty
-                  ? 'Progression à charger'
-                  : '$seen / ${all.length} vus',
-              style: const TextStyle(fontSize: 11, color: ModernPalette.lime))
+          Expanded(
+              child: Text(
+                  all.isEmpty
+                      ? 'Progression à charger'
+                      : '$seen / ${all.length} vus',
+                  textAlign: TextAlign.end,
+                  style:
+                      const TextStyle(fontSize: 11, color: ModernPalette.lime)))
         ]),
         const SizedBox(height: 11),
         TweenAnimationBuilder<double>(
@@ -552,38 +555,39 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
             ]),
           const SizedBox(height: 13),
           Row(children: [
-            ChoiceChip(
-                label: const Text('Tous'),
-                showCheckmark: false,
-                selectedColor: ModernPalette.lilac,
-                backgroundColor: const Color(0xFF241E2B),
-                side: BorderSide.none,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-                labelStyle: TextStyle(
-                    fontSize: 12,
-                    color: !_onlyUnseen
-                        ? const Color(0xFF342453)
-                        : const Color(0xFFB7A6C4)),
-                selected: !_onlyUnseen,
-                onSelected: (_) => setState(() => _onlyUnseen = false)),
-            const SizedBox(width: 7),
-            ChoiceChip(
-                label: const Text('Non vus'),
-                showCheckmark: false,
-                selectedColor: ModernPalette.lilac,
-                backgroundColor: const Color(0xFF241E2B),
-                side: BorderSide.none,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-                labelStyle: TextStyle(
-                    fontSize: 12,
-                    color: _onlyUnseen
-                        ? const Color(0xFF342453)
-                        : const Color(0xFFB7A6C4)),
-                selected: _onlyUnseen,
-                onSelected: (_) => setState(() => _onlyUnseen = true)),
-            const Spacer(),
+            Expanded(
+                child: Wrap(spacing: 7, runSpacing: 4, children: [
+              ChoiceChip(
+                  label: const Text('Tous'),
+                  showCheckmark: false,
+                  selectedColor: ModernPalette.lilac,
+                  backgroundColor: const Color(0xFF241E2B),
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  labelStyle: TextStyle(
+                      fontSize: 12,
+                      color: !_onlyUnseen
+                          ? const Color(0xFF342453)
+                          : const Color(0xFFB7A6C4)),
+                  selected: !_onlyUnseen,
+                  onSelected: (_) => setState(() => _onlyUnseen = false)),
+              ChoiceChip(
+                  label: const Text('Non vus'),
+                  showCheckmark: false,
+                  selectedColor: ModernPalette.lilac,
+                  backgroundColor: const Color(0xFF241E2B),
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  labelStyle: TextStyle(
+                      fontSize: 12,
+                      color: _onlyUnseen
+                          ? const Color(0xFF342453)
+                          : const Color(0xFFB7A6C4)),
+                  selected: _onlyUnseen,
+                  onSelected: (_) => setState(() => _onlyUnseen = true)),
+            ])),
             IconButton(
                 tooltip: 'Aller à un numéro',
                 onPressed:

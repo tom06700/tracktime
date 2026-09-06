@@ -312,6 +312,7 @@ class _ModernCommandState extends State<ModernCommand>
                                                 if (widget.eyebrow != null) ...[
                                                   Text(widget.eyebrow!,
                                                       style: TextStyle(
+                                                          fontFamily: 'Inter',
                                                           fontSize: 9,
                                                           letterSpacing: 1.5,
                                                           color: foreground
@@ -323,6 +324,7 @@ class _ModernCommandState extends State<ModernCommand>
                                                     widget.subtitleAbove) ...[
                                                   Text(widget.subtitle!,
                                                       style: TextStyle(
+                                                          fontFamily: 'Inter',
                                                           fontSize: 9,
                                                           letterSpacing: 1.4,
                                                           color: foreground
@@ -335,6 +337,7 @@ class _ModernCommandState extends State<ModernCommand>
                                                         ? 'Un instant…'
                                                         : widget.label,
                                                     style: TextStyle(
+                                                        fontFamily: 'Inter',
                                                         fontSize:
                                                             widget.labelSize ??
                                                                 (widget.compact
@@ -348,6 +351,7 @@ class _ModernCommandState extends State<ModernCommand>
                                                   const SizedBox(height: 5),
                                                   Text(widget.subtitle!,
                                                       style: TextStyle(
+                                                          fontFamily: 'Inter',
                                                           fontSize: 12,
                                                           color: foreground
                                                               .withValues(
@@ -530,6 +534,7 @@ class GlideControl extends StatelessWidget {
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                   style: TextStyle(
+                                                      fontFamily: 'Inter',
                                                       fontSize:
                                                           navigation ? 11 : 14,
                                                       fontWeight:

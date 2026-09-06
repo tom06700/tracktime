@@ -42,6 +42,12 @@ final _fonts = Platform.environment['NITRATE_AUDIT_FONTS'] ??
 // ─────────────────────────────── Polices ────────────────────────────────
 
 Future<void> _loadFonts() async {
+  final emoji = File('/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf');
+  if (emoji.existsSync()) {
+    await (FontLoader('NotoColorEmoji')
+          ..addFont(emoji.readAsBytes().then(ByteData.sublistView)))
+        .load();
+  }
   Future<ByteData> bytes(String f) async =>
       ByteData.sublistView(await File('$_fonts/$f').readAsBytes());
   final roboto = FontLoader('Roboto')
@@ -460,11 +466,12 @@ Future<void> _settleReal(WidgetTester tester, [int ms = 350]) async {
 // explicit icon fonts. Production uses the platform font automatically.
 InlineSpan _readableSpan(InlineSpan span) {
   if (span is! TextSpan) return span;
-  final style = span.style ?? const TextStyle();
+  final style = (span.style ?? const TextStyle())
+      .copyWith(fontFamilyFallback: const ['NotoColorEmoji']);
   return TextSpan(
     text: span.text,
     style: style.fontFamily == null || style.fontFamily == 'Ahem'
-        ? style.copyWith(fontFamily: 'Roboto')
+        ? style.copyWith(fontFamily: 'Inter')
         : style,
     children: span.children?.map(_readableSpan).toList(),
     recognizer: span.recognizer,
