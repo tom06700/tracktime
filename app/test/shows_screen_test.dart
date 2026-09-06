@@ -97,6 +97,38 @@ TvdbClient _silentTvdb() => TvdbClient(
     );
 
 void main() {
+  testWidgets('changer l’affiche boucle sans modifier les visionnages',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final db = await _pump(tester, otherShows: 1);
+    for (var i = 0;
+        i < 8 && find.byTooltip('Œuvre suivante').evaluate().isEmpty;
+        i++) {
+      await tester.drag(find.byKey(const PageStorageKey('to-watch-feed')),
+          const Offset(0, -250));
+      await tester.pumpAndSettle();
+    }
+    await tester.ensureVisible(find.byTooltip('Œuvre suivante'));
+    await tester.pumpAndSettle();
+    expect(find.text('À l’affiche · 1 / 2'), findsOneWidget);
+    await tester.tap(find.byTooltip('Œuvre suivante'));
+    await tester.pumpAndSettle();
+    expect(find.text('À l’affiche · 2 / 2'), findsOneWidget);
+    await tester.tap(find.byTooltip('Œuvre suivante'));
+    await tester.pumpAndSettle();
+    expect(find.text('À l’affiche · 1 / 2'), findsOneWidget);
+    await tester.tap(find.byTooltip('Œuvre précédente'));
+    await tester.pumpAndSettle();
+    expect(find.text('À l’affiche · 2 / 2'), findsOneWidget);
+    expect(await tester.runAsync(db.allWatchedEpisodes), isEmpty);
+    expect(tester.takeException(), isNull);
+    await _settle(tester);
+  });
+
   testWidgets('toute la carte ouvre l’épisode, marquer vu reste indépendant',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);

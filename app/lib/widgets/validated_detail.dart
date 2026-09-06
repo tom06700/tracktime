@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../brand/nitrate_brand.dart';
 import '../motion.dart';
 import 'media_image.dart';
 import 'modern_controls.dart';
@@ -106,13 +105,7 @@ class ValidatedDetailHero extends StatelessWidget {
                         backgroundColor: const Color(0xBC15171B),
                         foregroundColor: Colors.white),
                     icon: const Icon(Icons.arrow_back, size: 20)),
-                if (!film)
-                  const Expanded(
-                      child: Padding(
-                          padding: EdgeInsets.only(left: 8),
-                          child: NitrateWordmark(size: 22)))
-                else
-                  const Spacer(),
+                const Spacer(),
                 if (onManage != null)
                   IconButton.filledTonal(
                       tooltip: 'Gérer',

@@ -27,6 +27,41 @@ void main() {
   final now = DateTime(2026, 7, 6);
   final past = DateTime(2026, 1, 1);
 
+  test('fin de saison 22 : reprise en 23, jamais sur les spéciaux', () {
+    final show = _show(81797, 'One Piece');
+    final watched = [_w(81797, 22, 1155, now)];
+    final episodes = [
+      _ep(81797, 0, 1, air: past),
+      _ep(81797, 22, 1155, air: past),
+      _ep(81797, 23, 1156, air: past),
+      _ep(81797, 23, 1158, air: past),
+    ];
+    final feed = buildSeriesFeed(
+        shows: [_swp(show, 1)], episodes: episodes, watched: watched, now: now);
+    expect(feed.toWatch.single.season, 23);
+    expect(feed.toWatch.single.episode, 1156);
+    expect(feed.toWatch.single.remaining, 1);
+    expect(watched, hasLength(1));
+    expect(episodes.first.season, 0);
+  });
+
+  test('saison suivante future : les spéciaux ne deviennent pas la reprise',
+      () {
+    final show = _show(1, 'One Piece');
+    final feed = buildSeriesFeed(shows: [
+      _swp(show, 1)
+    ], episodes: [
+      _ep(1, 0, 1, air: past),
+      _ep(1, 22, 1155, air: past),
+      _ep(1, 23, 1156, air: now.add(const Duration(days: 7)))
+    ], watched: [
+      _w(1, 22, 1155, now)
+    ], now: now);
+    expect(feed.toWatch, isEmpty);
+    expect(feed.stale, isEmpty);
+    expect(feed.history.single.episode, 1155);
+  });
+
   test('prochain à voir précis + « +N » restants', () {
     final show = _show(1, 'Dark', total: 4);
     final feed = buildSeriesFeed(
@@ -93,8 +128,10 @@ void main() {
     final feed = buildSeriesFeed(
       shows: [_swp(recent, 1), _swp(old, 1)],
       episodes: [
-        _ep(1, 1, 1, air: past), _ep(1, 1, 2, air: past),
-        _ep(2, 1, 1, air: past), _ep(2, 1, 2, air: past),
+        _ep(1, 1, 1, air: past),
+        _ep(1, 1, 2, air: past),
+        _ep(2, 1, 1, air: past),
+        _ep(2, 1, 2, air: past),
       ],
       watched: [
         _w(1, 1, 1, now.subtract(const Duration(days: 2))),
@@ -113,8 +150,10 @@ void main() {
     final feed = buildSeriesFeed(
       shows: [_swp(a, 1), _swp(b, 1)],
       episodes: [
-        _ep(1, 1, 1, air: past), _ep(1, 1, 2, air: past),
-        _ep(2, 1, 1, air: past), _ep(2, 1, 2, air: past),
+        _ep(1, 1, 1, air: past),
+        _ep(1, 1, 2, air: past),
+        _ep(2, 1, 1, air: past),
+        _ep(2, 1, 2, air: past),
       ],
       watched: [
         _w(1, 1, 1, now.subtract(const Duration(days: 5))),
