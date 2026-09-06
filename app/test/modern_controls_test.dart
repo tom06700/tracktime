@@ -29,6 +29,7 @@ void main() {
               index: selected,
               onSelected: (i) => setState(() => selected = i)))));
       final track = tester.getRect(find.byType(GlideControl)).deflate(6);
+      var transition = 0;
       for (final target in [count - 1, 0, count - 1, 0]) {
         await tester.tap(find.text(labels[target]));
         await tester.pump();
@@ -39,11 +40,12 @@ void main() {
           expect(capsule.left, greaterThanOrEqualTo(track.left - .1));
           expect(capsule.right, lessThanOrEqualTo(track.right + .1));
           // Reverse one transition before it settles.
-          if (target == count - 1 && frame == 5) {
+          if (transition == 2 && frame == 5) {
             await tester.tap(find.text(labels[0]));
             await tester.pump();
           }
         }
+        transition++;
       }
       expect(tester.takeException(), isNull);
     });
