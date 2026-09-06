@@ -1,4 +1,4 @@
-# Audit préalable et portage global — en cours
+# Audit et intégration native du pack global
 
 Base : main d6a4763, avec les trois commits de la PR #10 (logo ruban approuvé,
 carte entière cliquable, résumé automatique pour les épisodes vus). La PR #11
@@ -49,12 +49,18 @@ virtualisée. Les informations supplémentaires du profil sont conservées sous 
 bloc principal. L’identité est enregistrée en un document local lors de la
 validation ; les anciennes clés restent lisibles pour préserver le profil.
 
-## Vérification restante
+## Validation et limites
 
-Portage en cours : ce fichier ne certifie aucune validation native. Flutter local
-ne s’exécute pas sur ce Mac avec le SDK courant ; analyse, tests et captures de
-widgets passent par GitHub Actions. Captures et vidéos à produire et comparer ;
-fluidité réelle, masques du lanceur et splash sur appareil restent à contrôler.
+Les captures des sept références ont été ouvertes et comparées aux widgets à
+390 px logiques ; les captures Flutter incluent les zones sûres 59/34 px. Les
+contrôles couvrent les interactions, données, petites surfaces et textes agrandis.
+Les résultats des exécutions et la galerie sont liés dans la PR #12 :
+https://github.com/tom06700/tracktime/pull/12.
+
+Ce fichier ne certifie aucune validation sur appareil. Flutter local ne s’exécute
+pas sur ce Mac avec le SDK courant ; analyse, tests et captures de widgets passent
+par GitHub Actions. Fluidité réelle, masques du lanceur et splash restent à
+contrôler sur iPhone/Android. La compilation iOS est non signée.
 
 ## Ajustements issus de la revue
 
@@ -102,3 +108,9 @@ Les vidéos ont été examinées par séquences de frames : envol jusqu’au bor
 déplacement et retour de Next Up, capsule restant dans son rail. La revue sur
 appareil doit encore vérifier la fluidité, le clavier, VoiceOver/TalkBack, le
 vrai dialogue de permission, les masques des lanceurs et le splash.
+
+La carte Explorer grandit avec le texte agrandi. Les tests couvrent 320 px et
+texte doublé pour Explorer et les fiches, en plus des cas de la fiche épisode.
+Les pictogrammes Flutter natifs sont conservés plutôt que le runtime Lucide JS
+des prototypes. Le téléchargement des affiches de QA réessaie les interruptions
+réseau temporaires sans substituer une œuvre différente.

@@ -263,22 +263,26 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                       id: featured.tvdbId!,
                                       isSeries: true,
                                       title: featured.name),
-                                  child: SizedBox(
-                                      height: 150,
+                                  child: ConstrainedBox(
+                                      constraints:
+                                          const BoxConstraints(minHeight: 150),
                                       child: Stack(
-                                          fit: StackFit.expand,
+                                          alignment: Alignment.center,
                                           children: [
-                                            MediaImage(
-                                                sources: [featured.image],
-                                                seed: featured.name,
-                                                icon: Icons.tv),
-                                            const DecoratedBox(
-                                                decoration: BoxDecoration(
-                                                    gradient: LinearGradient(
-                                                        colors: [
+                                            Positioned.fill(
+                                                child: MediaImage(
+                                                    sources: [featured.image],
+                                                    seed: featured.name,
+                                                    icon: Icons.tv)),
+                                            const Positioned.fill(
+                                                child: DecoratedBox(
+                                                    decoration: BoxDecoration(
+                                                        gradient:
+                                                            LinearGradient(
+                                                                colors: [
                                                   Color(0xE615141E),
                                                   Color(0x55000000)
-                                                ]))),
+                                                ])))),
                                             const Padding(
                                                 padding: EdgeInsets.all(20),
                                                 child: Row(children: [

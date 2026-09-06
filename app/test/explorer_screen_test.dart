@@ -34,10 +34,12 @@ Future<void> _mount(
   List<Map<String, dynamic>> series = const [],
   List<Map<String, dynamic>> movies = const [],
   TvdbClient? tvdb,
+  Size size = const Size(390, 844),
+  double scale = 1,
 }) async {
   // Surface d'iPhone : la surface de test par défaut (800×600) donnerait des
   // cellules de grille démesurées, poussant les boutons hors de l'écran.
-  tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+  tester.view.physicalSize = size * 3;
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
 
@@ -52,6 +54,10 @@ Future<void> _mount(
       ],
       child: MaterialApp(
         theme: buildTheme(),
+        builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(scale), disableAnimations: true),
+            child: child!),
         home: const Scaffold(body: ExplorerScreen()),
       ),
     ),
@@ -131,6 +137,22 @@ void main() {
     expect(find.text('Stranger Things'), findsOneWidget);
     expect(find.text('Titanic'), findsOneWidget);
 
+    await _settle(tester);
+  });
+
+  testWidgets('découverte lisible à 320 px avec texte doublé', (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await _mount(tester, db,
+        size: const Size(320, 740),
+        scale: 2,
+        series: [_item(1, 'Une série avec un titre particulièrement long')]);
+    expect(tester.takeException(), isNull);
+    await tester.scrollUntilVisible(
+        find.text('Une série avec un titre particulièrement long'), 200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(tester.takeException(), isNull);
     await _settle(tester);
   });
 
