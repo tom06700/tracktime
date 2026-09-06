@@ -36,17 +36,19 @@ class _NotificationScreenState extends State<NotificationScreen>
   Future<void> _readStatus() async {
     try {
       final value = await widget.permission.status();
-      if (mounted && !_busy)
+      if (mounted && !_busy) {
         setState(() {
           _status = value;
           _error = null;
         });
+      }
     } catch (_) {
-      if (mounted && !_busy)
+      if (mounted && !_busy) {
         setState(() {
           _status = NotificationAccess.unavailable;
           _error = 'Impossible de vérifier la permission. Tu peux continuer.';
         });
+      }
     }
   }
 
@@ -95,17 +97,19 @@ class _NotificationScreenState extends State<NotificationScreen>
     });
     try {
       final value = await widget.permission.request();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _status = value;
           _result = true;
         });
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _error =
               'La demande n’a pas abouti. Réessaie ou continue sans notifications.';
         });
+      }
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -130,9 +134,10 @@ class _NotificationScreenState extends State<NotificationScreen>
     try {
       await widget.permission.openSettings();
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error =
             'Ouvre les réglages de ton appareil pour modifier cette permission.');
+      }
     }
   }
 

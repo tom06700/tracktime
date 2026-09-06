@@ -5,7 +5,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
+import 'support/audit_fonts.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tracktime/onboarding/welcome_screen.dart';
 import 'package:tracktime/onboarding/notification_screen.dart';
@@ -18,16 +18,13 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     final key = GlobalKey();
-    await (FontLoader('Inter')
-          ..addFont(rootBundle.load('assets/fonts/Inter.ttf')))
-        .load();
-    await (FontLoader('MaterialIcons')
-          ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf')))
-        .load();
+    await tester.runAsync(loadAuditFonts);
     final out = Directory('build/modern-audit')..createSync(recursive: true);
     Future<void> capture(String name) async {
       final boundary =
           key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      readableAuditFonts(boundary);
+      await tester.pump();
       await tester.runAsync(() async {
         final image = await boundary.toImage(pixelRatio: 2);
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -96,6 +93,8 @@ void main() {
     await tester.pumpAndSettle();
     await capture('04-glide-navigation');
     await tester.pumpWidget(host(NotificationScreen(onFinish: () async {})));
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
     for (var i = 0; i < 60; i++) {
       await tester.pump(const Duration(milliseconds: 33));
     }

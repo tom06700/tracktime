@@ -282,6 +282,14 @@ class _ModernCommandState extends State<ModernCommand>
                                                                 alpha: .7)))
                                               ],
                                             ]))),
+                                if (check && !widget.compact)
+                                  Opacity(
+                                      opacity: 1 - t,
+                                      child: const Padding(
+                                          padding: EdgeInsets.only(right: 12),
+                                          child: Icon(Icons.north_east,
+                                              size: 15,
+                                              color: Color(0xFFBCCDAF)))),
                                 if (!attach && !check)
                                   Container(
                                       width: widget.compact ? 28 : 39,
@@ -321,9 +329,10 @@ class _ModernCommandState extends State<ModernCommand>
               Transform.translate(offset: Offset(dx, dy), child: face),
             ]);
           }
-          return Semantics(
-              selected: (check || attach) ? widget.selected : null,
-              child: face);
+          return MergeSemantics(
+              child: Semantics(
+                  selected: (check || attach) ? widget.selected : null,
+                  child: face));
         });
   }
 }

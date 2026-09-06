@@ -46,7 +46,6 @@ class FlightPainter extends CustomPainter {
                 .withValues(alpha: .08 + random(i + 50) * .15));
     }
     if (boost < .7) {
-      final rect = Rect.fromCircle(center: Offset(cx, sourceY), radius: 31);
       canvas.drawCircle(
           Offset(cx, sourceY),
           47,
@@ -60,15 +59,28 @@ class FlightPainter extends CustomPainter {
           Offset(cx, sourceY),
           31,
           Paint()
-            ..shader = RadialGradient(
-                center: const Alignment(-.36, -.5),
-                colors: [
+            ..shader = ui.Gradient.radial(
+                Offset(cx, sourceY),
+                33,
+                [
                   const Color(0xFF3B3E45),
                   const Color(0xFF202228),
                   const Color(0xFF14151A),
-                  const Color(0xFF434750),
+                  const Color(0xFF434750)
                 ].map((c) => c.withValues(alpha: 1 - boost)).toList(),
-                stops: const [0, .35, .86, 1]).createShader(rect));
+                const [0, .35, .86, 1],
+                TileMode.clamp,
+                null,
+                Offset(cx - 12, sourceY - 17),
+                1));
+      canvas.drawCircle(
+          Offset(cx, sourceY),
+          31,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1
+            ..color =
+                const Color(0x3DC5C8D4).withValues(alpha: .24 * (1 - boost)));
       final title = TextPainter(
           text: TextSpan(
               text: 'n',

@@ -220,7 +220,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             child: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(
               child: Padding(
-            padding: const EdgeInsets.fromLTRB(26, 10, 26, 24),
+            padding: const EdgeInsets.fromLTRB(26, 18, 26, 24),
             child: Column(children: [
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 const Flexible(
@@ -276,7 +276,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       child: Transform.translate(
                           offset: Offset(0, -10 * _departure.value),
                           child: child))),
-              const SizedBox(height: 38),
+              const SizedBox(height: 48),
               AnimatedBuilder(
                   animation: Listenable.merge([_clock, _departure]),
                   builder: (context, _) => FilledButton(

@@ -141,7 +141,7 @@ Uint8List _fixtureBytes(Uri url) {
   if (name.contains('81797')) return _pngs['one-piece'] ?? _pngs['audit']!;
   if (name.contains('392256')) return _pngs['last-of-us'] ?? _pngs['audit']!;
   final alias = RegExp(r'(?:poster|backdrop)-(\d+)').firstMatch(name)?.group(1);
-  return _pngs['movie-$alias'] ?? _pngs['one-piece'] ?? _pngs['audit']!;
+  return _pngs['movie-$alias'] ?? _pngs['audit']!;
 }
 
 class _Request implements HttpClientRequest {
@@ -252,9 +252,14 @@ TvdbClient _tvdb() => TvdbClient(
           });
         }
         if (p.contains('/series/') && p.endsWith('/extended')) {
+          final id = int.parse(p.split('/')[3]);
           return _ok({
-            'name': 'ワンピース',
-            'image': 'https://img.test/poster-81797.jpg',
+            'name': id == 371980
+                ? 'Severance'
+                : id == 392256
+                    ? 'The Last of Us'
+                    : 'ワンピース',
+            'image': 'https://img.test/poster-$id.jpg',
             'firstAired': '1999-10-20',
             'averageRuntime': 25,
             'status': {'name': 'Continuing'},
@@ -288,8 +293,13 @@ TvdbClient _tvdb() => TvdbClient(
           });
         }
         if (p.contains('/series/') && p.contains('/translations/')) {
+          final id = int.parse(p.split('/')[3]);
           return _ok({
-            'name': 'One Piece',
+            'name': id == 371980
+                ? 'Severance'
+                : id == 392256
+                    ? 'The Last of Us'
+                    : 'One Piece',
             'overview': 'Gold Roger est le seigneur des pirates. À sa mort, une grande '
                 'vague de piraterie s\'abat sur le monde. Monkey D. Luffy, un '
                 'garçon qui rêve de devenir pirate, part à la recherche du One '
