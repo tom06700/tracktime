@@ -295,13 +295,10 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
             ),
           if (next.isNotEmpty) ...[
             const SizedBox(height: 32),
-            Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(children: [
-                  const Expanded(
-                      child: Text('Dans ta\nrotation',
-                          style: TextStyle(color: TtColors.dim))),
-                ])),
+            const Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Text('Dans ta\nrotation',
+                    style: TextStyle(color: TtColors.dim))),
             _Carousel(
               height: 220 + (MediaQuery.textScalerOf(context).scale(40) - 40),
               itemCount: next.length,
