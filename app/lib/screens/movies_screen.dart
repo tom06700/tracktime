@@ -12,6 +12,7 @@ import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/editorial_heading.dart';
+import '../widgets/modern_controls.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
 import '../widgets/skeleton.dart';
@@ -59,23 +60,17 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
       length: 2,
       child: Column(
         children: [
-          const TabBar(
-            labelColor: TtColors.amber,
-            unselectedLabelColor: TtColors.dim,
-            indicatorColor: TtColors.amber,
-            indicatorSize: TabBarIndicatorSize.label,
-            indicatorWeight: 2,
-            dividerColor: Colors.transparent,
-            labelStyle: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
-            unselectedLabelStyle: TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w600,
-            ),
-            tabs: [
-              Tab(text: 'Ma liste'),
-              Tab(text: 'Sorties'),
-            ],
-          ),
+          Builder(builder: (context) {
+            final tabs = DefaultTabController.of(context);
+            return Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: AnimatedBuilder(
+                    animation: tabs,
+                    builder: (context, _) => GlideControl(
+                        labels: const ['Ma liste', 'Sorties'],
+                        index: tabs.index,
+                        onSelected: tabs.animateTo)));
+          }),
           const Expanded(
             child: TabBarView(children: [_LibraryTab(), _ReleasesTab()]),
           ),
