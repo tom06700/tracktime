@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'support/audit_fonts.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tracktime/onboarding/welcome_screen.dart';
+import 'package:tracktime/onboarding/flight_painter.dart';
 import 'package:tracktime/onboarding/notification_screen.dart';
 import 'package:tracktime/notifications/notification_permission.dart';
 import 'package:tracktime/widgets/modern_controls.dart';
@@ -38,8 +39,14 @@ void main() {
     Widget host(Widget page) => MaterialApp(
         theme: buildTheme(), home: RepaintBoundary(key: key, child: page));
     await tester.pumpWidget(host(WelcomeScreen(onFinish: () async {})));
-    await tester
-        .runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
+    bool ready() => tester.widgetList<CustomPaint>(find.byType(CustomPaint)).any(
+      (w) => w.painter is FlightPainter &&
+          (w.painter! as FlightPainter).sprites.length == flightAssets.length);
+    for (var attempt = 0; attempt < 40 && !ready(); attempt++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+    }
+    expect(ready(), isTrue, reason: 'Les 12 objets doivent être décodés avant la séquence de captures.');
     for (var i = 0; i < 90; i++) {
       await tester.pump(const Duration(milliseconds: 33));
       if (i % 6 == 0) await capture('motion-intro-${i ~/ 6}');
