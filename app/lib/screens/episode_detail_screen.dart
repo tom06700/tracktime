@@ -194,7 +194,7 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
                     title: const Text('Tout marquer jusqu’ici ?'),
                     content: SingleChildScrollView(
                         child: Text(
-                            '${plan.keys.length} épisodes non vus, jusqu’à S${widget.season} · E$number inclus. '
+                            '${plan.keys.length} ${plan.keys.length == 1 ? 'épisode non vu' : 'épisodes non vus'}, jusqu’à S${widget.season} · E$number inclus. '
                             'Cette action inclut les saisons précédentes connues'
                             '${specials ? ', y compris les spéciaux en saison 0' : ''}. '
                             'Les anciennes dates de visionnage sont conservées.')),
@@ -204,6 +204,9 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
                           child: const Text('Annuler')),
                       FilledButton(
                           onPressed: () => Navigator.pop(c, true),
+                          style: FilledButton.styleFrom(
+                              backgroundColor: ModernPalette.lilac,
+                              foregroundColor: const Color(0xFF302344)),
                           child: const Text('Confirmer'))
                     ]));
         if (confirmed != true || !mounted) return;
@@ -324,20 +327,21 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
                                               }
                                             },
                                             onDragEnd: _endDrag)),
-                                  Positioned(
-                                      top: 15,
-                                      right: 14,
-                                      child: IconButton.filledTonal(
-                                          tooltip: 'Fermer la fiche épisode',
-                                          style: IconButton.styleFrom(
-                                              backgroundColor:
-                                                  const Color(0xFF222329),
-                                              foregroundColor:
-                                                  const Color(0xFFE8E5EE)),
-                                          onPressed: _busy
-                                              ? null
-                                              : () => context.pop(),
-                                          icon: const Icon(Icons.close))),
+                                  if (_episodes == null || _error != null)
+                                    Positioned(
+                                        top: 15,
+                                        right: 14,
+                                        child: IconButton.filledTonal(
+                                            tooltip: 'Fermer la fiche épisode',
+                                            style: IconButton.styleFrom(
+                                                backgroundColor:
+                                                    const Color(0xFF222329),
+                                                foregroundColor:
+                                                    const Color(0xFFE8E5EE)),
+                                            onPressed: _busy
+                                                ? null
+                                                : () => context.pop(),
+                                            icon: const Icon(Icons.close))),
                                 ]))))))));
   }
 }
@@ -480,6 +484,17 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
                                 child: ExcludeSemantics(
                                     child: CustomPaint(
                                         painter: _WatchFlash(_confirmation))))),
+                        Positioned(
+                            top: 15,
+                            right: 14,
+                            child: IconButton.filledTonal(
+                                tooltip: 'Fermer la fiche épisode',
+                                onPressed:
+                                    widget.busy ? null : () => context.pop(),
+                                style: IconButton.styleFrom(
+                                    backgroundColor: const Color(0xFF222329),
+                                    foregroundColor: const Color(0xFFE8E5EE)),
+                                icon: const Icon(Icons.close))),
                         Positioned(
                             left: gap,
                             top: 19,
