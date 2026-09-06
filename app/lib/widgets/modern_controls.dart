@@ -159,13 +159,13 @@ class _ModernCommandState extends State<ModernCommand>
                     child: Stack(alignment: Alignment.center, children: [
                       if (check)
                         Positioned(
-                            left: -120,
-                            top: -114,
+                            left: -100,
+                            top: -140,
                             child: Transform.scale(
-                                scale: 2 * t,
+                                scale: 1.6 * t,
                                 child: Container(
-                                    width: 300,
-                                    height: 300,
+                                    width: 380,
+                                    height: 380,
                                     decoration: const BoxDecoration(
                                         color: ModernPalette.lime,
                                         shape: BoxShape.circle)))),

@@ -329,6 +329,11 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
                                       right: 14,
                                       child: IconButton.filledTonal(
                                           tooltip: 'Fermer la fiche épisode',
+                                          style: IconButton.styleFrom(
+                                              backgroundColor:
+                                                  const Color(0xFF222329),
+                                              foregroundColor:
+                                                  const Color(0xFFE8E5EE)),
                                           onPressed: _busy
                                               ? null
                                               : () => context.pop(),
@@ -440,20 +445,21 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
                   child: SizedBox(
                       height: small ? 242 : 278,
                       child: Stack(fit: StackFit.expand, children: [
-                        TweenAnimationBuilder<double>(
-                            tween: Tween(begin: 0, end: 1),
-                            duration: motionOf(
-                                context, const Duration(milliseconds: 500)),
-                            curve: const Cubic(.2, .8, .3, 1),
-                            builder: (_, t, child) => Transform.scale(
-                                scale: 1.13 - .09 * t,
-                                child: Transform.translate(
-                                    offset: Offset(12 * (1 - t), 0),
-                                    child: child)),
-                            child: MediaImage(sources: [
-                              widget.data['image'] as String?,
-                              widget.posterPath
-                            ], seed: widget.showName, icon: Icons.tv)),
+                        ClipRect(
+                            child: TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0, end: 1),
+                                duration: motionOf(
+                                    context, const Duration(milliseconds: 500)),
+                                curve: const Cubic(.2, .8, .3, 1),
+                                builder: (_, t, child) => Transform.scale(
+                                    scale: 1.13 - .09 * t,
+                                    child: Transform.translate(
+                                        offset: Offset(12 * (1 - t), 0),
+                                        child: child)),
+                                child: MediaImage(sources: [
+                                  widget.data['image'] as String?,
+                                  widget.posterPath
+                                ], seed: widget.showName, icon: Icons.tv))),
                         const DecoratedBox(
                             decoration: BoxDecoration(
                                 gradient: LinearGradient(
@@ -490,9 +496,17 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
                                         backgroundColor:
                                             const Color(0xD9131418),
                                         foregroundColor: ModernPalette.text),
-                                    child: Text('${widget.showName} ↗',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis)))),
+                                    child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Flexible(
+                                              child: Text(widget.showName,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis)),
+                                          const SizedBox(width: 6),
+                                          const Icon(Icons.north_east, size: 14)
+                                        ])))),
                         Positioned(
                             left: gap,
                             right: gap,
@@ -607,7 +621,8 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
                                 minHeight: 4,
                                 color: ModernPalette.lime,
                                 backgroundColor: const Color(0xFF292B2C),
-                                semanticsLabel: 'Progression de cette saison : ${widget.seen} sur ${widget.total} épisodes vus')),
+                                semanticsLabel:
+                                    'Progression de cette saison : ${widget.seen} sur ${widget.total} épisodes vus')),
                         const SizedBox(height: 26),
                         Wrap(
                             alignment: WrapAlignment.spaceBetween,
@@ -642,21 +657,66 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
                                       setState(() => _revealed = true),
                                   style: FilledButton.styleFrom(
                                       minimumSize: const Size(0, 88),
+                                      padding: EdgeInsets.zero,
                                       backgroundColor: const Color(0xFF191A1E),
+                                      foregroundColor: const Color(0xFFDED8EA),
                                       shape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(17))),
-                                  child: const Wrap(
-                                      alignment: WrapAlignment.center,
-                                      crossAxisAlignment:
-                                          WrapCrossAlignment.center,
-                                      spacing: 9,
-                                      children: [
-                                        Icon(Icons.visibility_outlined,
-                                            size: 15),
-                                        Text('Révéler le résumé',
-                                            style: TextStyle(fontSize: 12))
-                                      ])))
+                                  child: ConstrainedBox(
+                                      constraints:
+                                          const BoxConstraints(minHeight: 88),
+                                      child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            const Positioned.fill(
+                                                child: IgnorePointer(
+                                                    child: ExcludeSemantics(
+                                                        child: CustomPaint(
+                                                            painter:
+                                                                _SummaryLines())))),
+                                            Padding(
+                                                padding:
+                                                    const EdgeInsets.all(12),
+                                                child: Align(
+                                                    heightFactor: 1,
+                                                    child: Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 15,
+                                                                vertical: 10),
+                                                        decoration: BoxDecoration(
+                                                            color:
+                                                                const Color(
+                                                                    0xEF24222B),
+                                                            border: Border.all(
+                                                                color: const Color(
+                                                                    0xFF393441)),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        22)),
+                                                        child: const Wrap(
+                                                            alignment:
+                                                                WrapAlignment
+                                                                    .center,
+                                                            crossAxisAlignment:
+                                                                WrapCrossAlignment
+                                                                    .center,
+                                                            spacing: 9,
+                                                            children: [
+                                                              Icon(
+                                                                  Icons
+                                                                      .visibility_outlined,
+                                                                  size: 15),
+                                                              Text(
+                                                                  'Révéler le résumé',
+                                                                  style: TextStyle(
+                                                                      fontSize:
+                                                                          12))
+                                                            ])))),
+                                          ]))))
                         else ...[
                           EntranceFade(
                               child: Text(overview,
@@ -731,7 +791,10 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
                                       widget.busy ? null : widget.previous,
                                   icon: const Icon(Icons.arrow_back),
                                   style: IconButton.styleFrom(
-                                      minimumSize: const Size(52, 64))),
+                                      minimumSize: const Size(52, 64),
+                                      backgroundColor: const Color(0xFF212227),
+                                      foregroundColor:
+                                          const Color(0xFFC7C6CF))),
                               const SizedBox(width: 10),
                               Expanded(
                                   child: ModernCommand(
@@ -750,6 +813,7 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
                             onPressed: widget.busy ? null : widget.onAll,
                             style: FilledButton.styleFrom(
                                 backgroundColor: const Color(0xFF202126),
+                                foregroundColor: const Color(0xFFE5E0ED),
                                 minimumSize: const Size(0, 56),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(17))),
@@ -760,7 +824,7 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
                                 children: [
                                   Text('Tous les épisodes',
                                       style: TextStyle(fontSize: 12)),
-                                  Text('Choisir un numéro ↗',
+                                  Text('Choisir un numéro',
                                       style: TextStyle(
                                           fontSize: 10,
                                           color: ModernPalette.muted))
@@ -842,7 +906,11 @@ class _EpisodePickerState extends ConsumerState<_EpisodePicker> {
                                           errorMaxLines: 3))),
                               const SizedBox(width: 8),
                               FilledButton(
-                                  onPressed: _jump, child: const Text('Aller'))
+                                  onPressed: _jump,
+                                  style: FilledButton.styleFrom(
+                                      backgroundColor: ModernPalette.lilac,
+                                      foregroundColor: const Color(0xFF302344)),
+                                  child: const Text('Aller'))
                             ]),
                       ]))),
                   SliverPadding(
@@ -889,4 +957,25 @@ class _WatchFlash extends CustomPainter {
 
   @override
   bool shouldRepaint(_WatchFlash old) => old.animation != animation;
+}
+
+class _SummaryLines extends CustomPainter {
+  const _SummaryLines();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0x734B4756)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+    for (var i = 0; i < 3; i++) {
+      canvas.drawRRect(
+          RRect.fromRectAndRadius(
+              Rect.fromLTWH(
+                  18, 18 + i * 15, (size.width - 36) * [.92, .8, .58][i], 6),
+              const Radius.circular(5)),
+          paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SummaryLines old) => false;
 }

@@ -38,6 +38,17 @@ class EpisodeFixture extends TvdbClient {
 }
 
 void main() {
+  void episodeTest(String name, Future<void> Function(WidgetTester) body) {
+    testWidgets(name, (tester) async {
+      try {
+        await body(tester);
+      } finally {
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 2));
+      }
+    });
+  }
+
   Future<AppDatabase> mount(WidgetTester tester, EpisodeFixture api,
       {double scale = 1,
       int initial = 1155,
@@ -100,9 +111,12 @@ void main() {
   }
 
   Future<void> tap(WidgetTester tester, Finder finder) async {
-    await tester.ensureVisible(finder);
-    await tester.pump();
-    await tester.tap(finder);
+    final button = find.ancestor(
+        of: finder, matching: find.bySubtype<ButtonStyleButton>());
+    final target = button.evaluate().isEmpty ? finder : button.first;
+    await Scrollable.ensureVisible(tester.element(target), alignment: .5);
+    await tester.pumpAndSettle();
+    await tester.tap(target);
     await tester.pumpAndSettle();
   }
 
@@ -122,7 +136,7 @@ void main() {
     });
   }
 
-  testWidgets(
+  episodeTest(
       '1200 épisodes, résumé protégé, accès direct et navigation sans écriture',
       (tester) async {
     final api = EpisodeFixture(List.generate(1200, (i) => i + 1));
@@ -149,7 +163,7 @@ void main() {
     expect(api.calls, 1);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('trous, dates absentes, petit écran et texte agrandi',
+  episodeTest('trous, dates absentes, petit écran et texte agrandi',
       (tester) async {
     final db = await mount(tester, EpisodeFixture([1155, 1156, 1200]),
         scale: 2, size: const Size(320, 568));
@@ -167,7 +181,7 @@ void main() {
     expect(await db.allWatchedEpisodes(), isEmpty);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('cocher ne change pas de page, rattrapage confirmé puis annulé',
+  episodeTest('cocher ne change pas de page, rattrapage confirmé puis annulé',
       (tester) async {
     final db = await mount(tester, EpisodeFixture([1, 3, 1155]));
     final old = DateTime(2020, 2, 3);
@@ -212,7 +226,7 @@ void main() {
             .watchedAt,
         old);
   });
-  testWidgets('erreur de catalogue visible puis réessai', (tester) async {
+  episodeTest('erreur de catalogue visible puis réessai', (tester) async {
     final api = EpisodeFixture([1155])..fail = true;
     await mount(tester, api);
     expect(find.text('Épisode indisponible'), findsOneWidget);
