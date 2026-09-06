@@ -13,14 +13,17 @@ const _lilac = Color(0xFFCAB7FF);
 /// View-only palette: do not change Universe's colors or statistical weights.
 Color _color(String name) {
   final n = name.toLowerCase();
-  if (n.contains('coméd') || n.contains('comed'))
+  if (n.contains('coméd') || n.contains('comed')) {
     return const Color(0xFFD4F5A0);
+  }
   if (n.contains('anim')) return _lilac;
-  if (n.contains('réalité') || n.contains('realit'))
+  if (n.contains('réalité') || n.contains('realit')) {
     return const Color(0xFFF3B99D);
+  }
   if (n.contains('dram')) return const Color(0xFFA8C6EE);
-  if (n.contains('avent') || n.contains('advent'))
+  if (n.contains('avent') || n.contains('advent')) {
     return const Color(0xFFE5CEA0);
+  }
   if (n.contains('action')) return const Color(0xFFEDAAA4);
   return Color.lerp(genreColor(name), Colors.white, .5)!;
 }
@@ -43,8 +46,9 @@ List<_Slice> _slices(Universe universe) {
           universe.posterByGenre[g.name])
   ];
   final rest = valid.skip(6).fold(0.0, (sum, g) => sum + g.weight);
-  if (rest > 0)
+  if (rest > 0) {
     result.add(_Slice('rest', 'Autres', rest, const Color(0xFFABA6B6), null));
+  }
   final total = result.fold(0.0, (sum, s) => sum + s.weight);
   if (total <= 0 || !total.isFinite) return [];
   // Largest remainder rounds labels to 100 in total, without changing widths.
@@ -57,7 +61,7 @@ List<_Slice> _slices(Universe universe) {
           .compareTo(result[a].weight / total * 100 - result[a].percent);
       return d == 0 ? a.compareTo(b) : d;
     });
-  final missing = 100 - result.fold(0, (sum, s) => sum + s.percent);
+  final missing = 100 - result.fold<int>(0, (sum, s) => sum + s.percent);
   for (final i in order.take(missing)) {
     result[i].percent++;
   }
@@ -92,7 +96,7 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _reduced = reduceMotionOf(context);
-    if (_reduced || !TickerMode.of(context)) {
+    if (_reduced || !TickerMode.valuesOf(context).enabled) {
       _motion.value = 1;
     }
   }
@@ -114,7 +118,7 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
     if (changed) {
       _active = _items.isEmpty ? null : _items[_index].id;
       _motion.value = 1;
-      _oldAngle = _newAngle = _index * 57 - 20;
+      _oldAngle = _newAngle = _index * 57.0 - 20;
     }
   }
 
@@ -136,7 +140,7 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
       _previous = old.percent;
       _active = _items[index].id;
       _oldAngle = angle;
-      _newAngle = index * 57 - 20;
+      _newAngle = index * 57.0 - 20;
       _revision++;
       if (_reduced) {
         _motion.value = 1;
@@ -288,9 +292,10 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
                     }
                     x += width;
                   }
-                  return Stack(
-                      clipBehavior: Clip.none,
-                      children: [...panels, if (selected != null) selected]);
+                  return Stack(clipBehavior: Clip.none, children: [
+                    ...panels,
+                    ...[selected].whereType<Widget>()
+                  ]);
                 })),
             const SizedBox(height: 12),
             _holes(),
@@ -310,8 +315,8 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
   Widget _frame(int index, double width) {
     final s = _items[index];
     final active = index == _index;
-    final t =
-        _progress(active ? 950 : 800, active ? 0 : (index - _index).abs() * 35);
+    final t = _progress(
+        active ? 950 : 800, active ? 0 : (index - _index).abs() * 35.0);
     final y = _reduced
         ? (active ? -4.0 : 0.0)
         : active
@@ -361,7 +366,10 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
                   key: ValueKey('pellicule-segment-${s.id}'),
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _select(index),
-                  child: Opacity(
+                  child: AnimatedOpacity(
+                    duration: _reduced
+                        ? Duration.zero
+                        : const Duration(milliseconds: 500),
                     opacity: active ? 1 : .5,
                     child: Container(
                       decoration: BoxDecoration(
@@ -519,12 +527,30 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
                                                       left: 0,
                                                       child: ImageFiltered(
                                                           imageFilter: ui.ImageFilter.blur(
-                                                              sigmaX: 2 *
-                                                                  math.sin(roll *
-                                                                      math.pi),
-                                                              sigmaY: 2 *
-                                                                  math.sin(roll *
-                                                                      math.pi)),
+                                                              sigmaX: _reduced
+                                                                  ? 0
+                                                                  : _keyframes(
+                                                                      _progress(
+                                                                          850),
+                                                                      [
+                                                                        0,
+                                                                        .3,
+                                                                        1
+                                                                      ],
+                                                                      [0, 2, 0],
+                                                                      _ease),
+                                                              sigmaY: _reduced
+                                                                  ? 0
+                                                                  : _keyframes(
+                                                                      _progress(
+                                                                          850),
+                                                                      [
+                                                                        0,
+                                                                        .3,
+                                                                        1
+                                                                      ],
+                                                                      [0, 2, 0],
+                                                                      _ease)),
                                                           child: Column(
                                                               mainAxisSize:
                                                                   MainAxisSize
@@ -589,12 +615,13 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
 double _keyframes(
     double t, List<double> stops, List<double> values, Curve curve) {
   for (var i = 1; i < stops.length; i++) {
-    if (t <= stops[i])
+    if (t <= stops[i]) {
       return ui.lerpDouble(
           values[i - 1],
           values[i],
           curve.transform(((t - stops[i - 1]) / (stops[i] - stops[i - 1]))
               .clamp(0.0, 1.0)))!;
+    }
   }
   return values.last;
 }
