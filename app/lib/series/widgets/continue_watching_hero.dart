@@ -85,7 +85,7 @@ class ContinueWatchingHero extends ConsumerWidget {
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
-                                                  fontSize: 28,
+                                                  fontSize: 24,
                                                   height: 1.1,
                                                   fontWeight: FontWeight.w500,
                                                   color: Colors.white)),

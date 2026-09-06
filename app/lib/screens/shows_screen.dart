@@ -121,6 +121,7 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen>
                   ]),
                   const SizedBox(height: 16),
                   GlideControl(
+                      dense: true,
                       labels: const ['À voir', 'À venir'],
                       index: _tabs.index,
                       onSelected: (i) => _tabs.animateTo(i,
@@ -242,7 +243,7 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
                   children: [
                     Text('À reprendre.',
                         style: TextStyle(
-                            fontSize: 28,
+                            fontSize: 23,
                             fontWeight: FontWeight.w500,
                             letterSpacing: -1)),
                     SizedBox(height: 4),

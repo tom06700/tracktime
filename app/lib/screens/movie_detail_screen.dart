@@ -222,6 +222,8 @@ class _ContentState extends ConsumerState<_Content> {
                   child: ModernCommand(
                       shape: CommandShape.softCheck,
                       height: 63,
+                      labelSize: 13,
+                      trailingIndicator: false,
                       selected: seen,
                       label: seen ? 'Film vu' : 'Marquer vu',
                       onPressed: _busy ? null : () => _toggle(local))),

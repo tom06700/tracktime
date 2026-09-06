@@ -88,12 +88,9 @@ final _onePiece = <String, Object?>{
 };
 
 Future<void> _pump(
-  WidgetTester tester,
-  AppDatabase db,
-  TvdbClient tvdb,
-  Widget home,
-) async {
-  tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    WidgetTester tester, AppDatabase db, TvdbClient tvdb, Widget home,
+    {Size size = const Size(390, 844), double scale = 1}) async {
+  tester.view.physicalSize = size * 3;
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
 
@@ -103,7 +100,14 @@ Future<void> _pump(
         databaseProvider.overrideWithValue(db),
         tvdbClientProvider.overrideWithValue(tvdb),
       ],
-      child: MaterialApp(theme: buildTheme(), home: home),
+      child: MaterialApp(
+          theme: buildTheme(),
+          builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                  textScaler: TextScaler.linear(scale),
+                  disableAnimations: true),
+              child: child!),
+          home: home),
     ),
   );
   for (var i = 0; i < 6; i++) {
@@ -544,6 +548,44 @@ void main() {
     expect(await db.allWatchedEpisodes(), isEmpty);
     await _settle(tester);
   });
+
+  for (final film in [false, true]) {
+    testWidgets(
+        'fiche ${film ? 'film' : 'série'} : petit écran et texte doublé',
+        (tester) async {
+      final db = _fkDb();
+      addTearDown(db.close);
+      final api = _Api();
+      await _pump(
+          tester,
+          db,
+          api.client(series: {
+            ..._onePiece,
+            'name': 'Une très longue histoire à travers les océans du monde',
+          }, episodes: [
+            (1, 1236)
+          ]),
+          film
+              ? const MovieDetailScreen(movieId: 1406, title: 'Dune')
+              : const ShowDetailScreen(
+                  showId: 81797, title: 'Une très longue histoire'),
+          size: const Size(320, 740),
+          scale: 2);
+      expect(tester.takeException(), isNull);
+      if (!film) {
+        await _tapAndSettle(tester, find.text('Épisodes'));
+        await _tapAndSettle(tester, find.byTooltip('Aller à un numéro'));
+        expect(tester.takeException(), isNull);
+        await _tapAndSettle(tester, find.text('Annuler'));
+      } else {
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
+        await _frames(tester);
+        expect(tester.takeException(), isNull);
+      }
+      expect(await db.allWatchedEpisodes(), isEmpty);
+      await _settle(tester);
+    });
+  }
 
   testWidgets('openMediaDetail route selon le type, par identifiant', (
     tester,

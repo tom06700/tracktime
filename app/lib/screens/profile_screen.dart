@@ -546,6 +546,8 @@ class _TileDivider extends StatelessWidget {
 }
 
 class _RecentStories extends ConsumerWidget {
+  const _RecentStories({this.expanded = false});
+  final bool expanded;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final episodes = ref.watch(watchHistoryProvider).value ?? [];
@@ -558,7 +560,7 @@ class _RecentStories extends ConsumerWidget {
       String route,
       Object? extra
     })>[
-      for (final e in episodes.take(3))
+      for (final e in episodes)
         (
           title: e.show.name,
           subtitle: '${e.code} · ${frenchDate(e.watchedAt)}',
@@ -577,6 +579,55 @@ class _RecentStories extends ConsumerWidget {
           extra: m.title
         ),
     ]..sort((a, b) => b.at.compareTo(a.at));
+    Widget row(int index, {bool inSheet = false}) {
+      final e = entries[index];
+      return ListTile(
+        contentPadding: EdgeInsets.zero,
+        onTap: () {
+          if (inSheet) Navigator.pop(context);
+          context.push(e.route, extra: e.extra);
+        },
+        leading: ClipRRect(
+            borderRadius: BorderRadius.circular(11),
+            child: SizedBox(
+                width: 43,
+                height: 57,
+                child: MediaImage(
+                    sources: [e.image],
+                    seed: e.title,
+                    icon: Icons.movie_outlined))),
+        title: Text(e.title, style: const TextStyle(fontSize: 12)),
+        subtitle: Text(e.subtitle,
+            style: const TextStyle(fontSize: 10, color: Color(0xFFAA9BB4))),
+        trailing:
+            const Icon(Icons.north_east, size: 16, color: ModernPalette.lilac),
+      );
+    }
+
+    if (expanded) {
+      return SafeArea(
+          child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              child: Column(children: [
+                Row(children: [
+                  const Expanded(
+                      child: Text('Ton historique',
+                          style: TextStyle(fontSize: 22))),
+                  IconButton(
+                      tooltip: 'Fermer',
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close))
+                ]),
+                if (entries.isEmpty)
+                  const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('Ton premier visionnage apparaîtra ici.')),
+                Expanded(
+                    child: ListView.builder(
+                        itemCount: entries.length,
+                        itemBuilder: (_, i) => row(i, inSheet: true))),
+              ])));
+    }
     return Padding(
         padding: const EdgeInsets.fromLTRB(22, 25, 22, 12),
         child:
@@ -587,31 +638,19 @@ class _RecentStories extends ConsumerWidget {
                     style:
                         TextStyle(fontSize: 16, fontWeight: FontWeight.w500))),
             TextButton(
-                onPressed: () => context.push('/history'),
+                onPressed: () => showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: ModernPalette.background,
+                    builder: (_) => const FractionallySizedBox(
+                        heightFactor: .85,
+                        child: _RecentStories(expanded: true))),
                 child: const Text('Tout voir'))
           ]),
           if (entries.isEmpty)
             const Text('Ton premier visionnage apparaîtra ici.',
                 style: TextStyle(color: TtColors.dim)),
-          for (final e in entries.take(3))
-            ListTile(
-                contentPadding: EdgeInsets.zero,
-                onTap: () => context.push(e.route, extra: e.extra),
-                leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(11),
-                    child: SizedBox(
-                        width: 43,
-                        height: 57,
-                        child: MediaImage(
-                            sources: [e.image],
-                            seed: e.title,
-                            icon: Icons.movie_outlined))),
-                title: Text(e.title, style: const TextStyle(fontSize: 12)),
-                subtitle: Text(e.subtitle,
-                    style: const TextStyle(
-                        fontSize: 10, color: Color(0xFFAA9BB4))),
-                trailing: const Icon(Icons.north_east,
-                    size: 16, color: ModernPalette.lilac)),
+          for (var i = 0; i < entries.length.clamp(0, 3); i++) row(i),
         ]));
   }
 }

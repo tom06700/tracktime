@@ -28,6 +28,7 @@ class ModernCommand extends StatefulWidget {
       this.subtitle,
       this.eyebrow,
       this.labelSize,
+      this.trailingIndicator = true,
       this.compact = false,
       this.height,
       this.subtitleAbove = false});
@@ -36,6 +37,7 @@ class ModernCommand extends StatefulWidget {
   final String? subtitle;
   final String? eyebrow;
   final double? labelSize;
+  final bool trailingIndicator;
   final FutureOr<void> Function()? onPressed;
   final bool selected, compact;
   final double? height;
@@ -156,10 +158,18 @@ class _ModernCommandState extends State<ModernCommand>
               minimumSize: Size(0, height),
               padding: EdgeInsets.zero,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(check ? 40 : 26)),
+                  borderRadius: BorderRadius.circular(check
+                      ? 40
+                      : iconOnly
+                          ? 22
+                          : 26)),
             ),
             child: ClipRRect(
-                borderRadius: BorderRadius.circular(check ? 40 : 26),
+                borderRadius: BorderRadius.circular(check
+                    ? 40
+                    : iconOnly
+                        ? 22
+                        : 26),
                 child: ConstrainedBox(
                     constraints: BoxConstraints(minHeight: height),
                     child: Stack(alignment: Alignment.center, children: [
@@ -344,7 +354,9 @@ class _ModernCommandState extends State<ModernCommand>
                                                                   alpha: .7)))
                                                 ],
                                               ]))),
-                                  if (check && !widget.compact)
+                                  if (check &&
+                                      !widget.compact &&
+                                      widget.trailingIndicator)
                                     Opacity(
                                         opacity: 1 - t,
                                         child: const Padding(

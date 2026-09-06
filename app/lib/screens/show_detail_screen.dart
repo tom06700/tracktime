@@ -338,13 +338,18 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
     ];
     final seen =
         all.where((e) => watched.contains('S${e.season}E${e.episode}')).length;
-    final next = all.where((e) {
+    final candidates = all.where((e) {
       final air = _episodeDates[e.season]?[e.episode];
       return !watched.contains('S${e.season}E${e.episode}') &&
           (air == null || !air.isAfter(DateTime.now()));
-    }).firstOrNull;
-    final selected =
-        _selectedSeason ?? next?.season ?? _seasonNumbers.firstOrNull;
+    });
+    // Regular episodes drive resumption; specials remain explicitly accessible.
+    final next = candidates.where((e) => e.season > 0).firstOrNull ??
+        candidates.firstOrNull;
+    final selected = _selectedSeason ??
+        next?.season ??
+        _seasonNumbers.where((s) => s > 0).firstOrNull ??
+        _seasonNumbers.firstOrNull;
     final numbers = _episodesBySeason[selected] ?? <int>[];
     final visible = numbers
         .where((e) => !_onlyUnseen || !watched.contains('S${selected}E$e'))
@@ -511,7 +516,17 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
                       initialValue: selected,
                       key: ValueKey(selected),
                       isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'Saison'),
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFFE6DCEB)),
+                      decoration: InputDecoration(
+                          isDense: true,
+                          filled: true,
+                          fillColor: const Color(0xFF241E2B),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 14),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none)),
                       items: [
                         for (final s in _seasonNumbers)
                           DropdownMenuItem(
@@ -539,11 +554,33 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
           Row(children: [
             ChoiceChip(
                 label: const Text('Tous'),
+                showCheckmark: false,
+                selectedColor: ModernPalette.lilac,
+                backgroundColor: const Color(0xFF241E2B),
+                side: BorderSide.none,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+                labelStyle: TextStyle(
+                    fontSize: 12,
+                    color: !_onlyUnseen
+                        ? const Color(0xFF342453)
+                        : const Color(0xFFB7A6C4)),
                 selected: !_onlyUnseen,
                 onSelected: (_) => setState(() => _onlyUnseen = false)),
             const SizedBox(width: 7),
             ChoiceChip(
                 label: const Text('Non vus'),
+                showCheckmark: false,
+                selectedColor: ModernPalette.lilac,
+                backgroundColor: const Color(0xFF241E2B),
+                side: BorderSide.none,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+                labelStyle: TextStyle(
+                    fontSize: 12,
+                    color: _onlyUnseen
+                        ? const Color(0xFF342453)
+                        : const Color(0xFFB7A6C4)),
                 selected: _onlyUnseen,
                 onSelected: (_) => setState(() => _onlyUnseen = true)),
             const Spacer(),
@@ -808,6 +845,9 @@ class _OfficialEpisodeRow extends StatelessWidget {
                     onPressed: onToggle,
                     tooltip: seen ? 'Marquer non vu' : 'Marquer vu',
                     style: IconButton.styleFrom(
+                        minimumSize: const Size(44, 44),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
                         backgroundColor:
                             seen ? ModernPalette.lime : const Color(0xFF27292A),
                         foregroundColor: seen
