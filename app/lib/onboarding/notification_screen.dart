@@ -323,6 +323,7 @@ class _NotificationScreenState extends State<NotificationScreen>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 20, vertical: 18),
                           child: Row(children: [
+                            if (!bell) const SizedBox(width: 29),
                             if (bell) ...[
                               Transform.rotate(
                                   angle: reduceMotionOf(context) ? 0 : angle,
@@ -339,7 +340,7 @@ class _NotificationScreenState extends State<NotificationScreen>
                                         fontFamily: 'Inter',
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500))),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             const Icon(Icons.north_east, size: 19),
                           ])),
                       if (!reduceMotionOf(context) && sheen > 0)

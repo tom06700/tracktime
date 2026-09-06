@@ -19,11 +19,14 @@ const flightAssets = [
 
 /// Equations and seeded phases from the approved 01-intro-envol reference.
 class FlightPainter extends CustomPainter {
-  FlightPainter(this.clock, this.departure, this.sprites)
+  FlightPainter(this.clock, this.departure, this.sprites, {this.sourceHeight})
       : super(repaint: Listenable.merge([clock, departure]));
   final ValueNotifier<double> clock;
   final Animation<double> departure;
   final List<ui.Image> sprites;
+
+  /// Original scene height keeps the source fixed as the flight extends upward.
+  final double? sourceHeight;
   static double random(int i) {
     final n = math.sin(i * 127.1 + 311.7) * 43758.5453;
     return n - n.floor();
@@ -33,7 +36,7 @@ class FlightPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final width = size.width, height = size.height;
     final boost = (departure.value * .9 * 1.45).clamp(0.0, 1.0);
-    final sourceY = height * .87, cx = width * .5;
+    final sourceY = height - (sourceHeight ?? height) * .13, cx = width * .5;
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.drawColor(Colors.black, BlendMode.srcOver);
@@ -134,6 +137,7 @@ class FlightPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(FlightPainter oldDelegate) =>
+      oldDelegate.sourceHeight != sourceHeight ||
       oldDelegate.sprites != sprites ||
       oldDelegate.clock != clock ||
       oldDelegate.departure != departure;
