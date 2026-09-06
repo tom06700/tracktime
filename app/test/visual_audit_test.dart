@@ -192,8 +192,9 @@ TvdbClient _tvdb() => TvdbClient(
         if (p.endsWith('/login')) {
           return http.Response('{"data":{"token":"t"}}', 200);
         }
-        if (p.endsWith('/search'))
+        if (p.endsWith('/search')) {
           return _ok([_hit(81797, 'One Piece', '1999')]);
+        }
         if (p.contains('/series/filter')) {
           return _ok([
             _hit(81797, 'One Piece', '1999'),
