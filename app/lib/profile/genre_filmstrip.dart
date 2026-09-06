@@ -332,7 +332,7 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
             : _keyframes(
                 t, [0, .3, .65, 1], [0, 9, -3, 0], const Cubic(.2, .85, .2, 1));
     final transform = Matrix4.identity()
-      ..setEntry(3, 2, 1 / 600)
+      ..setEntry(3, 2, -1 / 600)
       ..setTranslationRaw(0.0, y, 0.0)
       ..rotateX(angle * math.pi / 180);
     final image = s.poster == null
@@ -505,7 +505,9 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
                               ]),
                               const SizedBox(height: 12),
                               Row(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.baseline,
+                                  textBaseline: TextBaseline.alphabetic,
                                   children: [
                                     Flexible(
                                         child: ClipRect(
@@ -516,12 +518,15 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
                                                       opacity: 0,
                                                       child: Text(
                                                           '${s.percent}',
-                                                          style:
-                                                              const TextStyle(
-                                                                  fontSize: 62,
-                                                                  height: 1.1,
-                                                                  letterSpacing:
-                                                                      -4))),
+                                                          style: const TextStyle(
+                                                              fontSize: 62,
+                                                              fontFeatures: [
+                                                                ui.FontFeature
+                                                                    .tabularFigures()
+                                                              ],
+                                                              height: 1.1,
+                                                              letterSpacing:
+                                                                  -4))),
                                                   Positioned(
                                                       top: -line * roll,
                                                       left: 0,
@@ -586,8 +591,7 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
                                                               ]))),
                                                 ])))),
                                     const Padding(
-                                        padding:
-                                            EdgeInsets.only(left: 6, bottom: 3),
+                                        padding: EdgeInsets.only(left: 6),
                                         child: Text('%',
                                             style: TextStyle(
                                                 fontSize: 25,
@@ -689,7 +693,9 @@ class _GenreButtonState extends State<_GenreButton>
                   child: AnimatedBuilder(
                       animation: _fill,
                       builder: (context, _) {
-                        final t = _ease.transform(_fill.value);
+                        final t = _fill.status == AnimationStatus.reverse
+                            ? 1 - _ease.transform(1 - _fill.value)
+                            : _ease.transform(_fill.value);
                         final color = Color.lerp(const Color(0xFFDDD9E3),
                             const Color(0xFF25212A), t)!;
                         return Material(
