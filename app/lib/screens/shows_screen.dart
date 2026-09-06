@@ -71,9 +71,10 @@ Future<void> _markWatched(BuildContext context, WidgetRef ref, NextUp n) async {
               try {
                 await db.setEpisodeUnwatched(n.show.id, n.season, n.episode);
               } catch (_) {
-                if (context.mounted)
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                       content: Text('Annulation impossible. Réessaie.')));
+                }
               }
             })));
 }
@@ -205,11 +206,12 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
       await Future<void>.delayed(
           motionOf(context, const Duration(milliseconds: 620)));
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _holding = null;
           _confirmed = false;
         });
+      }
     }
   }
 
@@ -222,8 +224,9 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
     final hero = _holding ?? (queue.isEmpty ? null : queue[selectedIndex]);
     final next = queue.length > 1 ? queue : <NextUp>[];
     void select(int index) {
-      if (_holding == null)
+      if (_holding == null) {
         setState(() => _selectedId = queue[index % queue.length].show.id);
+      }
     }
 
     return RefreshIndicator(
@@ -711,4 +714,14 @@ class _CinemaEmpty extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.title);
+  final String title;
+  @override
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      child: Text(title,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500)));
 }

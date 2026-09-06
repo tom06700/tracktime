@@ -86,9 +86,10 @@ class _ModernCommandState extends State<ModernCommand>
       }
       if (mounted) await widget.onPressed!();
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Impossible d’enregistrer. Réessaie.')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

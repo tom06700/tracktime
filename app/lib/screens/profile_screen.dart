@@ -17,7 +17,6 @@ import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/glass.dart';
 import '../widgets/states.dart';
 
 /// Page Profil « Univers » : une frise verticale cinématographique, unique

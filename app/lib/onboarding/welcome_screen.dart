@@ -128,8 +128,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 
   void _sync() {
-    final animate =
-        _active && TickerMode.of(context) && !reduceMotionOf(context);
+    final animate = _active &&
+        TickerMode.valuesOf(context).enabled &&
+        !reduceMotionOf(context);
     if (animate && !_ticker.isActive) {
       _previous = null;
       _ticker.start();
@@ -169,9 +170,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     } on TickerCanceled {
       // A disposed route never invokes completion later.
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Ouverture impossible. Réessaie.')));
+      }
     } finally {
       if (mounted) {
         _departure.reset();
