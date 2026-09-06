@@ -61,6 +61,7 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
   }
 
   Future<void> _load() async {
+    if (mounted) setState(() => _error = null);
     final tvdb = ref.read(tvdbClientProvider);
     try {
       final d = await tvdb.seriesExtended(widget.showId);
@@ -84,13 +85,13 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
       if (await ref.read(databaseProvider).showById(widget.showId) != null) {
         await _loadEpisodes();
       }
-    } on TvdbException catch (e) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _error = '$e');
     }
   }
 
-  /// Saisons officielles déclarées par `/series/{id}/extended`, hors saison 0.
+  /// Saisons officielles déclarées par `/series/{id}/extended`, y compris les spéciaux en saison 0.
   static List<int> _officialSeasons(Map<String, dynamic> d) {
     final out = <int>{};
     for (final s in (d['seasons'] as List?) ?? const []) {
@@ -315,7 +316,10 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
       backgroundColor: TtColors.bg,
       body: _error != null
           ? DetailWithBack(
-              child: EmptyState(icon: Icons.error_outline, message: _error!),
+              child: ErrorRetry(
+                  title: 'Impossible de charger cette série',
+                  message: _error!,
+                  onRetry: _load),
             )
           : _details == null
               // La forme de la fiche plutôt qu'un rond qui tourne : la mise en
@@ -417,14 +421,16 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
         const SizedBox(height: 26),
         ModernCommand(
             shape: CommandShape.nextUp,
-            height: 100,
+            height: 105,
+            eyebrow: 'ON EN ÉTAIT LÀ',
+            labelSize: 22,
             label: !followed
                 ? 'Commencer'
                 : next == null
                     ? 'Explorer les épisodes'
                     : 'Reprendre',
             subtitle: next == null
-                ? 'ON EN ÉTAIT LÀ'
+                ? null
                 : 'Saison ${next.season} · Épisode ${next.episode}',
             onPressed: _busy
                 ? null
@@ -443,6 +449,7 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
                   }),
         const SizedBox(height: 26),
         GlideControl(
+            dense: true,
             labels: const ['À propos', 'Épisodes'],
             index: _tab,
             onSelected: _selectTab),

@@ -246,6 +246,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                     color: Color(0xFF41354E))))),
                     const SizedBox(height: 15),
                     GlideControl(
+                        dense: true,
                         labels: const ['Tout', 'Séries', 'Films'],
                         index: _filter.index,
                         onSelected: (i) =>

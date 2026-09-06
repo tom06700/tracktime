@@ -72,7 +72,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final universe = ref.watch(universeProvider).value;
     return AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light,
-        child: ColoredBox(
+        child: Material(
             color: ModernPalette.background,
             child: _content(context, universe)));
   }

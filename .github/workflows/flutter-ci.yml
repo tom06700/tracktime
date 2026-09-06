@@ -106,6 +106,15 @@ jobs:
 
           google-chrome --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,1200 --virtual-time-budget=2000 --screenshot=build/modern-audit/reference-episode.png "file://$GITHUB_WORKSPACE/design/validated-handoff/episode-detail/preview.html"
 
+      - name: Vidéos des animations Flutter
+        if: ${{ !cancelled() }}
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y ffmpeg
+          fi
+          python3 ../scripts/encode_motion_audit.py build/modern-audit
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

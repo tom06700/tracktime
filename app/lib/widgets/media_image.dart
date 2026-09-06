@@ -6,8 +6,8 @@ import '../tmdb/artwork.dart';
 /// Dégradé stable dérivé d'un titre : deux séries différentes n'ont jamais la
 /// même teinte, et une même série garde la sienne d'un écran à l'autre.
 Gradient seedGradient(String seed) {
-  final hue = (seed.codeUnits.fold<int>(0, (a, c) => a * 31 + c) % 360)
-      .toDouble();
+  final hue =
+      (seed.codeUnits.fold<int>(0, (a, c) => a * 31 + c) % 360).toDouble();
   return LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -30,6 +30,7 @@ class MediaImage extends StatelessWidget {
     required this.sources,
     required this.seed,
     this.fit = BoxFit.cover,
+    this.alignment = Alignment.center,
     this.icon,
   });
 
@@ -41,6 +42,7 @@ class MediaImage extends StatelessWidget {
   final String seed;
 
   final BoxFit fit;
+  final Alignment alignment;
 
   /// Pictogramme posé sur le dégradé de repli.
   final IconData? icon;
@@ -59,6 +61,7 @@ class MediaImage extends StatelessWidget {
     return Image.network(
       url,
       fit: fit,
+      alignment: alignment,
       frameBuilder: (context, child, frame, wasSync) {
         // Déjà en cache : rien à attendre, rien à fondre.
         if (wasSync) return child;
@@ -83,17 +86,15 @@ class MediaImage extends StatelessWidget {
         );
       },
       errorBuilder: (_, _, _) {
-        final alternatives = sources
-            .map(absoluteArtwork)
-            .whereType<String>()
-            .toSet()
-            .toList();
+        final alternatives =
+            sources.map(absoluteArtwork).whereType<String>().toSet().toList();
         alternatives.remove(url);
         if (alternatives.isEmpty) return _fallback;
         return MediaImage(
           sources: alternatives,
           seed: seed,
           fit: fit,
+          alignment: alignment,
           icon: icon,
         );
       },
@@ -101,17 +102,17 @@ class MediaImage extends StatelessWidget {
   }
 
   Widget get _fallback => DecoratedBox(
-    decoration: BoxDecoration(gradient: seedGradient(seed)),
-    child: icon == null
-        ? const SizedBox.expand()
-        : Center(
-            child: Icon(
-              icon,
-              size: 30,
-              color: Colors.white.withValues(alpha: 0.55),
-            ),
-          ),
-  );
+        decoration: BoxDecoration(gradient: seedGradient(seed)),
+        child: icon == null
+            ? const SizedBox.expand()
+            : Center(
+                child: Icon(
+                  icon,
+                  size: 30,
+                  color: Colors.white.withValues(alpha: 0.55),
+                ),
+              ),
+      );
 }
 
 /// Voile sombre du bas vers le haut, pour poser du texte sur une image sans

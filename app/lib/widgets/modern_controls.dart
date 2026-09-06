@@ -26,12 +26,16 @@ class ModernCommand extends StatefulWidget {
       required this.onPressed,
       this.selected = false,
       this.subtitle,
+      this.eyebrow,
+      this.labelSize,
       this.compact = false,
       this.height,
       this.subtitleAbove = false});
   final CommandShape shape;
   final String label;
   final String? subtitle;
+  final String? eyebrow;
+  final double? labelSize;
   final FutureOr<void> Function()? onPressed;
   final bool selected, compact;
   final double? height;
@@ -104,6 +108,7 @@ class _ModernCommandState extends State<ModernCommand>
     final check = widget.shape == CommandShape.softCheck;
     final attach = widget.shape == CommandShape.attach;
     final next = widget.shape == CommandShape.nextUp;
+    final iconOnly = attach && widget.label.isEmpty;
     final color = check
         ? const Color(0xFF30332E)
         : attach
@@ -143,8 +148,9 @@ class _ModernCommandState extends State<ModernCommand>
           Widget face = FilledButton(
             onPressed: _busy || widget.onPressed == null ? null : _press,
             style: FilledButton.styleFrom(
-              backgroundColor: attach ? Colors.transparent : color,
-              disabledBackgroundColor: attach ? Colors.transparent : color,
+              backgroundColor: attach && !iconOnly ? Colors.transparent : color,
+              disabledBackgroundColor:
+                  attach && !iconOnly ? Colors.transparent : color,
               foregroundColor: textColor,
               disabledForegroundColor: textColor,
               minimumSize: Size(0, height),
@@ -169,7 +175,7 @@ class _ModernCommandState extends State<ModernCommand>
                                     decoration: const BoxDecoration(
                                         color: ModernPalette.lime,
                                         shape: BoxShape.circle)))),
-                      if (attach)
+                      if (attach && !iconOnly)
                         Positioned.fill(
                             child: LayoutBuilder(
                                 builder: (context, c) => Stack(children: [
@@ -178,7 +184,11 @@ class _ModernCommandState extends State<ModernCommand>
                                           top: 0,
                                           bottom: 0,
                                           width: math.max(
-                                              0, c.maxWidth - 80 + 46 * t),
+                                              0,
+                                              c.maxWidth -
+                                                  (widget.compact ? 48 : 80) +
+                                                  (widget.compact ? 25 : 46) *
+                                                      t),
                                           child: DecoratedBox(
                                               decoration: BoxDecoration(
                                                   color: ModernPalette.lilac,
@@ -189,7 +199,8 @@ class _ModernCommandState extends State<ModernCommand>
                                           right: 8 * t,
                                           top: 7 * t,
                                           bottom: 7 * t,
-                                          width: 66 - 6 * t,
+                                          width: (widget.compact ? 42 : 66) -
+                                              6 * t,
                                           child: Transform.rotate(
                                               angle: 2 * math.pi * elastic,
                                               child: DecoratedBox(
@@ -209,120 +220,150 @@ class _ModernCommandState extends State<ModernCommand>
                                                       size: 25,
                                                       color: foreground)))),
                                     ]))),
-                      Padding(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: check ? 7 : 13, vertical: 8),
-                          child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if (check) ...[
-                                  Transform.rotate(
-                                      angle: elastic * math.pi * 2,
-                                      child: Container(
-                                          width: orb,
-                                          height: orb,
-                                          decoration: BoxDecoration(
-                                              color: Color.lerp(
-                                                  ModernPalette.lime,
-                                                  const Color(0xFFB4DC81),
-                                                  t),
-                                              shape: BoxShape.circle),
-                                          child: Center(
-                                              child: _busy && !done
-                                                  ? const SizedBox(
-                                                      width: 17,
-                                                      height: 17,
-                                                      child:
-                                                          CircularProgressIndicator(
-                                                              strokeWidth: 2,
-                                                              color: Color(
-                                                                  0xFF455E33)))
-                                                  : Icon(
-                                                      done
-                                                          ? Icons.check
-                                                          : Icons
-                                                              .circle_outlined,
-                                                      color: const Color(
-                                                          0xFF455E33),
-                                                      size: done ? 23 : 20)))),
-                                  const SizedBox(width: 9),
-                                ],
-                                if (widget.shape == CommandShape.surprise) ...[
-                                  Transform.rotate(
-                                      angle: raw * math.pi * 2,
-                                      child: Transform.scale(
-                                          scale: 1 -
-                                              math.sin(raw * math.pi * 2) * .18,
-                                          child: const SizedBox(
-                                              width: 53,
-                                              height: 53,
-                                              child: CustomPaint(
-                                                  painter: _FlowerPainter())))),
-                                  const SizedBox(width: 13),
-                                ],
-                                Expanded(
-                                    child: Padding(
-                                        padding: EdgeInsets.only(
-                                            right: attach ? 66 : 0),
-                                        child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: attach
-                                                ? CrossAxisAlignment.center
-                                                : CrossAxisAlignment.start,
-                                            children: [
-                                              if (widget.subtitle != null &&
-                                                  widget.subtitleAbove) ...[
-                                                Text(widget.subtitle!,
+                      if (iconOnly)
+                        Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Transform.rotate(
+                                angle: 2 * math.pi * elastic,
+                                child: Icon(
+                                    done
+                                        ? Icons.bookmark
+                                        : Icons.bookmark_border,
+                                    size: 22,
+                                    color: foreground)))
+                      else
+                        Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: check ? 7 : 13, vertical: 8),
+                            child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (check) ...[
+                                    Transform.rotate(
+                                        angle: elastic * math.pi * 2,
+                                        child: Container(
+                                            width: orb,
+                                            height: orb,
+                                            decoration: BoxDecoration(
+                                                color: Color.lerp(
+                                                    ModernPalette.lime,
+                                                    const Color(0xFFB4DC81),
+                                                    t),
+                                                shape: BoxShape.circle),
+                                            child: Center(
+                                                child: _busy && !done
+                                                    ? const SizedBox(
+                                                        width: 17,
+                                                        height: 17,
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                                strokeWidth: 2,
+                                                                color: Color(
+                                                                    0xFF455E33)))
+                                                    : Icon(
+                                                        done
+                                                            ? Icons.check
+                                                            : Icons
+                                                                .circle_outlined,
+                                                        color: const Color(
+                                                            0xFF455E33),
+                                                        size:
+                                                            done ? 23 : 20)))),
+                                    const SizedBox(width: 9),
+                                  ],
+                                  if (widget.shape ==
+                                      CommandShape.surprise) ...[
+                                    Transform.rotate(
+                                        angle: raw * math.pi * 2,
+                                        child: Transform.scale(
+                                            scale: 1 -
+                                                math.sin(raw * math.pi * 2) *
+                                                    .18,
+                                            child: const SizedBox(
+                                                width: 53,
+                                                height: 53,
+                                                child: CustomPaint(
+                                                    painter:
+                                                        _FlowerPainter())))),
+                                    const SizedBox(width: 13),
+                                  ],
+                                  Expanded(
+                                      child: Padding(
+                                          padding: EdgeInsets.only(
+                                              right: attach
+                                                  ? (widget.compact ? 36 : 66)
+                                                  : 0),
+                                          child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment: attach
+                                                  ? CrossAxisAlignment.center
+                                                  : CrossAxisAlignment.start,
+                                              children: [
+                                                if (widget.eyebrow != null) ...[
+                                                  Text(widget.eyebrow!,
+                                                      style: TextStyle(
+                                                          fontSize: 9,
+                                                          letterSpacing: 1.5,
+                                                          color: foreground
+                                                              .withValues(
+                                                                  alpha: .7))),
+                                                  const SizedBox(height: 5),
+                                                ],
+                                                if (widget.subtitle != null &&
+                                                    widget.subtitleAbove) ...[
+                                                  Text(widget.subtitle!,
+                                                      style: TextStyle(
+                                                          fontSize: 9,
+                                                          letterSpacing: 1.4,
+                                                          color: foreground
+                                                              .withValues(
+                                                                  alpha: .7))),
+                                                  const SizedBox(height: 2),
+                                                ],
+                                                Text(
+                                                    _busy && !check
+                                                        ? 'Un instant…'
+                                                        : widget.label,
                                                     style: TextStyle(
-                                                        fontSize: 9,
-                                                        letterSpacing: 1.4,
-                                                        color: foreground
-                                                            .withValues(
-                                                                alpha: .7))),
-                                                const SizedBox(height: 2),
-                                              ],
-                                              Text(
-                                                  _busy && !check
-                                                      ? 'Un instant…'
-                                                      : widget.label,
-                                                  style: TextStyle(
-                                                      fontSize: widget.compact
-                                                          ? 13
-                                                          : 15,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                      color: textColor)),
-                                              if (widget.subtitle != null &&
-                                                  !widget.subtitleAbove) ...[
-                                                const SizedBox(height: 5),
-                                                Text(widget.subtitle!,
-                                                    style: TextStyle(
-                                                        fontSize: 12,
-                                                        color: foreground
-                                                            .withValues(
-                                                                alpha: .7)))
-                                              ],
-                                            ]))),
-                                if (check && !widget.compact)
-                                  Opacity(
-                                      opacity: 1 - t,
-                                      child: const Padding(
-                                          padding: EdgeInsets.only(right: 12),
-                                          child: Icon(Icons.north_east,
-                                              size: 15,
-                                              color: Color(0xFFBCCDAF)))),
-                                if (!attach && !check)
-                                  Container(
-                                      width: widget.compact ? 28 : 39,
-                                      height: widget.compact ? 28 : 39,
-                                      decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: next
-                                              ? const Color(0xFFCDD6EB)
-                                              : Colors.transparent),
-                                      child: Icon(Icons.north_east,
-                                          size: widget.compact ? 17 : 22)),
-                              ])),
+                                                        fontSize:
+                                                            widget.labelSize ??
+                                                                (widget.compact
+                                                                    ? 13
+                                                                    : 15),
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        color: textColor)),
+                                                if (widget.subtitle != null &&
+                                                    !widget.subtitleAbove) ...[
+                                                  const SizedBox(height: 5),
+                                                  Text(widget.subtitle!,
+                                                      style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: foreground
+                                                              .withValues(
+                                                                  alpha: .7)))
+                                                ],
+                                              ]))),
+                                  if (check && !widget.compact)
+                                    Opacity(
+                                        opacity: 1 - t,
+                                        child: const Padding(
+                                            padding: EdgeInsets.only(right: 12),
+                                            child: Icon(Icons.north_east,
+                                                size: 15,
+                                                color: Color(0xFFBCCDAF)))),
+                                  if (!attach && !check)
+                                    Container(
+                                        width: widget.compact ? 28 : 39,
+                                        height: widget.compact ? 28 : 39,
+                                        decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: next
+                                                ? const Color(0xFFCDD6EB)
+                                                : Colors.transparent),
+                                        child: Icon(Icons.north_east,
+                                            size: widget.compact ? 17 : 22)),
+                                ])),
                     ]))),
           );
           if (next && !widget.compact) {
@@ -389,16 +430,21 @@ class GlideControl extends StatelessWidget {
       required this.index,
       required this.onSelected,
       this.navigation = false,
+      this.dense = false,
       this.icons});
   final List<String> labels;
   final List<IconData>? icons;
   final int index;
   final ValueChanged<int> onSelected;
-  final bool navigation;
+  final bool navigation, dense;
   @override
   Widget build(BuildContext context) =>
       LayoutBuilder(builder: (context, constraints) {
-        final height = (navigation ? 67.0 : 60.0) +
+        final height = (navigation
+                ? 67.0
+                : dense
+                    ? 44.0
+                    : 60.0) +
             (MediaQuery.textScalerOf(context).scale(12) - 12).clamp(0.0, 30.0);
         final width = (constraints.maxWidth - 12) / labels.length;
         return DecoratedBox(
@@ -426,8 +472,11 @@ class GlideControl extends StatelessWidget {
                                   color: navigation
                                       ? const Color(0xFFE7EBF2)
                                       : ModernPalette.peach,
-                                  borderRadius: BorderRadius.circular(
-                                      navigation ? 22 : 35)))),
+                                  borderRadius: BorderRadius.circular(navigation
+                                      ? 22
+                                      : dense
+                                          ? 21
+                                          : 35)))),
                       Row(
                           children: List.generate(
                               labels.length,

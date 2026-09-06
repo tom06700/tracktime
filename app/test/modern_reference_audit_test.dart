@@ -58,13 +58,13 @@ void main() {
             'Les 12 objets doivent être décodés avant la séquence de captures.');
     for (var i = 0; i < 90; i++) {
       await tester.pump(const Duration(milliseconds: 33));
-      if (i % 6 == 0) await capture('motion-intro-${i ~/ 6}');
+      await capture('motion-intro-$i');
     }
     await capture('01-intro');
     await tester.tap(find.text('C’est parti'));
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 33));
-      if (i % 2 == 0) await capture('motion-departure-${i ~/ 2}');
+      await capture('motion-departure-$i');
     }
     await capture('02-departure');
     await tester.pump(const Duration(seconds: 1));
@@ -84,6 +84,12 @@ void main() {
                       onPressed: () {}))))));
       await tester.pumpAndSettle();
       await capture('03-${shape.name}');
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      for (var frame = 0; frame < 20; frame++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        await capture('motion-control-${shape.name}-$frame');
+      }
     }
     var tab = 0, section = 0;
     await tester.pumpWidget(host(StatefulBuilder(
@@ -122,7 +128,7 @@ void main() {
       await tester.pump();
       for (var frame = 0; frame < 14; frame++) {
         await tester.pump(const Duration(milliseconds: 50));
-        if (frame % 2 == 0) await capture('edge-$destination-$frame');
+        await capture('edge-$destination-$frame');
       }
     }
     await tester.pumpWidget(host(NotificationScreen(

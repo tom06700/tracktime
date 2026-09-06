@@ -127,8 +127,8 @@ void main() {
       movies: [_item(2, 'Titanic', '1997')],
     );
 
-    expect(find.text('Explorer'), findsOneWidget);
-    expect(find.text('Stranger Things'), findsNWidgets(2));
+    expect(find.text('Tu pars où ?'), findsOneWidget);
+    expect(find.text('Stranger Things'), findsOneWidget);
     expect(find.text('Titanic'), findsOneWidget);
 
     await _settle(tester);
@@ -178,7 +178,7 @@ void main() {
       MoviesCompanion.insert(id: const Value(1), title: 'Dune'),
     );
     await _mount(tester, db);
-    expect(find.textContaining('regarde ce soir'), findsNothing);
+    expect(find.text('Quoi regarder ce soir ?'), findsNothing);
 
     // Deux titres : la proposition apparaît.
     await db.upsertMovie(
@@ -187,8 +187,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.textContaining('regarde ce soir'), findsOneWidget);
-    expect(find.text('Choisir pour moi'), findsOneWidget);
+    expect(find.text('Quoi regarder ce soir ?'), findsOneWidget);
 
     await _settle(tester);
   });

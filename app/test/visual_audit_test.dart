@@ -491,7 +491,25 @@ Future<void> _shot(WidgetTester tester, String name) async {
     final img = await ro.toImage(pixelRatio: 2);
     final data = await img.toByteData(format: ui.ImageByteFormat.png);
     await File('$_out/$name.png').writeAsBytes(data!.buffer.asUint8List());
+    img.dispose();
   });
+}
+
+Future<void> _motionFrames(WidgetTester tester, String prefix) async {
+  for (var frame = 0; frame < 24; frame++) {
+    await tester.pump(const Duration(milliseconds: 50));
+    final boundary =
+        _boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    _readableFonts(boundary);
+    await tester.pump();
+    await tester.runAsync(() async {
+      final image = await boundary.toImage(pixelRatio: 2);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      await File('$_out/$prefix-$frame.png')
+          .writeAsBytes(bytes!.buffer.asUint8List());
+      image.dispose();
+    });
+  }
 }
 
 void main() {
@@ -623,10 +641,15 @@ void main() {
       await _settleReal(tester, 500);
 
       router.push('/show/81797', extra: 'One Piece');
+      await tester.pump();
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 150)));
+      await _motionFrames(tester, 'global-series-enter');
       await _settleReal(tester, 900);
       await _shot(tester, '09-fiche-serie');
       await tester.ensureVisible(find.text('Épisodes'));
       await tester.tap(find.text('Épisodes'));
+      await _motionFrames(tester, 'global-series-tabs');
       await _settleReal(tester, 600);
       await _shot(tester, '10-fiche-serie-episodes');
       await tester.ensureVisible(find.text('Non vus'));
@@ -699,6 +722,8 @@ void main() {
       await _shot(tester, '21-series-vide');
 
       File('$_out/issues.txt').writeAsStringSync(_issues.join('\n'));
+      expect(_issues, isEmpty,
+          reason: 'Les erreurs de rendu capturées doivent être corrigées.');
       debugNetworkImageHttpClientProvider = null;
       // Démontage propre.
       await tester.pumpWidget(const SizedBox.shrink());

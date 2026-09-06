@@ -483,6 +483,68 @@ void main() {
     await _settle(tester);
   });
 
+  testWidgets(
+      'saison longue : accès direct officiel, trous et spéciaux sans écriture',
+      (tester) async {
+    final db = _fkDb();
+    addTearDown(db.close);
+    final api = _Api();
+    final opened = <String>[];
+    final router = GoRouter(routes: [
+      GoRoute(
+          path: '/',
+          builder: (_, _) =>
+              const ShowDetailScreen(showId: 81797, title: 'One Piece')),
+      GoRoute(
+          path: '/episode/:id/:season/:number',
+          builder: (_, state) {
+            opened.add(
+                '${state.pathParameters['season']}/${state.pathParameters['number']}');
+            return const Scaffold(body: Text('Fiche officielle'));
+          }),
+    ]);
+    addTearDown(router.dispose);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(overrides: [
+      databaseProvider.overrideWithValue(db),
+      tvdbClientProvider
+          .overrideWithValue(api.client(series: _onePiece, episodes: [
+        (0, 3),
+        for (var n = 1; n <= 1236; n++)
+          if (n != 1200) (1, n),
+      ])),
+    ], child: MaterialApp.router(theme: buildTheme(), routerConfig: router)));
+    await _frames(tester);
+    await _openSeason(tester);
+    expect(find.byType(IconButton).evaluate().length, lessThan(25),
+        reason: 'La longue saison reste virtualisée.');
+    await _tapAndSettle(tester, find.byTooltip('Aller à un numéro'));
+    await tester.enterText(find.byType(TextField), '1200');
+    await _tapAndSettle(tester, find.text('Ouvrir la fiche'));
+    expect(
+        find.text('Ce numéro n’existe pas dans cette saison.'), findsOneWidget);
+    expect(opened, isEmpty);
+    await tester.enterText(find.byType(TextField), '1236');
+    await _tapAndSettle(tester, find.text('Ouvrir la fiche'));
+    await _frames(tester);
+    expect(opened, ['1/1236']);
+    expect(await db.showById(81797), isNull);
+    expect(await db.allWatchedEpisodes(), isEmpty);
+    router.pop();
+    await _frames(tester);
+    await _tapAndSettle(tester, find.byType(DropdownButtonFormField<int>));
+    await _tapAndSettle(tester, find.text('Spéciaux').last);
+    await _tapAndSettle(tester, find.byTooltip('Aller à un numéro'));
+    await tester.enterText(find.byType(TextField), '3');
+    await _tapAndSettle(tester, find.text('Ouvrir la fiche'));
+    await _frames(tester);
+    expect(opened, ['1/1236', '0/3']);
+    expect(await db.allWatchedEpisodes(), isEmpty);
+    await _settle(tester);
+  });
+
   testWidgets('openMediaDetail route selon le type, par identifiant', (
     tester,
   ) async {
