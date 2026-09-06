@@ -1,2 +1,5 @@
 # Downloaded catalogue artwork: opt-in audit only.
 app/test/fixtures/cinema/
+
+# Local handoff prototypes include demonstration poster images.
+nitrate-codex-handoff/

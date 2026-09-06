@@ -91,43 +91,33 @@ TvdbClient _silentTvdb() => TvdbClient(
     );
 
 void main() {
-  testWidgets('À venir masque le fond vedette, retour À voir le rétablit',
+  testWidgets('À venir remplace la carte, retour À voir la rétablit',
       (tester) async {
     await _pump(tester);
-    double opacity() => tester
-        .widget<Opacity>(find.byKey(const ValueKey('featured-artwork-opacity')))
-        .opacity;
-    expect(opacity(), 1);
+    expect(find.text('Severance'), findsOneWidget);
     await tester.tap(find.text('À venir'));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
-    expect(opacity(), 0);
+    expect(find.text('Severance'), findsNothing);
     await tester.tap(find.text('À voir'));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
-    expect(opacity(), 1);
+    expect(find.text('Severance'), findsOneWidget);
     await _settle(tester);
   });
 
-  testWidgets('le décor disparaît en descendant et revient en remontant',
+  testWidgets('le haut de page défile avec la carte au lieu de la découper',
       (tester) async {
-    tester.view.physicalSize = const Size(390, 500);
+    tester.view.physicalSize = const Size(390, 650);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await _pump(tester, otherShows: 3);
-    final list = find.byKey(const PageStorageKey('to-watch-feed'));
-    double opacity() => tester
-        .widget<Opacity>(find.byKey(const ValueKey('featured-artwork-opacity')))
-        .opacity;
-    final scrollable =
-        find.descendant(of: list, matching: find.byType(Scrollable)).first;
-    final position = tester.state<ScrollableState>(scrollable).position;
-    position.jumpTo(position.maxScrollExtent);
-    await tester.pump();
-    expect(opacity(), 0);
-    position.jumpTo(0);
-    await tester.pump();
-    expect(opacity(), 1);
+    final before = tester.getTopLeft(find.text('nitrate')).dy;
+    await tester.drag(find.byKey(const PageStorageKey('to-watch-feed')),
+        const Offset(0, -260));
+    await tester.pump(const Duration(seconds: 1));
+    expect(tester.getTopLeft(find.text('nitrate', skipOffstage: false)).dy,
+        lessThan(before));
     expect(tester.takeException(), isNull);
     await _settle(tester);
   });
@@ -202,10 +192,11 @@ void main() {
     await tester.pump();
 
     // Confirmation immédiate, avant même l'écriture.
-    expect(find.text('Vu'), findsOneWidget);
+    expect(find.text('Vu !'), findsNothing); // No success before persistence.
+    await tester.pump(const Duration(milliseconds: 100));
 
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
 
     final watched = await db.allWatchedEpisodes();
     expect(watched, hasLength(1));

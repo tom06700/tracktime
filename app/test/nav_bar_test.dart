@@ -83,7 +83,7 @@ void main() {
       final size = tester.getSize(
         find.ancestor(
           of: find.text(item.label),
-          matching: find.byType(GestureDetector),
+          matching: find.byType(TextButton),
         ),
       );
       expect(size.height, greaterThanOrEqualTo(44));

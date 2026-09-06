@@ -1,3 +1,4 @@
+import '../widgets/modern_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -252,13 +253,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           WatchlistStrip(movies: movies, shows: shows),
           const SizedBox(height: 16),
           Center(
-            child: ProminentGlassButton(
-              icon: Icons.movie_filter_outlined,
-              onPressed: tonight.isEmpty
-                  ? null
-                  : () => showTonightPicker(context, tonight),
-              child: const Text('Quoi regarder ce soir ?'),
-            ),
+            child: ModernCommand(
+                shape: CommandShape.surprise,
+                label: 'Quoi regarder ce soir ?',
+                subtitle: 'Dans ma liste',
+                onPressed: tonight.isEmpty
+                    ? null
+                    : () => showTonightPicker(context, tonight)),
           ),
         ]),
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../db/database.dart';
 import '../providers.dart';
 import '../theme.dart';
+import 'modern_controls.dart';
 
 /// Actions de la fiche : la bibliothèque reste la source du statut affiché.
 class MovieLibraryActions extends ConsumerStatefulWidget {
@@ -71,19 +72,15 @@ class _MovieLibraryActionsState extends ConsumerState<MovieLibraryActions> {
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        FilledButton.icon(
-          onPressed: _busy
-              ? null
-              : () => _run((db) => db.toggleMovieWatched(widget.movie)),
-          icon: _busy
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Icon(seen ? Icons.undo : Icons.check),
-          label: Text(seen ? 'Remettre à voir' : 'Marquer comme vu'),
-        ),
+        SizedBox(
+            width: 258,
+            child: ModernCommand(
+                shape: CommandShape.softCheck,
+                selected: seen,
+                label: seen ? 'Remettre à voir' : 'Marquer comme vu',
+                onPressed: _busy
+                    ? null
+                    : () => _run((db) => db.toggleMovieWatched(widget.movie)))),
         if (seen) const Text('Film vu', style: TextStyle(color: TtColors.dim)),
         IconButton(
           tooltip: 'Retirer de ma liste',

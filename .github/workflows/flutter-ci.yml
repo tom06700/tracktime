@@ -71,3 +71,15 @@ jobs:
       # partir en réseau. La CI ne dépend donc d'aucun service tiers.
       - name: Tests
         run: flutter test
+
+      - name: Captures des composants retenus
+        env:
+          NITRATE_DESIGN_AUDIT: '1'
+        run: flutter test test/modern_reference_audit_test.dart
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nitrate-modern-reference
+          path: app/build/modern-audit/
+          if-no-files-found: ignore

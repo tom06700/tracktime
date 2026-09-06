@@ -241,7 +241,7 @@ class CinematicTitle extends StatelessWidget {
         (scaler.scale(size) / size).clamp(1.0, 1.25),
       ),
       style: TextStyle(
-        fontFamily: 'CormorantGaramond',
+        fontFamily: 'Inter',
         fontSize: size,
         fontWeight: FontWeight.w500,
         height: 1.06,

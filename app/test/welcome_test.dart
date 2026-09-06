@@ -42,8 +42,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 2));
     expect(find.text('Ma collection'), findsNothing);
-    await tester.ensureVisible(find.text('Entrer dans Nitrate'));
-    await tester.tap(find.text('Entrer dans Nitrate'));
+    await tester.ensureVisible(find.text('C’est parti'));
+    await tester.tap(find.text('C’est parti'));
     await tester.pumpAndSettle();
     expect(find.text('Ma collection'), findsOneWidget);
     expect(
@@ -52,7 +52,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
-    expect(find.text('Entrer dans Nitrate'), findsNothing);
+    expect(find.text('C’est parti'), findsNothing);
     expect(find.text('Ma collection'), findsOneWidget);
   });
 
@@ -79,8 +79,8 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    await tester.ensureVisible(find.text('Entrer dans Nitrate'));
-    await tester.tap(find.text('Entrer dans Nitrate'));
+    await tester.ensureVisible(find.text('C’est parti'));
+    await tester.tap(find.text('C’est parti'));
     await tester.pumpAndSettle();
     expect(finished, isTrue);
     expect(tester.takeException(), isNull);

@@ -32,9 +32,16 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/objects/
     - assets/images/launch_mark.png
     - assets/images/empty_cinema.webp
   fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
     - family: CormorantGaramond
       fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
         - asset: assets/fonts/CormorantGaramond.ttf
