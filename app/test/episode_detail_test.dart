@@ -145,11 +145,20 @@ void main() {
     final db = await mount(tester, EpisodeFixture([1155]));
     await db.deleteShow(1);
     await tester.pump();
-    await tap(tester, find.text('Marquer vu'));
+    // The action awaits this dialog: pump its transition without requiring
+    // every underlying async animation to become idle before answering it.
+    await tester.ensureVisible(find.text('Marquer vu'));
+    await tester.tap(find.text('Marquer vu'));
+    for (var i = 0; i < 12; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)));
+      await tester.pump(const Duration(milliseconds: 50));
+    }
     expect(find.text('Ajouter à ma liste'), findsOneWidget);
     expect(await db.showById(1), isNull);
     expect(await db.allWatchedEpisodes(), isEmpty);
-    await tap(tester, find.text('Annuler'));
+    await tester.tap(find.text('Annuler'));
+    await tester.pump(const Duration(milliseconds: 500));
     expect(await db.showById(1), isNull);
     expect(await db.allWatchedEpisodes(), isEmpty);
   });
