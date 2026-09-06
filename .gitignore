@@ -3,3 +3,6 @@ app/test/fixtures/cinema/
 
 # Local handoff prototypes include demonstration poster images.
 nitrate-codex-handoff/
+
+# Pack complémentaire original, conservé localement.
+nitrate-notifications-codex/

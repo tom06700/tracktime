@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../motion.dart';
 
 import 'flight_painter.dart';
+import 'notification_screen.dart';
 
 /// Resolves the local preference before displaying either destination.
 /// The library and its database are never modified by onboarding.
@@ -62,8 +63,26 @@ class _WelcomeGateState extends State<WelcomeGate> {
                 height: 96)),
       );
     }
-    return _seen! ? widget.child : WelcomeScreen(onFinish: _finish);
+    return _seen! ? widget.child : IntroFlow(onFinish: _finish);
   }
+}
+
+/// Shared first-run and settings replay flow; skip intro still reaches step two.
+class IntroFlow extends StatefulWidget {
+  const IntroFlow({super.key, required this.onFinish});
+  final Future<void> Function() onFinish;
+  @override
+  State<IntroFlow> createState() => _IntroFlowState();
+}
+
+class _IntroFlowState extends State<IntroFlow> {
+  bool _notifications = false;
+  @override
+  Widget build(BuildContext context) => _notifications
+      ? NotificationScreen(onFinish: widget.onFinish)
+      : WelcomeScreen(onFinish: () async {
+          if (mounted) setState(() => _notifications = true);
+        });
 }
 
 /// Native port of the approved flight. Completion preserves the welcome gate.

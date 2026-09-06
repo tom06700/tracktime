@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../backup/backup.dart';
 import '../build_info.dart';
+import '../onboarding/notification_screen.dart';
 import '../db/database.dart';
 import '../providers.dart';
 import '../theme.dart';
@@ -94,6 +95,17 @@ class SettingsScreen extends ConsumerWidget {
             description:
                 'Garde une copie de tes souvenirs de cinéma, ou retrouve ton historique.',
           ),
+          Card(
+              child: ListTile(
+            leading: const Icon(Icons.notifications_none_rounded),
+            title: const Text('Notifications'),
+            subtitle: const Text('Permission de l’appareil · alertes à venir'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (ctx) => NotificationScreen(onFinish: () async {
+                      if (ctx.mounted) Navigator.of(ctx).pop();
+                    }))),
+          )),
           // Sauvegarder, puis restaurer, puis effacer : l'ordre du parcours.
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 8, 20, 4),

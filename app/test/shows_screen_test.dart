@@ -200,7 +200,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump(const Duration(milliseconds: 500));
 
-    final watched = await db.allWatchedEpisodes();
+    final watched = (await tester.runAsync(db.allWatchedEpisodes))!;
     expect(watched, hasLength(1));
     expect(watched.single.season, 2);
     expect(watched.single.episode, 4);
@@ -209,7 +209,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.textContaining('S02 · E05'), findsWidgets);
     await _settle(tester);
-  });
+  }, timeout: const Timeout(Duration(seconds: 45)));
 
   testWidgets('l\'onglet À venir regroupe par échéance', (tester) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());

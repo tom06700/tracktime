@@ -46,6 +46,12 @@ void main() {
     await tester.pump();
     expect(find.text('C’est parti').hitTestable(), findsOneWidget);
     await tester.tap(find.text('C’est parti'));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    expect(find.text('La suite.\nSans la manquer.'), findsOneWidget);
+    await tester.ensureVisible(find.text('Plus tard'));
+    await tester.pump();
+    await tester.tap(find.text('Plus tard'));
     await tester.pumpAndSettle();
     expect(find.text('Ma collection'), findsOneWidget);
     expect(

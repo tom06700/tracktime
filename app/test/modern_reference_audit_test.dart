@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tracktime/onboarding/welcome_screen.dart';
+import 'package:tracktime/onboarding/notification_screen.dart';
 import 'package:tracktime/widgets/modern_controls.dart';
 import 'package:tracktime/theme.dart';
 
@@ -94,6 +95,12 @@ void main() {
             ])))));
     await tester.pumpAndSettle();
     await capture('04-glide-navigation');
+    await tester.pumpWidget(host(NotificationScreen(onFinish: () async {})));
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+    await capture('05-notifications');
+    await tester.pumpWidget(const SizedBox());
     expect(tester.takeException(), isNull);
   }, skip: Platform.environment['NITRATE_DESIGN_AUDIT'] != '1');
 }
