@@ -579,6 +579,9 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
                                                                         style: const TextStyle(
                                                                             fontSize:
                                                                                 62,
+                                                                            fontFeatures: [
+                                                                              ui.FontFeature.tabularFigures()
+                                                                            ],
                                                                             height:
                                                                                 1.1,
                                                                             letterSpacing:
@@ -591,6 +594,9 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
                                                                         style: const TextStyle(
                                                                             fontSize:
                                                                                 62,
+                                                                            fontFeatures: [
+                                                                              ui.FontFeature.tabularFigures()
+                                                                            ],
                                                                             height:
                                                                                 1.1,
                                                                             letterSpacing:
