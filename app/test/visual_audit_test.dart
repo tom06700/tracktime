@@ -625,12 +625,14 @@ void main() {
       router.push('/show/81797', extra: 'One Piece');
       await _settleReal(tester, 900);
       await _shot(tester, '09-fiche-serie');
+      await tester.ensureVisible(find.text('Épisodes'));
       await tester.tap(find.text('Épisodes'));
       await _settleReal(tester, 600);
       await _shot(tester, '10-fiche-serie-episodes');
-      await tester.tap(find.text('Saison 1'));
+      await tester.ensureVisible(find.text('Non vus'));
+      await tester.tap(find.text('Non vus'));
       await _settleReal(tester, 400);
-      await _shot(tester, '11-fiche-serie-saison');
+      await _shot(tester, '11-fiche-serie-non-vus');
       router.pop();
       await _settleReal(tester, 500);
 

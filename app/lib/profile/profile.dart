@@ -64,7 +64,12 @@ class ProfileNotifier extends AsyncNotifier<Profile> {
     Map<String, dynamic>? identity;
     if (encoded != null) {
       try {
-        identity = jsonDecode(encoded) as Map<String, dynamic>;
+        final parsed = jsonDecode(encoded);
+        if (parsed is Map<String, dynamic> &&
+            parsed['name'] is String &&
+            parsed['emoji'] is String) {
+          identity = parsed;
+        }
       } catch (_) {}
     }
     return Profile(

@@ -34,8 +34,9 @@ class _IdentityEditorState extends ConsumerState<_IdentityEditor> {
           .saveIdentity(name: _name.text, emoji: _emoji);
       if (mounted) Navigator.pop(context);
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error = 'Enregistrement impossible. Réessaie.');
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

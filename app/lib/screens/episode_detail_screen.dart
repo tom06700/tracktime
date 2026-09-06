@@ -156,15 +156,41 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
     }
   }
 
+  Future<bool> _requireFollowed() async {
+    final db = ref.read(databaseProvider);
+    if (await db.showById(widget.showId) != null) return true;
+    if (!mounted) return false;
+    final add = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ajouter à ma liste'),
+        content: const Text(
+            'Ajoute cette série à ta collection avant de suivre ses épisodes.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Annuler')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Ajouter')),
+        ],
+      ),
+    );
+    if (add == true && mounted) {
+      await addShowFromTvdb(db, ref.read(tvdbClientProvider), widget.showId,
+          preferredName: widget.showName);
+      _message('Série ajoutée. Tu peux maintenant marquer tes épisodes vus.');
+    }
+    // Adding is explicit and never also records a viewing.
+    return false;
+  }
+
   Future<void> _toggle(int number, bool watched) => _run(() async {
         final db = ref.read(databaseProvider);
         if (watched) {
           await db.setEpisodeUnwatched(widget.showId, widget.season, number);
         } else {
-          // Preserve the existing episode-screen behaviour: watching follows a show.
-          await addShowFromTvdb(db, ref.read(tvdbClientProvider), widget.showId,
-              preferredName: widget.showName);
-          if (!mounted) return;
+          if (!await _requireFollowed() || !mounted) return;
           await db.setEpisodeWatched(widget.showId, widget.season, number);
         }
         if (mounted) HapticFeedback.lightImpact();
@@ -173,8 +199,7 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
   Future<void> _catchUp(int number) => _run(() async {
         final db = ref.read(databaseProvider);
         final tvdb = ref.read(tvdbClientProvider);
-        await addShowFromTvdb(db, tvdb, widget.showId,
-            preferredName: widget.showName);
+        if (!await _requireFollowed() || !mounted) return;
         final show = await db.showById(widget.showId);
         if (show == null || !mounted) return;
         await syncShowEpisodes(db, tvdb, show);

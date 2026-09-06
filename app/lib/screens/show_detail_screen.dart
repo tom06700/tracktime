@@ -17,6 +17,7 @@ import '../tmdb/tvdb.dart';
 import 'movie_detail_screen.dart' show DetailWithBack, MediaDetailSkeleton;
 import '../widgets/common.dart';
 import '../widgets/states.dart';
+import 'media_detail_parts.dart' show addSeriesToLibrary;
 
 class ShowDetailScreen extends ConsumerStatefulWidget {
   const ShowDetailScreen({
@@ -379,8 +380,9 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
                   onPressed: followed
                       ? () {}
                       : () => _guard(() async {
-                            if (!await _addToLibrary())
+                            if (!await _addToLibrary()) {
                               throw StateError('Ajout impossible');
+                            }
                           }))),
         ]),
         const SizedBox(height: 26),
@@ -518,8 +520,12 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
                       onPressed: _busy || numbers.isEmpty
                           ? null
                           : () => _confirmSeason(selected, numbers, watched),
-                      child: const Text('Tout marquer vu',
-                          style: TextStyle(
+                      child: Text(
+                          numbers.every(
+                                  (e) => watched.contains('S${selected}E$e'))
+                              ? 'Tout marquer non vu'
+                              : 'Tout marquer vu',
+                          style: const TextStyle(
                               color: ModernPalette.lilac, fontSize: 11))))
             ]),
           const SizedBox(height: 13),
@@ -584,9 +590,10 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
     try {
       await action();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Modification impossible. Réessaie.')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -607,10 +614,11 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
                       onPressed: () => Navigator.pop(ctx, true),
                       child: const Text('Ajouter'))
                 ]));
-    if (yes == true && mounted)
+    if (yes == true && mounted) {
       await _guard(() async {
         if (!await _addToLibrary()) throw StateError('Ajout impossible');
       });
+    }
   }
 
   Future<void> _manage(bool followed) async {
@@ -627,24 +635,27 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
     if (!await _requireFollowed() || !mounted) return;
     final missing =
         numbers.where((e) => !watched.contains('S${season}E$e')).toList();
+    final clear = missing.isEmpty;
     final yes = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-                title: Text('Terminer la saison $season ?'),
-                content: Text(
-                    '${missing.length} épisodes non vus seront marqués vus. Les visionnages existants sont conservés.'),
+                title: Text(clear
+                    ? 'Recommencer la saison $season ?'
+                    : 'Terminer la saison $season ?'),
+                content: Text(clear
+                    ? '${numbers.length} visionnages de cette saison seront retirés de ton historique.'
+                    : '${missing.length} épisodes non vus seront marqués vus. Les visionnages existants sont conservés.'),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
                       child: const Text('Annuler')),
                   FilledButton(
-                      onPressed: missing.isEmpty
-                          ? null
-                          : () => Navigator.pop(ctx, true),
+                      onPressed: () => Navigator.pop(ctx, true),
                       child: const Text('Confirmer'))
                 ]));
-    if (yes == true && mounted)
-      await _guard(() => _setSeason(season, missing, true));
+    if (yes == true && mounted) {
+      await _guard(() => _setSeason(season, clear ? numbers : missing, !clear));
+    }
   }
 
   Future<void> _jump(int season, List<int> numbers) async {
@@ -680,9 +691,10 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
     // Let the dialog finish its reverse transition before disposing its field.
     await Future<void>.delayed(const Duration(milliseconds: 300));
     controller.dispose();
-    if (number != null && mounted)
+    if (number != null && mounted) {
       context.push('/episode/${widget.showId}/$season/$number',
           extra: {'name': _name});
+    }
   }
 
   static List<String> _genresOf(Map<String, dynamic> d) =>
@@ -785,6 +797,7 @@ class _OfficialEpisodeRow extends StatelessWidget {
                 builder: (context, t, child) =>
                     Transform.rotate(angle: t * 6.283185, child: child),
                 child: IconButton.filledTonal(
+                    key: ValueKey('series-episode-check-$number'),
                     onPressed: onToggle,
                     tooltip: seen ? 'Marquer non vu' : 'Marquer vu',
                     style: IconButton.styleFrom(

@@ -147,7 +147,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     ];
     final found = <String>{};
     final discovery = <MediaSearchResult>[];
-    for (final g in groups)
+    for (final g in groups) {
       for (final m in g.data.value ?? <Map<String, dynamic>>[]) {
         final id = (m['id'] as num?)?.toInt();
         final name = '${m['name'] ?? ''}';
@@ -160,6 +160,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
             image: m['image'] as String?,
             year: m['year']?.toString()));
       }
+    }
     final items = searching ? _filtered : discovery;
     final featured = discovery
         .where((m) => m.type == SearchMediaType.series && m.tvdbId != null)

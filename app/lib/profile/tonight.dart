@@ -13,7 +13,20 @@ import 'sections.dart';
 /// s'arrête au hasard sur un titre. Relance possible ; « Ouvrir la fiche »
 /// pour les séries.
 Future<void> showTonightPicker(BuildContext context, List<WatchItem> items) {
-  if (items.isEmpty) return Future<void>.value();
+  if (items.isEmpty) {
+    return showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+              title: const Text('Tout est à découvrir'),
+              content: const Text(
+                  'Ajoute des films ou des séries à ta liste : une suggestion sera choisie parmi tes titres non vus.'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Compris'))
+              ],
+            ));
+  }
   return showDialog(
     context: context,
     barrierColor: Colors.black.withValues(alpha: 0.82),

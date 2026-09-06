@@ -97,17 +97,19 @@ class _ContentState extends ConsumerState<_Content> {
     try {
       await action();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Modification impossible. Réessaie.')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _add() async {
-    if (!await addMovieToLibrary(ref, widget.movie.id))
+    if (!await addMovieToLibrary(ref, widget.movie.id)) {
       throw StateError('Ajout impossible');
+    }
   }
 
   Future<void> _toggle(Movie? movie) => _run(() async {
@@ -134,7 +136,7 @@ class _ContentState extends ConsumerState<_Content> {
         final saved = await db.movieById(movie.id);
         if (!mounted) return;
         setState(() => _revealed = false);
-        if (movie.watchedAt == null && saved?.watchedAt != null)
+        if (movie.watchedAt == null && saved?.watchedAt != null) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: const Text('Visionnage enregistré.'),
               action: SnackBarAction(
@@ -142,9 +144,11 @@ class _ContentState extends ConsumerState<_Content> {
                   onPressed: () => _run(() async {
                         final current = await db.movieById(movie.id);
                         if (current != null &&
-                            current.watchedAt == saved!.watchedAt)
+                            current.watchedAt == saved!.watchedAt) {
                           await db.toggleMovieWatched(current);
+                        }
                       }))));
+        }
       });
   Future<void> _manage(Movie? movie) async {
     if (movie == null) {
@@ -165,8 +169,9 @@ class _ContentState extends ConsumerState<_Content> {
                       onPressed: () => Navigator.pop(ctx, true),
                       child: const Text('Retirer'))
                 ]));
-    if (yes == true && mounted)
+    if (yes == true && mounted) {
       await _run(() => ref.read(databaseProvider).deleteMovie(movie.id));
+    }
   }
 
   @override
@@ -223,17 +228,21 @@ class _ContentState extends ConsumerState<_Content> {
               const SizedBox(width: 9),
               SizedBox(
                   width: 64,
-                  child: ModernCommand(
-                      shape: CommandShape.attach,
-                      height: 63,
-                      compact: true,
-                      label: '',
-                      selected: local != null,
-                      onPressed: _busy
-                          ? null
-                          : local != null
-                              ? () {}
-                              : () => _run(_add)))
+                  child: Semantics(
+                      label: local == null
+                          ? 'Ajouter à ma liste'
+                          : 'Film dans ma liste',
+                      child: ModernCommand(
+                          shape: CommandShape.attach,
+                          height: 63,
+                          compact: true,
+                          label: '',
+                          selected: local != null,
+                          onPressed: _busy
+                              ? null
+                              : local != null
+                                  ? () {}
+                                  : () => _run(_add))))
             ]),
             const SizedBox(height: 12),
             Text(
