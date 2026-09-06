@@ -423,12 +423,19 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
         (before, after) {
       if (before != null &&
           before.hasValue &&
+          after.hasValue &&
+          (before.value != null) != (after.value != null)) {
+        _revealed = false;
+      }
+      if (before != null &&
+          before.hasValue &&
           before.value == null &&
           after.value != null &&
           !reduceMotionOf(context)) {
         _confirmation.forward(from: 0);
       }
     });
+    final summaryVisible = watched != null || _revealed;
     final overview = '${widget.data['overview'] ?? ''}'.trim();
     final title = '${widget.data['name'] ?? ''}'.trim();
     final air = DateTime.tryParse('${widget.data['aired'] ?? ''}');
@@ -649,7 +656,7 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
                                       fontWeight: FontWeight.w500)),
                               if (overview.isNotEmpty)
                                 Text(
-                                    _revealed
+                                    summaryVisible
                                         ? 'Résumé affiché'
                                         : 'Sans spoiler',
                                     style: const TextStyle(
@@ -664,7 +671,7 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: ModernPalette.muted)))
-                        else if (!_revealed)
+                        else if (!summaryVisible)
                           Semantics(
                               expanded: false,
                               child: FilledButton.tonal(
@@ -739,10 +746,11 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
                                       fontSize: 13,
                                       height: 1.8,
                                       color: Color(0xFFB5B2BF)))),
-                          TextButton(
-                              onPressed: () =>
-                                  setState(() => _revealed = false),
-                              child: const Text('Masquer le résumé'))
+                          if (watched == null)
+                            TextButton(
+                                onPressed: () =>
+                                    setState(() => _revealed = false),
+                                child: const Text('Masquer le résumé'))
                         ],
                         const SizedBox(height: 23),
                         ModernCommand(

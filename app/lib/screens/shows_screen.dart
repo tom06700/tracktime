@@ -259,8 +259,6 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
               key: ValueKey('${hero.show.id}-${hero.season}-${hero.episode}'),
               next: hero,
               onOpen: () => _openEpisode(context, hero),
-              onOpenShow: () =>
-                  _openShow(context, hero.show.id, hero.show.name),
               confirmed: _confirmed,
               onMarkWatched: () => _mark(hero),
             ),

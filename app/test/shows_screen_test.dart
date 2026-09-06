@@ -1,3 +1,4 @@
+import 'package:go_router/go_router.dart';
 import 'package:tracktime/brand/nitrate_brand.dart';
 import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
@@ -17,7 +18,7 @@ import 'package:tracktime/theme.dart';
 /// Monte l'écran Séries sur une base en mémoire, sans réseau : le fil se
 /// recompose depuis la base comme dans l'app.
 Future<AppDatabase> _pump(WidgetTester tester,
-    {bool seed = true, int otherShows = 0}) async {
+    {bool seed = true, int otherShows = 0, GoRouter? router}) async {
   final db = AppDatabase.forTesting(NativeDatabase.memory());
   addTearDown(() async {
     await tester.pumpWidget(const SizedBox.shrink());
@@ -66,10 +67,10 @@ Future<AppDatabase> _pump(WidgetTester tester,
         databaseProvider.overrideWithValue(db),
         tvdbClientProvider.overrideWithValue(_silentTvdb()),
       ],
-      child: MaterialApp(
-        theme: buildTheme(),
-        home: const Scaffold(body: ShowsScreen()),
-      ),
+      child: router == null
+          ? MaterialApp(
+              theme: buildTheme(), home: const Scaffold(body: ShowsScreen()))
+          : MaterialApp.router(theme: buildTheme(), routerConfig: router),
     ),
   );
   await tester.pump();
@@ -96,6 +97,57 @@ TvdbClient _silentTvdb() => TvdbClient(
     );
 
 void main() {
+  testWidgets('toute la carte ouvre l’épisode, marquer vu reste indépendant',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final router = GoRouter(routes: [
+      GoRoute(
+          path: '/',
+          builder: (_, state) => const Scaffold(body: ShowsScreen())),
+      GoRoute(
+          path: '/episode/:id/:season/:episode',
+          builder: (_, state) => Scaffold(
+              body: Text('Épisode ouvert ${state.pathParameters['episode']}'))),
+    ]);
+    addTearDown(router.dispose);
+    final db = await _pump(tester, router: router);
+    try {
+      final card = find.byKey(const ValueKey('continue-watching-open'));
+      for (final area in ['image', 'titre', 'espace']) {
+        await Scrollable.ensureVisible(tester.element(card), alignment: .1);
+        await tester.pumpAndSettle();
+        final rect = tester.getRect(card);
+        if (area == 'titre') {
+          await tester.tap(find.text('Severance'));
+        } else {
+          await tester.tapAt(area == 'image'
+              ? rect.topCenter + const Offset(0, 30)
+              : rect.bottomCenter - const Offset(0, 5));
+        }
+        await tester.pumpAndSettle();
+        expect(find.text('Épisode ouvert 4'), findsOneWidget);
+        expect((await tester.runAsync(db.allWatchedEpisodes))!, isEmpty);
+        router.pop();
+        await tester.pumpAndSettle();
+      }
+      final command = find.text('Marquer vu');
+      await Scrollable.ensureVisible(tester.element(command), alignment: .5);
+      await tester.pumpAndSettle();
+      await tester.tap(command);
+      await tester.runAsync(db.allWatchedEpisodes);
+      await tester.pump();
+      // A second tap during the confirmation must not bubble to the card.
+      await tester.tapAt(tester.getCenter(find.text('Vu !')));
+      await tester.pump(const Duration(seconds: 2));
+      expect(router.routeInformationProvider.value.uri.path, '/');
+      expect((await tester.runAsync(db.allWatchedEpisodes))!.length, 1);
+      expect(tester.takeException(), isNull);
+    } finally {
+      await _settle(tester);
+    }
+  });
   testWidgets('À venir remplace la carte, retour À voir la rétablit',
       (tester) async {
     await _pump(tester);
