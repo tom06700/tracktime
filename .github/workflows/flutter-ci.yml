@@ -96,6 +96,8 @@ jobs:
           google-chrome --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,1600 --virtual-time-budget=1000 --screenshot=build/modern-audit/reference-controls.png "file://$GITHUB_WORKSPACE/design/validated-handoff/previews/controls.html"
           google-chrome --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,900 --virtual-time-budget=2000 --screenshot=build/modern-audit/reference-notifications.png "file://$GITHUB_WORKSPACE/design/validated-handoff/previews/notifications.html"
 
+          google-chrome --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,1200 --virtual-time-budget=2000 --screenshot=build/modern-audit/reference-episode.png "file://$GITHUB_WORKSPACE/design/validated-handoff/episode-detail/preview.html"
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

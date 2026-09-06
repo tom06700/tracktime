@@ -664,6 +664,16 @@ void main() {
       );
       await _settleReal(tester, 900);
       await _shot(tester, '18-episode');
+      await tester.drag(find.text('Dans cet épisode'), const Offset(0, -330));
+      await _settleReal(tester, 600);
+      await _shot(tester, '18b-episode-actions');
+      if (find.text('Révéler le résumé').evaluate().isNotEmpty) {
+        await tester.ensureVisible(find.text('Révéler le résumé'));
+        await tester.pump();
+        await tester.tap(find.text('Révéler le résumé'));
+        await _settleReal(tester, 500);
+        await _shot(tester, '18c-episode-summary');
+      }
       router.pop();
       await _settleReal(tester, 400);
 
