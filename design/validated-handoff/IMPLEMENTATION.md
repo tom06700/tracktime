@@ -65,11 +65,15 @@ Les captures de widgets ne certifient pas les performances iPhone.
 
 ## Compatibilité Android vérifiée par compilation
 
-Le projet utilisait déjà AGP 9 et le DSL Kotlin intégré dans son module app,
-mais gardait `android.builtInKotlin=false`. Avec file_picker 11.0.2, cela ne
-compilait pas sa classe Kotlin FilePickerPlugin. Le drapeau est désormais
-activé, conformément à la configuration du module et au support Flutter 3.47.
-Aucune migration majeure de file_picker ni modification de l’API d’import.
-Le manifeste utilise Nitrate comme nom présenté par Android.
+Le projet utilise AGP 9, mais share_plus 12 nécessite encore le plugin Kotlin
+classique. Le mode `android.builtInKotlin=false` est donc conservé et le module
+app applique explicitement KGP. file_picker 11.0.2 omet à tort KGP sous AGP 9,
+ce qui exclut sa classe FilePickerPlugin du build. Un script Gradle limité à ce
+plugin applique le correctif de compatibilité publié dans son changelog beta.3,
+sans changer l’API d’import ni relever la version minimale iOS. Il pourra être
+retiré lors d’une migration délibérée de file_picker. Le manifeste utilise
+Nitrate comme nom présenté par Android.
 
-Référence : https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers
+Références :
+- https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers
+- https://pub.dev/packages/file_picker/changelog#1200-beta3
