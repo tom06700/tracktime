@@ -69,19 +69,31 @@ void main() {
     await capture('02-departure');
     await tester.pump(const Duration(seconds: 1));
     for (final shape in CommandShape.values) {
-      await tester.pumpWidget(host(Scaffold(
-          body: Center(
-              child: SizedBox(
-                  width: 267,
-                  child: ModernCommand(
-                      shape: shape,
-                      label: switch (shape) {
-                        CommandShape.softCheck => 'Marquer vu',
-                        CommandShape.attach => 'Ma liste',
-                        CommandShape.nextUp => 'Épisode suivant',
-                        CommandShape.surprise => 'Choisis pour moi',
-                      },
-                      onPressed: () {}))))));
+      var selected = false;
+      await tester.pumpWidget(host(StatefulBuilder(
+          builder: (context, change) => Scaffold(
+              body: Center(
+                  child: SizedBox(
+                      width: 267,
+                      child: ModernCommand(
+                        key: ValueKey(shape),
+                        shape: shape,
+                        selected: selected,
+                        label: switch (shape) {
+                          CommandShape.softCheck =>
+                            selected ? 'Épisode vu' : 'Marquer vu',
+                          CommandShape.attach =>
+                            selected ? 'Ajouté' : 'Ma liste',
+                          CommandShape.nextUp => 'Épisode suivant',
+                          CommandShape.surprise => 'Choisis pour moi',
+                        },
+                        onPressed: () {
+                          if (shape == CommandShape.softCheck ||
+                              shape == CommandShape.attach) {
+                            change(() => selected = !selected);
+                          }
+                        },
+                      )))))));
       await tester.pumpAndSettle();
       await capture('03-${shape.name}');
       await tester.tap(find.byType(FilledButton));
