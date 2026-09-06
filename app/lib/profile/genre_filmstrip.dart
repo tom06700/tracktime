@@ -607,7 +607,7 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
                                         padding:
                                             EdgeInsets.only(left: 6, bottom: 3),
                                         child: Text('%',
-                                            key: const ValueKey(
+                                            key: ValueKey(
                                                 'pellicule-percent-symbol'),
                                             style: TextStyle(
                                                 fontSize: 25,
