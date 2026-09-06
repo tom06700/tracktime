@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers.dart';
 import '../../theme.dart';
-import '../../widgets/media_image.dart';
+import '../../widgets/hero_artwork.dart';
 import '../../widgets/modern_controls.dart';
 import '../feed.dart';
 
@@ -42,7 +42,7 @@ class ContinueWatchingHero extends ConsumerWidget {
                               ? 275
                               : 302,
                           child: Stack(fit: StackFit.expand, children: [
-                            MediaImage(sources: [
+                            HeroArtwork(sources: [
                               detail?.poster,
                               n.show.poster,
                               detail?.backdrop,

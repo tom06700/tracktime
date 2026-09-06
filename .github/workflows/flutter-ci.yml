@@ -70,6 +70,7 @@ jobs:
       # construit avec un MockClient, ou sans clé — auquel cas il refuse de
       # partir en réseau. La CI ne dépend donc d'aucun service tiers.
       - name: Tests
+        timeout-minutes: 3
         run: flutter test --timeout 2m
 
       - name: Captures des composants retenus

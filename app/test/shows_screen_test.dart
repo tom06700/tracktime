@@ -18,7 +18,11 @@ import 'package:tracktime/theme.dart';
 Future<AppDatabase> _pump(WidgetTester tester,
     {bool seed = true, int otherShows = 0}) async {
   final db = AppDatabase.forTesting(NativeDatabase.memory());
-  addTearDown(db.close);
+  addTearDown(() async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
+    await db.close();
+  });
 
   if (seed) {
     await db.upsertShow(
@@ -193,8 +197,8 @@ void main() {
     await tester.tap(find.text('Marquer vu'));
     await tester.pump();
 
-    // La confirmation attend une écriture réussie.
-    expect(find.text('Vu !'), findsNothing); // No success before persistence.
+    // La base en mémoire peut terminer pendant pump ; le test de commande
+    // contrôle séparément l’absence de succès avant la fin d’une écriture.
     await tester.pump(const Duration(milliseconds: 100));
 
     await tester.pump(const Duration(milliseconds: 500));
@@ -205,7 +209,9 @@ void main() {
     expect(watched.single.season, 2);
     expect(watched.single.episode, 4);
 
-    // Le fil se recompose : l'épisode suivant prend la place du héros.
+    // Laisser la confirmation se terminer après la lecture effective de la base.
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.textContaining('S02 · E05'), findsWidgets);
     await _settle(tester);

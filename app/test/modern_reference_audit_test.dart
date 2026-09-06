@@ -9,6 +9,7 @@ import 'support/audit_fonts.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tracktime/onboarding/welcome_screen.dart';
 import 'package:tracktime/onboarding/notification_screen.dart';
+import 'package:tracktime/notifications/notification_permission.dart';
 import 'package:tracktime/widgets/modern_controls.dart';
 import 'package:tracktime/theme.dart';
 
@@ -92,7 +93,7 @@ void main() {
             ])))));
     await tester.pumpAndSettle();
     await capture('04-glide-navigation');
-    await tester.pumpWidget(host(NotificationScreen(onFinish: () async {})));
+    await tester.pumpWidget(host(NotificationScreen(onFinish: () async {}, permission: const _AuditPermission())));
     await tester
         .runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
     for (var i = 0; i < 60; i++) {
@@ -102,4 +103,11 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     expect(tester.takeException(), isNull);
   }, skip: Platform.environment['NITRATE_DESIGN_AUDIT'] != '1');
+}
+
+// Presentation fixture only. Real channel behavior is covered separately.
+class _AuditPermission extends NotificationPermission {
+  const _AuditPermission();
+  @override
+  Future<NotificationAccess> status() async => NotificationAccess.notDetermined;
 }
