@@ -105,6 +105,13 @@ jobs:
           flutter test test/visual_audit_test.dart --timeout 10m
           cp build/audit/*.png build/modern-audit/
 
+      - name: Capturer Ta pellicule et ses interactions
+        if: ${{ !cancelled() }}
+        timeout-minutes: 3
+        env:
+          NITRATE_PELLICULE_AUDIT: '1'
+        run: flutter test test/pellicule_audit_test.dart --timeout 2m
+
       - name: Capturer les prototypes fournis
         if: ${{ !cancelled() }}
         run: |
