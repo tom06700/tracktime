@@ -93,7 +93,8 @@ void main() {
             ])))));
     await tester.pumpAndSettle();
     await capture('04-glide-navigation');
-    await tester.pumpWidget(host(NotificationScreen(onFinish: () async {}, permission: const _AuditPermission())));
+    await tester.pumpWidget(host(NotificationScreen(
+        onFinish: () async {}, permission: const _AuditPermission())));
     await tester
         .runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
     for (var i = 0; i < 60; i++) {

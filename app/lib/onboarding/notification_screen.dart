@@ -185,8 +185,15 @@ class _NotificationScreenState extends State<NotificationScreen>
                               image: true,
                               child: ExcludeSemantics(
                                   child: RepaintBoundary(
-                                      child:
-                                          NotificationScene(clock: _clock)))),
+                                      child: LayoutBuilder(
+                                          builder: (context, c) => SizedBox(
+                                              height: 352,
+                                              child: OverflowBox(
+                                                  maxWidth: c.maxWidth + 18,
+                                                  child: SizedBox(
+                                                      width: c.maxWidth + 18,
+                                                      child: NotificationScene(
+                                                          clock: _clock)))))))),
                           const Padding(
                               padding: EdgeInsets.only(top: 30, bottom: 18),
                               child: Text('La suite.\nSans la manquer.',
