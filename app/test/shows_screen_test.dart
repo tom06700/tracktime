@@ -105,6 +105,13 @@ void main() {
     addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     final db = await _pump(tester, otherShows: 1);
+    for (var i = 0;
+        i < 8 && find.byTooltip('Œuvre suivante').evaluate().isEmpty;
+        i++) {
+      await tester.drag(find.byKey(const PageStorageKey('to-watch-feed')),
+          const Offset(0, -250));
+      await tester.pumpAndSettle();
+    }
     await tester.ensureVisible(find.byTooltip('Œuvre suivante'));
     await tester.pumpAndSettle();
     expect(find.text('À l’affiche · 1 / 2'), findsOneWidget);
