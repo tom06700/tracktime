@@ -62,3 +62,14 @@ La compilation native sans publication vérifie séparément Swift/iOS et
 Kotlin/Android. Elle ne teste pas la réponse d’un vrai dialogue sur appareil.
 L’essai physique iPhone, VoiceOver et la fluidité mesurée restent à effectuer.
 Les captures de widgets ne certifient pas les performances iPhone.
+
+## Compatibilité Android vérifiée par compilation
+
+Le projet utilisait déjà AGP 9 et le DSL Kotlin intégré dans son module app,
+mais gardait `android.builtInKotlin=false`. Avec file_picker 11.0.2, cela ne
+compilait pas sa classe Kotlin FilePickerPlugin. Le drapeau est désormais
+activé, conformément à la configuration du module et au support Flutter 3.47.
+Aucune migration majeure de file_picker ni modification de l’API d’import.
+Le manifeste utilise Nitrate comme nom présenté par Android.
+
+Référence : https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers

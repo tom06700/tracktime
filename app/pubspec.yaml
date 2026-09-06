@@ -1,5 +1,5 @@
 name: tracktime
-description: "TrackTime — suivi de séries et films, 100 % local."
+description: "Nitrate — suivi de séries et films, 100 % local."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -41,7 +41,4 @@ flutter:
         - asset: assets/fonts/Inter.ttf
     - family: CormorantGaramond
       fonts:
-    - family: Inter
-      fonts:
-        - asset: assets/fonts/Inter.ttf
         - asset: assets/fonts/CormorantGaramond.ttf
