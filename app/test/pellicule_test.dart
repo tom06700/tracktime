@@ -36,6 +36,20 @@ void main() {
   tearDown(() {
     TestWidgetsFlutterBinding.instance.platformDispatcher.clearAllTestValues();
   });
+  testWidgets(
+      'le compteur garde la largeur de l’ancien nombre pendant le roulement',
+      (tester) async {
+    addTearDown(tester.view.reset);
+    await host(tester);
+    final counter = find.byKey(const ValueKey('pellicule-counter-window'));
+    final width = tester.getSize(counter).width;
+    await tester.tap(segment('genre:Drame'));
+    await tester.pump(const Duration(milliseconds: 40));
+    expect(tester.getSize(counter).width, greaterThanOrEqualTo(width));
+    await tester.pumpAndSettle();
+    expect(focus('Drame', 8), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('segments, grands boutons et pourcentage partagent la sélection',
       (tester) async {
     addTearDown(tester.view.reset);

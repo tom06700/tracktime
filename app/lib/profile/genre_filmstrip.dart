@@ -512,12 +512,21 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
                                     Flexible(
                                         child: ClipRect(
                                             child: SizedBox(
+                                                key: const ValueKey(
+                                                    'pellicule-counter-window'),
                                                 height: line,
                                                 child: Stack(children: [
                                                   Opacity(
                                                       opacity: 0,
                                                       child: Text(
-                                                          '${s.percent}',
+                                                          _previous
+                                                                      .toString()
+                                                                      .length >
+                                                                  s.percent
+                                                                      .toString()
+                                                                      .length
+                                                              ? '$_previous'
+                                                              : '${s.percent}',
                                                           style: const TextStyle(
                                                               fontSize: 62,
                                                               fontFeatures: [
