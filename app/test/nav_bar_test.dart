@@ -34,9 +34,7 @@ void main() {
     expect(taps, isEmpty);
   });
 
-  // Pas d'attente `isFocusable` : les onglets ne sont pas dans l'arbre de
-  // focus clavier, ce dont VoiceOver n'a pas besoin — il balaie les nœuds par
-  // label et action.
+  // La sélection et les actions natives restent sur le même nœud accessible.
   testWidgets('chaque onglet expose sa sélection à VoiceOver', (tester) async {
     final handle = tester.ensureSemantics();
     await tester.pumpWidget(host(2, (_) {}));
@@ -46,6 +44,10 @@ void main() {
       matchesSemantics(
         label: 'Explorer',
         isButton: true,
+        isFocusable: true,
+        isEnabled: true,
+        hasEnabledState: true,
+        hasFocusAction: true,
         isSelected: true,
         hasTapAction: true,
         hasSelectedState: true,
@@ -57,6 +59,10 @@ void main() {
       matchesSemantics(
         label: 'Séries',
         isButton: true,
+        isFocusable: true,
+        isEnabled: true,
+        hasEnabledState: true,
+        hasFocusAction: true,
         hasTapAction: true,
         hasSelectedState: true,
         isInMutuallyExclusiveGroup: true,
@@ -83,7 +89,7 @@ void main() {
       final size = tester.getSize(
         find.ancestor(
           of: find.text(item.label),
-          matching: find.byType(GestureDetector),
+          matching: find.byType(TextButton),
         ),
       );
       expect(size.height, greaterThanOrEqualTo(44));

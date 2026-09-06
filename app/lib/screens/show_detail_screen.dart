@@ -1,3 +1,4 @@
+import '../widgets/modern_controls.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -546,11 +547,12 @@ class _AboutTab extends StatelessWidget {
         Align(
           alignment: Alignment.centerLeft,
           child: followed
-              ? FilledButton.icon(
-                  onPressed: onOpenEpisodes,
-                  icon: const Icon(Icons.playlist_play),
-                  label: const Text('Voir les épisodes'),
-                )
+              ? SizedBox(
+                  width: 252,
+                  child: ModernCommand(
+                      shape: CommandShape.nextUp,
+                      label: 'Voir les épisodes',
+                      onPressed: onOpenEpisodes))
               : AddToListButton(
                   label: 'Ajouter à ma liste',
                   inLibrary: followed,

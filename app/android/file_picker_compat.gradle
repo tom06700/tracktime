@@ -1,0 +1,11 @@
+// Narrow build-only compatibility for file_picker 11.0.2 + AGP 9.
+// Upstream fix: file_picker 12.0.0-beta.3 changelog (Android registration).
+// Remove with a future deliberate migration of the file_picker API.
+plugins.withId('com.android.library') {
+    if (providers.gradleProperty('android.builtInKotlin').orNull == 'false') {
+        project.apply plugin: 'org.jetbrains.kotlin.android'
+        project.android.kotlinOptions {
+            jvmTarget = JavaVersion.VERSION_17.toString()
+        }
+    }
+}

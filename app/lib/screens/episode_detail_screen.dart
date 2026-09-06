@@ -1,3 +1,4 @@
+import '../widgets/modern_controls.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -80,13 +81,13 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
     if (dismiss) {
       _drag
           .animateTo(
-            h,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeIn,
-          )
+        h,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeIn,
+      )
           .whenComplete(() {
-            if (mounted) context.pop();
-          });
+        if (mounted) context.pop();
+      });
     } else {
       _drag.animateTo(
         0,
@@ -99,12 +100,10 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
   Future<void> _loadSeason() async {
     var numbers = <int>[widget.initialEpisode];
     try {
-      final all = await ref
-          .read(tvdbClientProvider)
-          .seriesEpisodes(widget.showId);
-      final eps = all
-          .where((e) => (e['season'] as int) == widget.season)
-          .toList();
+      final all =
+          await ref.read(tvdbClientProvider).seriesEpisodes(widget.showId);
+      final eps =
+          all.where((e) => (e['season'] as int) == widget.season).toList();
       final rows = <EpisodesCompanion>[];
       final nums = <int>[];
       for (final e in eps) {
@@ -130,9 +129,8 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
       /* on garde l'épisode seul */
     }
     if (!mounted) return;
-    final index = numbers
-        .indexOf(widget.initialEpisode)
-        .clamp(0, numbers.length - 1);
+    final index =
+        numbers.indexOf(widget.initialEpisode).clamp(0, numbers.length - 1);
     setState(() {
       _episodes = numbers;
       _current = index;
@@ -227,9 +225,8 @@ class _DotsIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final start = count <= _window
-        ? 0
-        : (index - _window ~/ 2).clamp(0, count - _window);
+    final start =
+        count <= _window ? 0 : (index - _window ~/ 2).clamp(0, count - _window);
     final end = count <= _window ? count : start + _window;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -301,9 +298,8 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
 
   Future<void> _load() async {
     try {
-      final all = await ref
-          .read(tvdbClientProvider)
-          .seriesEpisodes(widget.showId);
+      final all =
+          await ref.read(tvdbClientProvider).seriesEpisodes(widget.showId);
       final e = all.firstWhere(
         (x) =>
             (x['season'] as int) == widget.season &&
@@ -532,18 +528,12 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
                   Row(
                     children: [
                       Expanded(
-                        child: watched
-                            ? ProminentGlassButton(
-                                color: TtColors.teal,
-                                icon: Icons.check,
-                                onPressed: () => _toggleWatched(true),
-                                child: const Text('Épisode vu'),
-                              )
-                            : ProminentGlassButton(
-                                icon: Icons.remove_red_eye_outlined,
-                                onPressed: () => _toggleWatched(false),
-                                child: const Text('Marquer comme vu'),
-                              ),
+                        child: ModernCommand(
+                            shape: CommandShape.softCheck,
+                            selected: watched,
+                            compact: true,
+                            label: watched ? 'Épisode vu' : 'Marquer comme vu',
+                            onPressed: () => _toggleWatched(watched)),
                       ),
                       const SizedBox(width: 8),
                       GlassButton(
@@ -776,8 +766,8 @@ class _Stars extends StatelessWidget {
             stars >= i + 1
                 ? Icons.star_rounded
                 : stars >= i + 0.5
-                ? Icons.star_half_rounded
-                : Icons.star_border_rounded,
+                    ? Icons.star_half_rounded
+                    : Icons.star_border_rounded,
             size: 20,
             color: TtColors.amber,
           ),
@@ -838,14 +828,14 @@ class _SectionTitle extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Text(
-    text.toUpperCase(),
-    style: const TextStyle(
-      fontSize: 12,
-      fontWeight: FontWeight.w800,
-      letterSpacing: 1,
-      color: TtColors.amber,
-    ),
-  );
+        text.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1,
+          color: TtColors.amber,
+        ),
+      );
 }
 
 class _GuestStar extends StatelessWidget {

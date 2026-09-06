@@ -24,7 +24,7 @@ final router = GoRouter(
         path: '/', builder: (_, _) => const WelcomeGate(child: HomeShell())),
     GoRoute(
         path: '/welcome',
-        builder: (context, _) => WelcomeScreen(
+        builder: (context, _) => IntroFlow(
               onFinish: () async {
                 if (context.canPop()) {
                   context.pop();

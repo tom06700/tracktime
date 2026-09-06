@@ -1,10 +1,52 @@
-# Native Flutter design QA — Nitrate
+# Revue des packs validés — septembre 2026
 
-> Revue historique, antérieure à la refonte de septembre 2026. Le verdict
-> ci-dessous ne valide ni la nouvelle branche ni le niveau artistique demandé.
-> Nouvelle intro, accueil et composants : validation iPhone à effectuer par le
-> propriétaire après livraison du lot. Aucun nouveau rendu natif inspecté ici.
+Références actuelles : `design/validated-handoff/TRANSMISSION-CODEX.md` et
+`design/validated-handoff/notifications/TRANSMISSION-CODEX.md`. Elles remplacent
+la maquette et la direction rétro décrites dans l’historique ci-dessous.
 
+## Contrôles effectués
+
+- Comparaisons côte à côte des prototypes HTML et captures Flutter à 390 pixels
+  logiques : intro, commandes et page notifications. Cadres du téléphone et
+  outils de démonstration exclus de l’interface native.
+- Inspection des captures des parcours existants : accueil, À venir, films,
+  exploration, profil, fiches, épisodes, historique, bibliothèque, réglages,
+  import et état vide. Les exceptions de rendu sont relevées par le scénario.
+- Revue des images successives de la transition de départ : ascension accélérée,
+  disparition du texte, remplacement de flèche et progression du bouton.
+  Ce contrôle ne mesure pas la fluidité sur un appareil.
+- Correction de la sphère de l’intro, des proportions de la scène notifications,
+  des filtres Films/Explorer et de l’utilisation de l’image dans le héros.
+- Les captures isolées chargent explicitement les polices ; les fixtures de
+  catalogue associent l’affiche à l’identifiant de chaque œuvre. Les objets
+  de l’envol doivent tous être décodés avant sa séquence de captures.
+
+Preuves intermédiaires : Actions 34039084598, artefact 9991128160. Les captures
+finales sont jointes au dernier contrôle Flutter CI de la PR #6. Le script
+`app/test/modern_reference_audit_test.dart` capture les composants et
+`app/test/visual_audit_test.dart` les parcours de l’app.
+
+## Écarts et limites assumés
+
+Les textes de notification précisent que l’envoi d’alertes de sortie n’est pas
+encore disponible : aucun service de push ou de planification n’existe dans le
+dépôt. Le système demande réellement la permission après appui ; il ne s’agit
+pas du dialogue simulé du HTML. Les tests de cette réponse utilisent un canal
+simulé, distinct de la compilation des implémentations Swift et Kotlin.
+
+Les safe areas natives et le texte agrandi peuvent modifier les espacements.
+Les icônes fonctionnelles utilisent la bibliothèque Material existante ; les
+objets 3D sont ceux fournis. Les compteurs et œuvres sont ceux de la collection,
+jamais les données du prototype. Une image de héros trop petite est refusée.
+
+**Validation sur appareil : à effectuer.** Aucun iPhone ni simulateur exécuté
+sur le Mac local. La compilation, les tests et les captures de widgets ne
+certifient ni VoiceOver réel, ni la boîte de permission, ni la fluidité iPhone.
+Le verdict de l’ancienne revue ci-dessous ne s’applique pas à cette refonte.
+
+---
+
+# Historique de l’ancienne direction — ne vaut pas validation actuelle
 
 Source visual truth: selected first image, `exec-f3a6a009-8547-4537-bfcf-fe004fd132ce.png` (854 × 1844).
 Implementation: GitHub Actions native Flutter widget captures, 390 × 844 logical pixels, 780 × 1688 PNG; device padding top 59 / bottom 34 logical pixels. Both images are normalized to 390 × 844 for comparisons. The source omits system safe areas; these remain respected in the app.

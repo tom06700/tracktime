@@ -36,8 +36,7 @@ import 'package:tracktime/settings/prefs.dart';
 import 'package:tracktime/tmdb/tvdb.dart';
 
 final _out = Platform.environment['NITRATE_AUDIT_OUT'] ?? 'build/audit';
-final _fonts =
-    Platform.environment['NITRATE_AUDIT_FONTS'] ??
+final _fonts = Platform.environment['NITRATE_AUDIT_FONTS'] ??
     '${Platform.environment['HOME']}/flutter/bin/cache/artifacts/material_fonts';
 
 // ─────────────────────────────── Polices ────────────────────────────────
@@ -54,10 +53,10 @@ Future<void> _loadFonts() async {
   final icons = FontLoader('MaterialIcons')
     ..addFont(bytes('MaterialIcons-Regular.otf'));
   await icons.load();
-  final editorial = FontLoader('CormorantGaramond')
+  final editorial = FontLoader('Inter')
     ..addFont(
       File(
-        'assets/fonts/CormorantGaramond.ttf',
+        'assets/fonts/Inter.ttf',
       ).readAsBytes().then(ByteData.sublistView),
     );
   await editorial.load();
@@ -80,9 +79,9 @@ Future<Uint8List> _pngFor(String url, {int w = 640, int h = 360}) async {
     Paint()
       ..shader =
           ui.Gradient.linear(Offset.zero, Offset(w.toDouble(), h.toDouble()), [
-            HSLColor.fromAHSL(1, hue, 0.6, 0.55).toColor(),
-            HSLColor.fromAHSL(1, (hue + 50) % 360, 0.7, 0.25).toColor(),
-          ]),
+        HSLColor.fromAHSL(1, hue, 0.6, 0.55).toColor(),
+        HSLColor.fromAHSL(1, (hue + 50) % 360, 0.7, 0.25).toColor(),
+      ]),
   );
   // Un peu de matière pour ne pas ressembler à un aplat.
   for (var i = 0; i < 40; i++) {
@@ -121,12 +120,13 @@ class _Response extends Stream<List<int>> implements HttpClientResponse {
     Function? onError,
     void Function()? onDone,
     bool? cancelOnError,
-  }) => Stream<List<int>>.fromIterable([_bytes]).listen(
-    onData,
-    onError: onError,
-    onDone: onDone,
-    cancelOnError: cancelOnError,
-  );
+  }) =>
+      Stream<List<int>>.fromIterable([_bytes]).listen(
+        onData,
+        onError: onError,
+        onDone: onDone,
+        cancelOnError: cancelOnError,
+      );
   @override
   dynamic noSuchMethod(Invocation i) => null;
 }
@@ -134,15 +134,14 @@ class _Response extends Stream<List<int>> implements HttpClientResponse {
 Uint8List _fixtureBytes(Uri url) {
   final name = url.path;
   if (name.contains('371980')) {
-    return _pngs[name.contains('backdrop')
-            ? 'severance-backdrop'
-            : 'severance'] ??
+    return _pngs[
+            name.contains('backdrop') ? 'severance-backdrop' : 'severance'] ??
         _pngs['audit']!;
   }
   if (name.contains('81797')) return _pngs['one-piece'] ?? _pngs['audit']!;
   if (name.contains('392256')) return _pngs['last-of-us'] ?? _pngs['audit']!;
   final alias = RegExp(r'(?:poster|backdrop)-(\d+)').firstMatch(name)?.group(1);
-  return _pngs['movie-$alias'] ?? _pngs['one-piece'] ?? _pngs['audit']!;
+  return _pngs['movie-$alias'] ?? _pngs['audit']!;
 }
 
 class _Request implements HttpClientRequest {
@@ -168,156 +167,166 @@ class _Client implements HttpClient {
 // ────────────────────────────── TheTVDB ──────────────────────────────────
 
 http.Response _ok(Object? data, {Map<String, Object?>? extra}) => http.Response(
-  jsonEncode({
-    'data': data,
-    'links': {'next': null},
-    ...?extra,
-  }),
-  200,
-  headers: {'content-type': 'application/json; charset=utf-8'},
-);
+      jsonEncode({
+        'data': data,
+        'links': {'next': null},
+        ...?extra,
+      }),
+      200,
+      headers: {'content-type': 'application/json; charset=utf-8'},
+    );
 
 Map<String, Object?> _hit(int id, String name, String year) => {
-  'id': id,
-  'tvdb_id': '$id',
-  'name': name,
-  'year': year,
-  'image': 'https://img.test/poster-$id.jpg',
-  'type': 'series',
-};
+      'id': id,
+      'tvdb_id': '$id',
+      'name': name,
+      'year': year,
+      'image': 'https://img.test/poster-$id.jpg',
+      'type': 'series',
+    };
 
 TvdbClient _tvdb() => TvdbClient(
-  'k',
-  client: MockClient((req) async {
-    final p = req.url.path;
-    if (p.endsWith('/login')) {
-      return http.Response('{"data":{"token":"t"}}', 200);
-    }
-    if (p.endsWith('/search')) return _ok([_hit(81797, 'One Piece', '1999')]);
-    if (p.contains('/series/filter')) {
-      return _ok([
-        _hit(81797, 'One Piece', '1999'),
-        _hit(371980, 'Severance', '2022'),
-        _hit(392256, 'The Last of Us', '2023'),
-      ]);
-    }
-    if (p.contains('/movies/filter')) {
-      return _ok([
-        _hit(1406, 'Dune', '2021'),
-        _hit(496243, 'Parasite', '2019'),
-        _hit(27205, 'Inception', '2010'),
-        _hit(157336, 'Interstellar', '2014'),
-        _hit(603, 'Oppenheimer', '2023'),
-      ]);
-    }
-    if (p.contains('/movies/') && p.endsWith('/extended')) {
-      final id = int.tryParse(p.split('/')[3]) ?? 1406;
-      const titles = {
-        1406: 'Dune',
-        1: 'The Assassination of Jesse James by the Coward Robert Ford',
-        872585: 'Once Upon a Time in Hollywood',
-      };
-      return _ok({
-        'name': titles[id] ?? 'Dune',
-        'image': 'https://img.test/poster-$id.jpg',
-        'runtime': 155,
-        'first_release': {'date': '2021-09-15'},
-        'genres': [
-          {'name': 'Science-Fiction'},
-          {'name': 'Aventure'},
-        ],
-        'artworks': [
-          {'type': 15, 'image': 'https://img.test/backdrop-$id.jpg'},
-        ],
-        'characters': [
-          {'personName': 'Denis Villeneuve', 'peopleType': 'Director'},
-          {'personName': 'Timothée Chalamet', 'peopleType': 'Actor'},
-          {'personName': 'Zendaya', 'peopleType': 'Actor'},
-          {'personName': 'Rebecca Ferguson', 'peopleType': 'Actor'},
-        ],
-        'studios': [
-          {'name': 'Legendary Pictures'},
-        ],
-      });
-    }
-    if (p.contains('/movies/') && p.contains('/translations/')) {
-      return _ok({
-        'overview':
-            'Sur la planète Arrakis, seule source de l\'épice, les Atréides '
-            'prennent la relève des Harkonnen. Paul, héritier du duc Leto, '
-            'se découvre un destin qui le dépasse et devra choisir entre la '
-            'vengeance de son père et le salut d\'un peuple entier, au '
-            'risque de précipiter une guerre sainte à travers tout '
-            'l\'univers connu.',
-      });
-    }
-    if (p.contains('/series/') && p.endsWith('/extended')) {
-      return _ok({
-        'name': 'ワンピース',
-        'image': 'https://img.test/poster-81797.jpg',
-        'firstAired': '1999-10-20',
-        'averageRuntime': 25,
-        'status': {'name': 'Continuing'},
-        'genres': [
-          {'name': 'Animation'},
-          {'name': 'Aventure'},
-        ],
-        'originalNetwork': {'name': 'Fuji TV'},
-        'seasons': [
-          {
-            'number': 1,
-            'type': {'type': 'official'},
-          },
-          {
-            'number': 2,
-            'type': {'type': 'official'},
-          },
-          {
-            'number': 3,
-            'type': {'type': 'official'},
-          },
-        ],
-        'artworks': [
-          {
-            'type': 3,
-            'image': p.contains('/371980/')
-                ? 'https://img.test/backdrop-371980.jpg'
-                : 'https://img.test/backdrop-81797.jpg',
-          },
-        ],
-      });
-    }
-    if (p.contains('/series/') && p.contains('/translations/')) {
-      return _ok({
-        'name': 'One Piece',
-        'overview':
-            'Gold Roger est le seigneur des pirates. À sa mort, une grande '
-            'vague de piraterie s\'abat sur le monde. Monkey D. Luffy, un '
-            'garçon qui rêve de devenir pirate, part à la recherche du One '
-            'Piece, le fabuleux trésor amassé par Gold Roger durant toute '
-            'sa vie.',
-      });
-    }
-    if (p.contains('/episodes/')) {
-      return _ok({
-        'episodes': [
-          for (var s = 1; s <= 3; s++)
-            for (var e = 1; e <= 8; e++)
+      'k',
+      client: MockClient((req) async {
+        final p = req.url.path;
+        if (p.endsWith('/login')) {
+          return http.Response('{"data":{"token":"t"}}', 200);
+        }
+        if (p.endsWith('/search')) {
+          return _ok([_hit(81797, 'One Piece', '1999')]);
+        }
+        if (p.contains('/series/filter')) {
+          return _ok([
+            _hit(81797, 'One Piece', '1999'),
+            _hit(371980, 'Severance', '2022'),
+            _hit(392256, 'The Last of Us', '2023'),
+          ]);
+        }
+        if (p.contains('/movies/filter')) {
+          return _ok([
+            _hit(1406, 'Dune', '2021'),
+            _hit(496243, 'Parasite', '2019'),
+            _hit(27205, 'Inception', '2010'),
+            _hit(157336, 'Interstellar', '2014'),
+            _hit(603, 'Oppenheimer', '2023'),
+          ]);
+        }
+        if (p.contains('/movies/') && p.endsWith('/extended')) {
+          final id = int.tryParse(p.split('/')[3]) ?? 1406;
+          const titles = {
+            1406: 'Dune',
+            1: 'The Assassination of Jesse James by the Coward Robert Ford',
+            872585: 'Once Upon a Time in Hollywood',
+          };
+          return _ok({
+            'name': titles[id] ?? 'Dune',
+            'image': 'https://img.test/poster-$id.jpg',
+            'runtime': 155,
+            'first_release': {'date': '2021-09-15'},
+            'genres': [
+              {'name': 'Science-Fiction'},
+              {'name': 'Aventure'},
+            ],
+            'artworks': [
+              {'type': 15, 'image': 'https://img.test/backdrop-$id.jpg'},
+            ],
+            'characters': [
+              {'personName': 'Denis Villeneuve', 'peopleType': 'Director'},
+              {'personName': 'Timothée Chalamet', 'peopleType': 'Actor'},
+              {'personName': 'Zendaya', 'peopleType': 'Actor'},
+              {'personName': 'Rebecca Ferguson', 'peopleType': 'Actor'},
+            ],
+            'studios': [
+              {'name': 'Legendary Pictures'},
+            ],
+          });
+        }
+        if (p.contains('/movies/') && p.contains('/translations/')) {
+          return _ok({
+            'overview': 'Sur la planète Arrakis, seule source de l\'épice, les Atréides '
+                'prennent la relève des Harkonnen. Paul, héritier du duc Leto, '
+                'se découvre un destin qui le dépasse et devra choisir entre la '
+                'vengeance de son père et le salut d\'un peuple entier, au '
+                'risque de précipiter une guerre sainte à travers tout '
+                'l\'univers connu.',
+          });
+        }
+        if (p.contains('/series/') && p.endsWith('/extended')) {
+          final id = int.parse(p.split('/')[3]);
+          return _ok({
+            'name': id == 371980
+                ? 'Severance'
+                : id == 392256
+                    ? 'The Last of Us'
+                    : 'ワンピース',
+            'image': 'https://img.test/poster-$id.jpg',
+            'firstAired': '1999-10-20',
+            'averageRuntime': 25,
+            'status': {'name': 'Continuing'},
+            'genres': [
+              {'name': 'Animation'},
+              {'name': 'Aventure'},
+            ],
+            'originalNetwork': {'name': 'Fuji TV'},
+            'seasons': [
               {
-                'seasonNumber': s,
-                'number': e,
-                'name': 'Épisode $e de la saison $s',
-                'overview': 'Résumé.',
-                'image':
-                    'https://img.test/still-${p.contains('/371980/') ? 371980 : 81797}-$s-$e.jpg',
-                'aired': '2026-0$s-${e.toString().padLeft(2, '0')}',
+                'number': 1,
+                'type': {'type': 'official'},
               },
-        ],
-      });
-    }
-    return _ok(<String, Object?>{});
-  }),
-);
+              {
+                'number': 2,
+                'type': {'type': 'official'},
+              },
+              {
+                'number': 3,
+                'type': {'type': 'official'},
+              },
+            ],
+            'artworks': [
+              {
+                'type': 3,
+                'image': p.contains('/371980/')
+                    ? 'https://img.test/backdrop-371980.jpg'
+                    : 'https://img.test/backdrop-81797.jpg',
+              },
+            ],
+          });
+        }
+        if (p.contains('/series/') && p.contains('/translations/')) {
+          final id = int.parse(p.split('/')[3]);
+          return _ok({
+            'name': id == 371980
+                ? 'Severance'
+                : id == 392256
+                    ? 'The Last of Us'
+                    : 'One Piece',
+            'overview': 'Gold Roger est le seigneur des pirates. À sa mort, une grande '
+                'vague de piraterie s\'abat sur le monde. Monkey D. Luffy, un '
+                'garçon qui rêve de devenir pirate, part à la recherche du One '
+                'Piece, le fabuleux trésor amassé par Gold Roger durant toute '
+                'sa vie.',
+          });
+        }
+        if (p.contains('/episodes/')) {
+          return _ok({
+            'episodes': [
+              for (var s = 1; s <= 3; s++)
+                for (var e = 1; e <= 8; e++)
+                  {
+                    'seasonNumber': s,
+                    'number': e,
+                    'name': 'Épisode $e de la saison $s',
+                    'overview': 'Résumé.',
+                    'image':
+                        'https://img.test/still-${p.contains('/371980/') ? 371980 : 81797}-$s-$e.jpg',
+                    'aired': '2026-0$s-${e.toString().padLeft(2, '0')}',
+                  },
+            ],
+          });
+        }
+        return _ok(<String, Object?>{});
+      }),
+    );
 
 // ─────────────────────────────── Données ─────────────────────────────────
 
@@ -558,14 +567,13 @@ void main() {
         Directory('$_out/motion').createSync(recursive: true);
         for (var frame = 0; frame < 90; frame++) {
           if (frame == 12) await tester.tap(find.text('Marquer vu'));
-          if (frame == 48) await tester.tap(find.text('Voir l’épisode'));
+          if (frame == 48) await tester.tap(find.text('Ouvrir'));
           await tester.pump(const Duration(microseconds: 33333));
           _readableFonts(_boundary.currentContext!.findRenderObject()!);
           await tester.pump();
           await tester.runAsync(() async {
-            final ro =
-                _boundary.currentContext!.findRenderObject()
-                    as RenderRepaintBoundary;
+            final ro = _boundary.currentContext!.findRenderObject()
+                as RenderRepaintBoundary;
             final image = await ro.toImage(pixelRatio: 2);
             final bytes = await image.toByteData(
               format: ui.ImageByteFormat.png,

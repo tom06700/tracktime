@@ -13,6 +13,7 @@ import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/editorial_heading.dart';
+import '../widgets/modern_controls.dart';
 import '../tmdb/add.dart';
 import '../tmdb/search_result.dart';
 import '../tmdb/tvdb.dart';
@@ -206,7 +207,7 @@ class _SearchField extends StatelessWidget {
   }
 }
 
-/// Filtres sobres : du texte souligné, pas des capsules colorées.
+/// Les filtres réutilisent la capsule Glide validée.
 class _FilterRow extends StatelessWidget {
   const _FilterRow({required this.value, required this.onChanged});
 
@@ -220,38 +221,10 @@ class _FilterRow extends StatelessWidget {
   };
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-      child: Wrap(
-        children: [
-          for (final f in SearchFilter.values)
-            Semantics(
-              button: true,
-              selected: f == value,
-              label: _labels[f],
-              child: GestureDetector(
-                onTap: () => onChanged(f),
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 18, top: 14, bottom: 14),
-                  child: Text(
-                    _labels[f]!,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: f == value
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                      color: f == value ? TtColors.amber : TtColors.dim,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+    child: GlideControl(labels: SearchFilter.values.map((f) => _labels[f]!).toList(),
+      index: value.index, onSelected: (i) => onChanged(SearchFilter.values[i])));
 }
 
 // ───────────────────────────── Découverte ─────────────────────────────

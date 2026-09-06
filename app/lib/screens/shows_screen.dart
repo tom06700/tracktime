@@ -13,7 +13,7 @@ import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
-import '../widgets/hero_artwork.dart';
+import '../widgets/modern_controls.dart';
 import '../widgets/states.dart';
 import '../widgets/press_response.dart';
 
@@ -57,208 +57,84 @@ void _openEpisode(BuildContext context, NextUp n) => context.push(
       extra: {'name': n.show.name, 'poster': n.show.poster},
     );
 
-Future<void> _markWatched(WidgetRef ref, NextUp n) => ref
-    .read(databaseProvider)
-    .setEpisodeWatched(n.show.id, n.season, n.episode);
+Future<void> _markWatched(BuildContext context, WidgetRef ref, NextUp n) async {
+  final db = ref.read(databaseProvider);
+  await db.setEpisodeWatched(n.show.id, n.season, n.episode);
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(
+        content: Text('${n.show.name} · épisode enregistré'),
+        action: SnackBarAction(
+            label: 'Annuler',
+            onPressed: () async {
+              try {
+                await db.setEpisodeUnwatched(n.show.id, n.season, n.episode);
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Annulation impossible. Réessaie.')));
+                }
+              }
+            })));
+}
 
 class _ShowsScreenState extends ConsumerState<ShowsScreen>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 2, vsync: this);
+  late final TabController _tabs = TabController(length: 2, vsync: this)
+    ..addListener(_tabChanged);
   bool _syncStarted = false;
-  final _scroll = ValueNotifier<double>(0);
+  void _tabChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
     _tabs.dispose();
-    _scroll.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Lance la synchro TheTVDB au montage (la clé est embarquée).
     if (!_syncStarted) {
       _syncStarted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _sync(ref));
     }
-
-    final feed = ref.watch(seriesFeedProvider).value;
-    final queue = [...?feed?.toWatch, ...?feed?.stale];
-    final featured = queue.isEmpty ? null : queue.first;
-    final detail = featured == null
-        ? null
-        : ref.watch(seriesDetailProvider(featured.show.id)).value;
-    return DefaultTabController(
-      length: 2,
-      child: Stack(
-        children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: AnimatedBuilder(
-              animation: Listenable.merge([_tabs.animation!, _scroll]),
-              builder: (context, child) => Opacity(
-                key: const ValueKey('featured-artwork-opacity'),
-                opacity: (1 - _tabs.animation!.value).clamp(0.0, 1.0) *
-                    (1 - _scroll.value / 220).clamp(0.0, 1.0),
-                child: child,
-              ),
-              child: IgnorePointer(
-                child: SizedBox(
-                  height: MediaQuery.paddingOf(context).top + 590,
-                  child: AnimatedBuilder(
-                    animation: _scroll,
-                    builder: (context, _) {
-                      final offset = reduceMotionOf(context)
-                          ? 0.0
-                          : _scroll.value.clamp(0.0, 500.0) * .18;
-                      return Transform.translate(
-                        offset: Offset(0, -offset),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            if (featured != null)
-                              AnimatedSwitcher(
-                                duration: motionOf(context, Motion.ambient),
-                                child: SizedBox.expand(
-                                  key: ValueKey(featured.show.id),
-                                  child: HeroArtwork(
-                                    sources: [
-                                      detail?.backdrop,
-                                      detail?.poster,
-                                      featured.show.poster,
-                                    ],
-                                    seed: featured.show.name,
-                                  ),
-                                ),
-                              ),
-                            const DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Color(0xA0080C0B),
-                                    Color(0x18080C0B),
-                                    Color(0xDE080C0B),
-                                    NitrateBrand.ink,
-                                  ],
-                                  stops: [0, .30, .76, 1],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Column(
-            children: [
-              SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 16, 4),
-                  child: Row(
-                    children: [
-                      const Expanded(child: NitrateWordmark()),
-                      IconButton(
+    // Header and cards share the scroll coordinator. There is no fixed
+    // transparent window clipping a featured title underneath the tabs.
+    return NestedScrollView(
+      key: const ValueKey('series-scroll'),
+      headerSliverBuilder: (context, scrolled) => [
+        SliverToBoxAdapter(
+          child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                child: Column(children: [
+                  Row(children: [
+                    const Expanded(child: NitrateWordmark(size: 28)),
+                    IconButton(
                         tooltip: 'Mes séries',
                         onPressed: () => context.push('/series'),
-                        icon: const Icon(Icons.video_library_outlined),
-                      ),
-                      IconButton(
+                        icon: const Icon(Icons.video_library_outlined)),
+                    IconButton(
                         tooltip: 'Réglages',
                         onPressed: () => context.push('/settings'),
-                        icon: const Icon(Icons.settings_outlined, size: 21),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TabBar(
-                  controller: _tabs,
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
-                  padding: const EdgeInsets.only(left: 8),
-                  labelPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  labelColor: NitrateBrand.ivory,
-                  unselectedLabelColor: TtColors.dim,
-                  indicatorColor: NitrateBrand.ivory,
-                  indicatorWeight: 2,
-                  indicatorSize: TabBarIndicatorSize.label,
-                  dividerColor: Colors.transparent,
-                  labelStyle: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  tabs: const [
-                    Tab(text: 'À voir'),
-                    Tab(text: 'À venir'),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabs,
-                  children: [
-                    NotificationListener<ScrollNotification>(
-                      onNotification: (n) {
-                        if (n.depth == 0 && n.metrics.axis == Axis.vertical) {
-                          _scroll.value = n.metrics.pixels;
-                        }
-                        return false;
-                      },
-                      child: ValueListenableBuilder<double>(
-                        valueListenable: _scroll,
-                        child: const _ToWatchTab(),
-                        builder: (context, pixels, child) => Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            child!,
-                            Positioned(
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              height: 24,
-                              child: IgnorePointer(
-                                child: Opacity(
-                                  opacity: (pixels / 24).clamp(0.0, 1.0),
-                                  child: const DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                        colors: [
-                                          NitrateBrand.ink,
-                                          Color(0x00080C0B)
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const ColoredBox(
-                      color: NitrateBrand.ink,
-                      child: _UpcomingTab(),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+                        icon: const Icon(Icons.settings_outlined, size: 21)),
+                  ]),
+                  const SizedBox(height: 16),
+                  GlideControl(
+                      labels: const ['À voir', 'À venir'],
+                      index: _tabs.index,
+                      onSelected: (i) => _tabs.animateTo(i,
+                          duration: motionOf(
+                              context, const Duration(milliseconds: 300)))),
+                ]),
+              )),
+        )
+      ],
+      body: TabBarView(
+          controller: _tabs, children: const [_ToWatchTab(), _UpcomingTab()]),
     );
   }
 }
@@ -308,16 +184,50 @@ class _ToWatchTab extends ConsumerWidget {
   }
 }
 
-class _ToWatchFeed extends ConsumerWidget {
+class _ToWatchFeed extends ConsumerStatefulWidget {
   const _ToWatchFeed({required this.feed});
 
   final SeriesFeed feed;
+  @override
+  ConsumerState<_ToWatchFeed> createState() => _ToWatchFeedState();
+}
+
+class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
+  NextUp? _holding;
+  int? _selectedId;
+  bool _confirmed = false;
+  Future<void> _mark(NextUp n) async {
+    if (_holding != null) return;
+    setState(() => _holding = n);
+    try {
+      await _markWatched(context, ref, n);
+      if (!mounted) return;
+      setState(() => _confirmed = true);
+      await Future<void>.delayed(
+          motionOf(context, const Duration(milliseconds: 620)));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _holding = null;
+          _confirmed = false;
+        });
+      }
+    }
+  }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final feed = widget.feed;
     final queue = [...feed.toWatch, ...feed.stale];
-    final hero = queue.isEmpty ? null : queue.first;
-    final next = queue.skip(1).toList();
+    final selection = queue.indexWhere((n) => n.show.id == _selectedId);
+    final selectedIndex = selection < 0 ? 0 : selection;
+    final hero = _holding ?? (queue.isEmpty ? null : queue[selectedIndex]);
+    final next = queue.length > 1 ? queue : <NextUp>[];
+    void select(int index) {
+      if (_holding == null) {
+        setState(() => _selectedId = queue[index % queue.length].show.id);
+      }
+    }
 
     return RefreshIndicator(
       color: TtColors.amber,
@@ -328,6 +238,20 @@ class _ToWatchFeed extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(bottom: bottomNavInset(context)),
         children: [
+          const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 18),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('À reprendre.',
+                        style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: -1)),
+                    SizedBox(height: 4),
+                    Text('Juste un épisode de plus.',
+                        style: TextStyle(color: TtColors.dim, fontSize: 13)),
+                  ])),
           if (hero != null)
             ContinueWatchingHero(
               // La clé lie l'état de la carte à l'épisode : la validation ne
@@ -337,18 +261,37 @@ class _ToWatchFeed extends ConsumerWidget {
               onOpen: () => _openEpisode(context, hero),
               onOpenShow: () =>
                   _openShow(context, hero.show.id, hero.show.name),
-              onMarkWatched: () => _markWatched(ref, hero),
+              confirmed: _confirmed,
+              onMarkWatched: () => _mark(hero),
             ),
           if (next.isNotEmpty) ...[
             const SizedBox(height: 32),
-            const _SectionHeader('Dans ta liste'),
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(children: [
+                  const Expanded(
+                      child: Text('Dans ta rotation',
+                          style: TextStyle(color: TtColors.dim))),
+                  IconButton(
+                      tooltip: 'Œuvre précédente',
+                      onPressed: _holding == null
+                          ? () => select(selectedIndex - 1)
+                          : null,
+                      icon: const Icon(Icons.arrow_back)),
+                  IconButton(
+                      tooltip: 'Œuvre suivante',
+                      onPressed: _holding == null
+                          ? () => select(selectedIndex + 1)
+                          : null,
+                      icon: const Icon(Icons.arrow_forward)),
+                ])),
             _Carousel(
               height: 205 + (MediaQuery.textScalerOf(context).scale(30) - 30),
               itemCount: next.length,
               separator: 14,
               itemBuilder: (_, i) => _QueuePoster(
                 next: next[i],
-                onTap: () => _openEpisode(context, next[i]),
+                onTap: () => select(i),
               ),
             ),
           ],
@@ -387,35 +330,6 @@ class _Carousel extends StatelessWidget {
         itemCount: itemCount,
         separatorBuilder: (_, _) => SizedBox(width: separator),
         itemBuilder: itemBuilder,
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.title);
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: NitrateBrand.display(30),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -800,4 +714,14 @@ class _CinemaEmpty extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.title);
+  final String title;
+  @override
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      child: Text(title,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500)));
 }

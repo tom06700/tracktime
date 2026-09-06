@@ -1,3 +1,12 @@
+# Direction validée — septembre 2026
+
+La transmission `design/validated-handoff/TRANSMISSION-CODEX.md` remplace les
+propositions précédentes : envol noir / Inter, commandes modernes carbone,
+lime, lilas, pêche et corail. Les anciennes notes ci-dessous sont historiques
+et ne doivent pas guider une nouvelle implémentation.
+
+## Notes historiques
+
 # Nitrate — direction cinéma
 
 ## Identity

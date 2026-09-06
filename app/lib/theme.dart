@@ -4,13 +4,13 @@ import 'widgets/press_response.dart';
 
 /// Surfaces cinéma et accent ivoire commun à tous les parcours.
 abstract final class TtColors {
-  static const bg = Color(0xFF080C0B);
-  static const surface = Color(0xFF171B18);
-  static const surfaceHi = Color(0xFF2B302A);
-  static const amber = Color(0xFFF3E7CF);
-  static const teal = Color(0xFFC5D0B1);
-  static const dim = Color(0xFFB0B1A6);
-  static const text = Color(0xFFF5F1E7);
+  static const bg = Color(0xFF101113);
+  static const surface = Color(0xFF1A1B1F);
+  static const surfaceHi = Color(0xFF2B2C33);
+  static const amber = Color(0xFFD4F5A0);
+  static const teal = Color(0xFFD4F5A0);
+  static const dim = Color(0xFFA6A7AE);
+  static const text = Color(0xFFF2F3F5);
   static const danger = Color(0xFFE5636F);
 }
 
@@ -81,7 +81,7 @@ ThemeData buildTheme() {
       surfaceTintColor: Colors.transparent,
       titleTextStyle: TextStyle(
         color: TtColors.text,
-        fontFamily: 'CormorantGaramond',
+        fontFamily: 'Inter',
         fontSize: 30,
         fontWeight: FontWeight.w500,
         letterSpacing: -0.5,
