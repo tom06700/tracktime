@@ -49,9 +49,6 @@ Future<void> _refresh(BuildContext context, WidgetRef ref) async {
     );
 }
 
-void _openShow(BuildContext context, int id, String name) =>
-    context.push('/show/$id', extra: name);
-
 void _openEpisode(BuildContext context, NextUp n) => context.push(
       '/episode/${n.show.id}/${n.season}/${n.episode}',
       extra: {'name': n.show.name, 'poster': n.show.poster},
