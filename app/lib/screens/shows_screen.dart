@@ -109,7 +109,7 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen>
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 child: Column(children: [
                   Row(children: [
-                    const Expanded(child: NitrateWordmark(size: 28)),
+                    const Expanded(child: NitrateWordmark(size: 22)),
                     IconButton(
                         tooltip: 'Mes séries',
                         onPressed: () => context.push('/series'),
@@ -260,33 +260,55 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
               confirmed: _confirmed,
               onMarkWatched: () => _mark(hero),
             ),
+          if (next.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                    color: ModernPalette.surface,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                        color: ModernPalette.lilac.withValues(alpha: .22))),
+                child: Row(children: [
+                  IconButton(
+                      tooltip: 'Œuvre précédente',
+                      onPressed: _holding == null
+                          ? () => select(selectedIndex - 1)
+                          : null,
+                      icon: const Icon(Icons.arrow_back,
+                          color: ModernPalette.lilac)),
+                  Expanded(
+                      child: Text(
+                          'À l’affiche · ${selectedIndex + 1} / ${queue.length}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              fontSize: 13, color: ModernPalette.lilac))),
+                  IconButton(
+                      tooltip: 'Œuvre suivante',
+                      onPressed: _holding == null
+                          ? () => select(selectedIndex + 1)
+                          : null,
+                      icon: const Icon(Icons.arrow_forward,
+                          color: ModernPalette.lilac)),
+                ]),
+              ),
+            ),
           if (next.isNotEmpty) ...[
             const SizedBox(height: 32),
             Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(children: [
                   const Expanded(
-                      child: Text('Dans ta rotation',
+                      child: Text('Dans ta\nrotation',
                           style: TextStyle(color: TtColors.dim))),
-                  IconButton(
-                      tooltip: 'Œuvre précédente',
-                      onPressed: _holding == null
-                          ? () => select(selectedIndex - 1)
-                          : null,
-                      icon: const Icon(Icons.arrow_back)),
-                  IconButton(
-                      tooltip: 'Œuvre suivante',
-                      onPressed: _holding == null
-                          ? () => select(selectedIndex + 1)
-                          : null,
-                      icon: const Icon(Icons.arrow_forward)),
                 ])),
             _Carousel(
-              height: 205 + (MediaQuery.textScalerOf(context).scale(30) - 30),
+              height: 220 + (MediaQuery.textScalerOf(context).scale(40) - 40),
               itemCount: next.length,
               separator: 14,
               itemBuilder: (_, i) => _QueuePoster(
                 next: next[i],
+                selected: next[i].show.id == hero?.show.id,
                 onTap: () => select(i),
               ),
             ),
@@ -616,7 +638,9 @@ class _DayCounter extends StatelessWidget {
 }
 
 class _QueuePoster extends StatelessWidget {
-  const _QueuePoster({required this.next, required this.onTap});
+  const _QueuePoster(
+      {required this.next, required this.onTap, required this.selected});
+  final bool selected;
   final NextUp next;
   final VoidCallback onTap;
   @override
@@ -624,27 +648,40 @@ class _QueuePoster extends StatelessWidget {
         width: 112,
         child: Semantics(
           button: true,
-          label: '${next.show.name}, ${next.code}',
+          selected: selected,
+          label: '${next.show.name}, ${next.code}, afficher à la une',
           child: PressTarget(
             onTap: onTap,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(9),
-                  child: SizedBox(
-                    height: 164,
-                    width: 112,
-                    child: MediaImage(
-                      sources: [next.show.poster, next.still],
-                      seed: next.show.name,
+                AnimatedContainer(
+                  duration:
+                      motionOf(context, const Duration(milliseconds: 220)),
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          width: 2,
+                          color: selected
+                              ? ModernPalette.lilac
+                              : Colors.transparent)),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(9),
+                    child: SizedBox(
+                      height: 164,
+                      width: 112,
+                      child: MediaImage(
+                        sources: [next.show.poster, next.still],
+                        seed: next.show.name,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   next.show.name,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                       fontSize: 13, fontWeight: FontWeight.w600),

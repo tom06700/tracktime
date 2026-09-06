@@ -235,9 +235,11 @@ SeriesFeed buildSeriesFeed({
     NextUp? next;
     if (eps != null && eps.isNotEmpty) {
       // Précis : premier épisode diffusé non vu, dans l'ordre.
-      final watchable = eps.where(aired).toList()..sort(_compareEpisodes);
-      final unwatched =
-          watchable.where((e) => !wk.contains(key(e.season, e.episode))).toList();
+      final watchable = eps.where((e) => e.season > 0 && aired(e)).toList()
+        ..sort(_compareEpisodes);
+      final unwatched = watchable
+          .where((e) => !wk.contains(key(e.season, e.episode)))
+          .toList();
       if (unwatched.isEmpty) continue; // à jour → pas dans « à voir »
       final e = unwatched.first;
       next = NextUp(
@@ -295,8 +297,7 @@ NextUp _fallbackNext(Show show, Set<String> watchedKeys) {
       maxE = e;
     }
   }
-  return NextUp(
-      show: show, season: maxS, episode: maxE + 1, precise: false);
+  return NextUp(show: show, season: maxS, episode: maxE + 1, precise: false);
 }
 
 /// Un épisode vu, pour la page Historique. Contrairement à
