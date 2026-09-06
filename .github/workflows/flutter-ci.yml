@@ -79,6 +79,13 @@ jobs:
           NITRATE_DESIGN_AUDIT: '1'
         run: flutter test test/modern_reference_audit_test.dart
 
+      - name: Capturer la fiche épisode et les longues saisons
+        if: ${{ !cancelled() }}
+        timeout-minutes: 3
+        env:
+          NITRATE_EPISODE_AUDIT: '1'
+        run: flutter test test/episode_detail_test.dart --timeout 2m
+
       - name: Capturer les parcours existants
         timeout-minutes: 3
         if: ${{ !cancelled() }}
