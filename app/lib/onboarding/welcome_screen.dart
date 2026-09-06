@@ -1,3 +1,4 @@
+import '../brand/nitrate_brand.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -251,15 +252,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Flexible(
-                                  child: Text('nitrate',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 25,
-                                          letterSpacing: -1.35,
-                                          fontWeight: FontWeight.w500))),
+                              const Flexible(child: NitrateWordmark(size: 25)),
                               TextButton(
                                   onPressed: _busy ? null : _finish,
                                   child: const Text('Passer',

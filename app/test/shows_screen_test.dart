@@ -1,3 +1,4 @@
+import 'package:tracktime/brand/nitrate_brand.dart';
 import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -116,11 +117,12 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await _pump(tester, otherShows: 3);
-    final before = tester.getTopLeft(find.text('nitrate')).dy;
+    final before = tester.getTopLeft(find.byType(NitrateWordmark)).dy;
     await tester.drag(find.byKey(const PageStorageKey('to-watch-feed')),
         const Offset(0, -260));
     await tester.pump(const Duration(seconds: 1));
-    expect(tester.getTopLeft(find.text('nitrate', skipOffstage: false)).dy,
+    expect(
+        tester.getTopLeft(find.byType(NitrateWordmark, skipOffstage: false)).dy,
         lessThan(before));
     expect(tester.takeException(), isNull);
     await _settle(tester);

@@ -1,3 +1,4 @@
+import '../brand/nitrate_brand.dart';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -84,19 +85,11 @@ class FlightPainter extends CustomPainter {
             ..strokeWidth = 1
             ..color =
                 const Color(0x3DC5C8D4).withValues(alpha: .24 * (1 - boost)));
-      final title = TextPainter(
-          text: TextSpan(
-              text: 'n',
-              style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFFDDDFE7).withValues(alpha: 1 - boost))),
-          textDirection: TextDirection.ltr)
-        ..layout();
-      title.paint(
-          canvas, Offset(cx - title.width / 2, sourceY - title.height / 2 - 1));
-      title.dispose();
+      paintNitrateSymbol(
+          canvas,
+          Rect.fromCenter(
+              center: Offset(cx, sourceY - 1), width: 24, height: 24),
+          color: const Color(0xFFC5AEFD).withValues(alpha: 1 - boost));
     }
     final order = List.generate(21, (i) => i)
       ..sort((a, b) => random(a + 32).compareTo(random(b + 32)));
