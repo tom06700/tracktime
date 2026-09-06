@@ -20,11 +20,11 @@ Future<void> _settle(WidgetTester tester) async {
 }
 
 Map<String, dynamic> _item(int id, String name, [String? year]) => {
-  'id': id,
-  'name': name,
-  'year': year,
-  'image': 'https://artworks.thetvdb.com/x.jpg',
-};
+      'id': id,
+      'name': name,
+      'year': year,
+      'image': 'https://artworks.thetvdb.com/x.jpg',
+    };
 
 /// Monte Explorer avec des rangées de découverte figées : aucun appel réseau,
 /// les tests restent déterministes.
@@ -34,10 +34,12 @@ Future<void> _mount(
   List<Map<String, dynamic>> series = const [],
   List<Map<String, dynamic>> movies = const [],
   TvdbClient? tvdb,
+  Size size = const Size(390, 844),
+  double scale = 1,
 }) async {
   // Surface d'iPhone : la surface de test par défaut (800×600) donnerait des
   // cellules de grille démesurées, poussant les boutons hors de l'écran.
-  tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+  tester.view.physicalSize = size * 3;
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
 
@@ -52,6 +54,10 @@ Future<void> _mount(
       ],
       child: MaterialApp(
         theme: buildTheme(),
+        builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(scale), disableAnimations: true),
+            child: child!),
         home: const Scaffold(body: ExplorerScreen()),
       ),
     ),
@@ -66,12 +72,12 @@ Future<void> _mount(
 /// Client TheTVDB muet : les écrans déclenchent une synchro au montage, et son
 /// échec réseau lèverait une erreur asynchrone non gérée en plein test.
 TvdbClient _silentTvdb() => TvdbClient(
-  'test',
-  client: MockClient(
-    (_) async =>
-        http.Response('{"data":{"token":"t"},"status":"success"}', 200),
-  ),
-);
+      'test',
+      client: MockClient(
+        (_) async =>
+            http.Response('{"data":{"token":"t"},"status":"success"}', 200),
+      ),
+    );
 
 /// Client renvoyant une réponse de recherche par requête, avec un délai
 /// optionnel pour simuler une réponse arrivant en retard.
@@ -98,10 +104,10 @@ TvdbClient _searchTvdb(
 }
 
 Map<String, dynamic> _hit(String type, String name, int id) => {
-  'type': type,
-  'name': name,
-  'tvdb_id': id,
-};
+      'type': type,
+      'name': name,
+      'tvdb_id': id,
+    };
 
 /// Saisit une requête et laisse passer le debounce.
 Future<void> _type(WidgetTester tester, String q) async {
@@ -127,11 +133,26 @@ void main() {
       movies: [_item(2, 'Titanic', '1997')],
     );
 
-    expect(find.text('Séries populaires'), findsOneWidget);
-    expect(find.text('Films populaires'), findsOneWidget);
+    expect(find.text('Tu pars où ?'), findsOneWidget);
     expect(find.text('Stranger Things'), findsOneWidget);
     expect(find.text('Titanic'), findsOneWidget);
 
+    await _settle(tester);
+  });
+
+  testWidgets('découverte lisible à 320 px avec texte doublé', (tester) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await _mount(tester, db,
+        size: const Size(320, 740),
+        scale: 2,
+        series: [_item(1, 'Une série avec un titre particulièrement long')]);
+    expect(tester.takeException(), isNull);
+    await tester.scrollUntilVisible(
+        find.text('Une série avec un titre particulièrement long'), 200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(tester.takeException(), isNull);
     await _settle(tester);
   });
 
@@ -151,14 +172,14 @@ void main() {
     await _settle(tester);
   });
 
-  testWidgets('les filtres n\'apparaissent qu\'une fois la recherche lancée', (
+  testWidgets('les filtres restent accessibles avant et pendant la recherche', (
     tester,
   ) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
 
     await _mount(tester, db);
-    expect(find.text('Tout'), findsNothing);
+    expect(find.text('Tout'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'dune');
     await tester.pump();
@@ -179,7 +200,7 @@ void main() {
       MoviesCompanion.insert(id: const Value(1), title: 'Dune'),
     );
     await _mount(tester, db);
-    expect(find.textContaining('regarde ce soir'), findsNothing);
+    expect(find.text('Quoi regarder ce soir ?'), findsNothing);
 
     // Deux titres : la proposition apparaît.
     await db.upsertMovie(
@@ -188,8 +209,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.textContaining('regarde ce soir'), findsOneWidget);
-    expect(find.text('Choisir pour moi'), findsOneWidget);
+    expect(find.text('Quoi regarder ce soir ?'), findsOneWidget);
 
     await _settle(tester);
   });

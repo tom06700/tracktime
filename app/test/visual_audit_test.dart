@@ -42,6 +42,12 @@ final _fonts = Platform.environment['NITRATE_AUDIT_FONTS'] ??
 // ─────────────────────────────── Polices ────────────────────────────────
 
 Future<void> _loadFonts() async {
+  final emoji = File('/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf');
+  if (emoji.existsSync()) {
+    await (FontLoader('NotoColorEmoji')
+          ..addFont(emoji.readAsBytes().then(ByteData.sublistView)))
+        .load();
+  }
   Future<ByteData> bytes(String f) async =>
       ByteData.sublistView(await File('$_fonts/$f').readAsBytes());
   final roboto = FontLoader('Roboto')
@@ -460,11 +466,12 @@ Future<void> _settleReal(WidgetTester tester, [int ms = 350]) async {
 // explicit icon fonts. Production uses the platform font automatically.
 InlineSpan _readableSpan(InlineSpan span) {
   if (span is! TextSpan) return span;
-  final style = span.style ?? const TextStyle();
+  final style = (span.style ?? const TextStyle())
+      .copyWith(fontFamilyFallback: const ['NotoColorEmoji']);
   return TextSpan(
     text: span.text,
     style: style.fontFamily == null || style.fontFamily == 'Ahem'
-        ? style.copyWith(fontFamily: 'Roboto')
+        ? style.copyWith(fontFamily: 'Inter')
         : style,
     children: span.children?.map(_readableSpan).toList(),
     recognizer: span.recognizer,
@@ -491,7 +498,25 @@ Future<void> _shot(WidgetTester tester, String name) async {
     final img = await ro.toImage(pixelRatio: 2);
     final data = await img.toByteData(format: ui.ImageByteFormat.png);
     await File('$_out/$name.png').writeAsBytes(data!.buffer.asUint8List());
+    img.dispose();
   });
+}
+
+Future<void> _motionFrames(WidgetTester tester, String prefix) async {
+  for (var frame = 0; frame < 24; frame++) {
+    await tester.pump(const Duration(milliseconds: 50));
+    final boundary =
+        _boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    _readableFonts(boundary);
+    await tester.pump();
+    await tester.runAsync(() async {
+      final image = await boundary.toImage(pixelRatio: 2);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      await File('$_out/$prefix-$frame.png')
+          .writeAsBytes(bytes!.buffer.asUint8List());
+      image.dispose();
+    });
+  }
 }
 
 void main() {
@@ -623,14 +648,21 @@ void main() {
       await _settleReal(tester, 500);
 
       router.push('/show/81797', extra: 'One Piece');
+      await tester.pump();
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 150)));
+      await _motionFrames(tester, 'global-series-enter');
       await _settleReal(tester, 900);
       await _shot(tester, '09-fiche-serie');
+      await tester.ensureVisible(find.text('Épisodes'));
       await tester.tap(find.text('Épisodes'));
+      await _motionFrames(tester, 'global-series-tabs');
       await _settleReal(tester, 600);
       await _shot(tester, '10-fiche-serie-episodes');
-      await tester.tap(find.text('Saison 1'));
+      await tester.ensureVisible(find.text('Non vus'));
+      await tester.tap(find.text('Non vus'));
       await _settleReal(tester, 400);
-      await _shot(tester, '11-fiche-serie-saison');
+      await _shot(tester, '11-fiche-serie-non-vus');
       router.pop();
       await _settleReal(tester, 500);
 
@@ -697,6 +729,8 @@ void main() {
       await _shot(tester, '21-series-vide');
 
       File('$_out/issues.txt').writeAsStringSync(_issues.join('\n'));
+      expect(_issues, isEmpty,
+          reason: 'Les erreurs de rendu capturées doivent être corrigées.');
       debugNetworkImageHttpClientProvider = null;
       // Démontage propre.
       await tester.pumpWidget(const SizedBox.shrink());

@@ -53,6 +53,7 @@ void main() {
   Future<AppDatabase> mount(WidgetTester tester, EpisodeFixture api,
       {double scale = 1,
       bool reduce = true,
+      bool seen = false,
       int initial = 1155,
       Size size = const Size(390, 844)}) async {
     if (Platform.environment['NITRATE_EPISODE_AUDIT'] == '1') {
@@ -64,6 +65,7 @@ void main() {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     await db.upsertShow(
         ShowsCompanion.insert(id: const Value(1), name: 'Série test'));
+    if (seen) await db.setEpisodeWatched(1, 1, initial);
     addTearDown(() async {
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 2));
@@ -138,6 +140,29 @@ void main() {
     });
   }
 
+  episodeTest('une série absente exige un ajout explicite avant visionnage',
+      (tester) async {
+    final db = await mount(tester, EpisodeFixture([1155]));
+    await db.deleteShow(1);
+    await tester.pump();
+    // The action awaits this dialog: pump its transition without requiring
+    // every underlying async animation to become idle before answering it.
+    await tester.ensureVisible(find.text('Marquer vu'));
+    await tester.tap(find.text('Marquer vu'));
+    for (var i = 0; i < 12; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)));
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(find.text('Ajouter à ma liste'), findsOneWidget);
+    expect(await db.showById(1), isNull);
+    expect(await db.allWatchedEpisodes(), isEmpty);
+    await tester.tap(find.text('Annuler'));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(await db.showById(1), isNull);
+    expect(await db.allWatchedEpisodes(), isEmpty);
+  });
+
   episodeTest(
       '1200 épisodes, résumé protégé, accès direct et navigation sans écriture',
       (tester) async {
@@ -192,6 +217,8 @@ void main() {
     await tester.runAsync(() => db.allWatchedEpisodes());
     await tester.pumpAndSettle();
     expect(find.text('Titre 1155'), findsOneWidget);
+    expect(find.text('Résumé caché 1155'), findsOneWidget);
+    expect(find.text('Révéler le résumé'), findsNothing);
     expect(
         (await tester.runAsync(db.allWatchedEpisodes))!
             .map((e) => 'S${e.season}E${e.episode}')
@@ -227,6 +254,32 @@ void main() {
             .firstWhere((e) => e.season == 1 && e.episode == 1)
             .watchedAt,
         old);
+  });
+  episodeTest('résumé visible si déjà vu et protégé après marquage non vu',
+      (tester) async {
+    final db = await mount(tester, EpisodeFixture([1155, 1200]), seen: true);
+    await Scrollable.ensureVisible(
+        tester.element(find.text('Résumé caché 1155')),
+        alignment: .5);
+    await tester.pumpAndSettle();
+    expect(find.text('Résumé caché 1155'), findsOneWidget);
+    expect(find.text('Révéler le résumé'), findsNothing);
+    await capture(tester, 'episode-seen-summary');
+    await tap(tester, find.text('Épisode vu'));
+    await tester.runAsync(db.allWatchedEpisodes);
+    await tester.pumpAndSettle();
+    expect(find.text('Résumé caché 1155'), findsNothing);
+    expect(find.text('Révéler le résumé'), findsOneWidget);
+    await tap(tester, find.text('Révéler le résumé'));
+    expect(find.text('Résumé caché 1155'), findsOneWidget);
+    await tap(tester, find.text('Marquer vu'));
+    await tester.runAsync(db.allWatchedEpisodes);
+    await tester.pumpAndSettle();
+    await tap(tester, find.text('Épisode vu'));
+    await tester.runAsync(db.allWatchedEpisodes);
+    await tester.pumpAndSettle();
+    expect(find.text('Résumé caché 1155'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
   episodeTest('erreur de catalogue visible puis réessai', (tester) async {
     final api = EpisodeFixture([1155])..fail = true;

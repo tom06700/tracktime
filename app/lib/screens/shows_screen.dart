@@ -49,9 +49,6 @@ Future<void> _refresh(BuildContext context, WidgetRef ref) async {
     );
 }
 
-void _openShow(BuildContext context, int id, String name) =>
-    context.push('/show/$id', extra: name);
-
 void _openEpisode(BuildContext context, NextUp n) => context.push(
       '/episode/${n.show.id}/${n.season}/${n.episode}',
       extra: {'name': n.show.name, 'poster': n.show.poster},
@@ -124,6 +121,7 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen>
                   ]),
                   const SizedBox(height: 16),
                   GlideControl(
+                      dense: true,
                       labels: const ['À voir', 'À venir'],
                       index: _tabs.index,
                       onSelected: (i) => _tabs.animateTo(i,
@@ -245,7 +243,7 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
                   children: [
                     Text('À reprendre.',
                         style: TextStyle(
-                            fontSize: 28,
+                            fontSize: 23,
                             fontWeight: FontWeight.w500,
                             letterSpacing: -1)),
                     SizedBox(height: 4),
@@ -259,8 +257,6 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
               key: ValueKey('${hero.show.id}-${hero.season}-${hero.episode}'),
               next: hero,
               onOpen: () => _openEpisode(context, hero),
-              onOpenShow: () =>
-                  _openShow(context, hero.show.id, hero.show.name),
               confirmed: _confirmed,
               onMarkWatched: () => _mark(hero),
             ),

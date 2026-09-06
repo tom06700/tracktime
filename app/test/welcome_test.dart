@@ -1,3 +1,4 @@
+import 'package:tracktime/brand/nitrate_brand.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -54,7 +55,8 @@ void main() {
     expect(bounds.top, 0);
     expect(bounds.left, 0);
     expect(bounds.right, 390);
-    expect(tester.getRect(find.text('nitrate')).top, greaterThanOrEqualTo(59));
+    expect(tester.getRect(find.byType(NitrateWordmark)).top,
+        greaterThanOrEqualTo(59));
     expect(find.text('Passer').hitTestable(), findsOneWidget);
     expect(find.text('C’est parti').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);

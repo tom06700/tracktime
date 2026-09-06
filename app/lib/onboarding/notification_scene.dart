@@ -1,3 +1,4 @@
+import '../brand/nitrate_brand.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../motion.dart';
@@ -189,13 +190,9 @@ class NotificationScene extends StatelessWidget {
             height: 39,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-                color: const Color(0xFFD3C0FF),
+                color: const Color(0xFFC5AEFD),
                 borderRadius: BorderRadius.circular(13)),
-            child: const Text('n.',
-                style: TextStyle(
-                    fontSize: 23,
-                    letterSpacing: -2,
-                    color: Color(0xFF20182E)))),
+            child: const NitrateSymbol(size: 23, color: Color(0xFF0D0E10))),
         const SizedBox(width: 10),
         Expanded(
             child: Column(

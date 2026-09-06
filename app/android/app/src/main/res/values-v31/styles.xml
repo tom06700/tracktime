@@ -3,7 +3,7 @@
     <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@drawable/launch_background</item>
         <item name="android:windowSplashScreenBackground">@color/nitrate_ink</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/nitrate_launch_symbol</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@color/nitrate_ink</item>
     </style>
 </resources>

@@ -1,0 +1,47 @@
+{
+  "base_commit": "d6a47638ba9fef96e126232ef37f402c6500659d",
+  "references": [
+    {
+      "path": "references/01-intro.html",
+      "title": "Intro",
+      "original_fragment_sha256": "7443bcb6a6308d7e24dfc7397432130bf5b4d245cb314beb9fe58e09c119cbce",
+      "document_sha256": "4883c8e28bee271e2937385b0580ba784cebb7d9ffc7e5ef6e923a06d8da7a7b"
+    },
+    {
+      "path": "references/02-boutons.html",
+      "title": "Boutons",
+      "original_fragment_sha256": "cbef69f81bf1e3f3adcaae7edcdc99c02c4151329856048c7529d3596f5f9b31",
+      "document_sha256": "1caa9c426b468a0f4f3dcadf41db538a9c77f938fd900a5a824d77da4d9fd4af"
+    },
+    {
+      "path": "references/03-a-reprendre.html",
+      "title": "À reprendre",
+      "original_fragment_sha256": "030bb349aa676d7d6fbaa023dbd66b200db55967301b295d5772b6954bd4f1f4",
+      "document_sha256": "7147998c5a79b13af2eb5f74c90c5b067773cbd45055bebcfd4b1a4cde3ff67d"
+    },
+    {
+      "path": "references/04-notifications.html",
+      "title": "Notifications",
+      "original_fragment_sha256": "48533fcaf7b3bc33e8e5fc53cb3dc4bbee8799e37a11c9d4c611bcfdb000b991",
+      "document_sha256": "6b3425ecf6d5b3ed7b16085379e84a669b34380fb267c0dcdebd2f16dccb3843"
+    },
+    {
+      "path": "references/05-episode.html",
+      "title": "Fiche épisode",
+      "original_fragment_sha256": "d889bb725d7fcf0db6835ba7a610665455e2fb418ed95a41aa686269a6f56adb",
+      "document_sha256": "7780b035f86d4f4d8707513c2242e505fd9b64994aa2f0cf4be535af5496541c"
+    },
+    {
+      "path": "references/06-serie.html",
+      "title": "Fiche série",
+      "original_fragment_sha256": "fdfac40e60ba6c639a572102011ee882b18708ace277b4d610459e6f4f260386",
+      "document_sha256": "368fb06808f26e9b231b308decaedca90996b2ac8f4365b4fd18b54cc56f77d0"
+    },
+    {
+      "path": "references/07-film-explorer-profil.html",
+      "title": "Film · Explorer · Profil",
+      "original_fragment_sha256": "978da5431e4480519f63b7479ce924e5dfd8af34633f904397bfb7df97264916",
+      "document_sha256": "750a642359a79cb02cbcbe80bb98698c90daafa37a94a466b383b67068c2b161"
+    }
+  ]
+}

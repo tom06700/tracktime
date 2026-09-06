@@ -1,3 +1,4 @@
+import '../widgets/validated_detail.dart';
 import '../widgets/modern_controls.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
@@ -7,19 +8,16 @@ import 'package:go_router/go_router.dart';
 
 import '../db/database.dart';
 import '../providers.dart';
-import '../media/cinematic.dart';
-import '../media/palette.dart';
 import '../motion.dart';
 import '../series/catch_up.dart';
 import '../series/widgets/catch_up_sheet.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../tmdb/tvdb.dart';
-import 'media_detail_parts.dart';
 import 'movie_detail_screen.dart' show DetailWithBack, MediaDetailSkeleton;
 import '../widgets/common.dart';
-import '../widgets/skeleton.dart';
 import '../widgets/states.dart';
+import 'media_detail_parts.dart' show addSeriesToLibrary;
 
 class ShowDetailScreen extends ConsumerStatefulWidget {
   const ShowDetailScreen({
@@ -35,16 +33,12 @@ class ShowDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<ShowDetailScreen> createState() => _ShowDetailScreenState();
 }
 
-class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 2, vsync: this)
-    ..addListener(() {
-      // Les épisodes ne sont chargés qu'à l'ouverture de leur onglet : leur
-      // liste est une requête paginée coûteuse — plus de mille épisodes pour
-      // One Piece — qu'on ne déclenche pas pour un simple aperçu.
-      if (_tabs.index == 1) _loadEpisodes();
-    });
-
+class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen> {
+  int _tab = 0;
+  int? _selectedSeason;
+  bool _onlyUnseen = false;
+  bool _busy = false;
+  final Map<int, Map<int, DateTime?>> _episodeDates = {};
   bool _episodesRequested = false;
   bool _loadingEpisodes = false;
   String? _episodesError;
@@ -66,13 +60,8 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
     _load();
   }
 
-  @override
-  void dispose() {
-    _tabs.dispose();
-    super.dispose();
-  }
-
   Future<void> _load() async {
+    if (mounted) setState(() => _error = null);
     final tvdb = ref.read(tvdbClientProvider);
     try {
       final d = await tvdb.seriesExtended(widget.showId);
@@ -96,19 +85,19 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
       if (await ref.read(databaseProvider).showById(widget.showId) != null) {
         await _loadEpisodes();
       }
-    } on TvdbException catch (e) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _error = '$e');
     }
   }
 
-  /// Saisons officielles déclarées par `/series/{id}/extended`, hors saison 0.
+  /// Saisons officielles déclarées par `/series/{id}/extended`, y compris les spéciaux en saison 0.
   static List<int> _officialSeasons(Map<String, dynamic> d) {
     final out = <int>{};
     for (final s in (d['seasons'] as List?) ?? const []) {
       if (s is! Map) continue;
       final n = (s['number'] as num?)?.toInt();
-      if ((s['type'] as Map?)?['type'] == 'official' && n != null && n > 0) {
+      if ((s['type'] as Map?)?['type'] == 'official' && n != null && n >= 0) {
         out.add(n);
       }
     }
@@ -137,10 +126,11 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
       final rows = <EpisodesCompanion>[];
       for (final e in eps) {
         final s = e['season'] as int;
-        if (s < 1) continue;
+        if (s < 0) continue;
         final n = e['episode'] as int;
         (bySeason[s] ??= []).add(n);
         (names[s] ??= {})[n] = '${e['name'] ?? 'Épisode $n'}';
+        (_episodeDates[s] ??= {})[n] = DateTime.tryParse('${e['aired'] ?? ''}');
         rows.add(
           EpisodesCompanion.insert(
             showId: widget.showId,
@@ -152,8 +142,8 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
           ),
         );
       }
-      for (final l in bySeason.values) {
-        l.sort();
+      for (final key in bySeason.keys.toList()) {
+        bySeason[key] = bySeason[key]!.toSet().toList()..sort();
       }
       final seasons = bySeason.keys.toList()..sort();
 
@@ -184,7 +174,7 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
         if (seasons.isNotEmpty) _seasonNumbers = seasons;
         _loadingEpisodes = false;
       });
-    } on TvdbException catch (e) {
+    } catch (e) {
       debugPrint('Épisodes de ${widget.showId} indisponibles : $e');
       // La fiche reste consultable : seul l'onglet Épisodes restera vide.
       _episodesRequested = false;
@@ -250,9 +240,6 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
     return true;
   }
 
-  Future<List<int>> _loadSeason(int season) async =>
-      _episodesBySeason[season] ?? const [];
-
   Future<void> _toggleEpisode(int season, int episode, bool watched) async {
     if (!await _requireFollowed()) return;
     HapticFeedback.selectionClick();
@@ -289,7 +276,9 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
   Future<void> _setSeason(int season, List<int> eps, bool on) async {
     if (!await _requireFollowed()) return;
     HapticFeedback.lightImpact();
-    ref.read(databaseProvider).setSeasonWatched(widget.showId, season, eps, on);
+    await ref
+        .read(databaseProvider)
+        .setSeasonWatched(widget.showId, season, eps, on);
   }
 
   Future<void> _confirmDelete() async {
@@ -327,7 +316,10 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
       backgroundColor: TtColors.bg,
       body: _error != null
           ? DetailWithBack(
-              child: EmptyState(icon: Icons.error_outline, message: _error!),
+              child: ErrorRetry(
+                  title: 'Impossible de charger cette série',
+                  message: _error!,
+                  onRetry: _load),
             )
           : _details == null
               // La forme de la fiche plutôt qu'un rond qui tourne : la mise en
@@ -338,132 +330,419 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
   }
 
   Widget _buildContent(bool followed) {
-    final poster = TvdbClient.posterOf(_details!);
-    final meta = [
-      _yearOf(_details!),
-      if (_totalEpisodes() case final n?) '$n épisodes',
-      if (_networkOf(_details!) case final n when n.isNotEmpty) n,
-      ..._genresOf(_details!).take(2),
-    ].where((s) => s.isNotEmpty).join(' · ');
-
-    return CinematicDetailShell(
-      media: MediaRef(id: widget.showId, isSeries: true),
-      seed: _name,
-      backdrop: _backdrop,
-      poster: poster,
-      builder: (context, scope) => Stack(
-        children: [
-          // Le fond défile avec le contenu, les onglets prennent ensuite le
-          // relais : c'est le rôle de NestedScrollView, qui accorde un
-          // défilement extérieur à des listes intérieures.
-          NestedScrollView(
-            headerSliverBuilder: (context, _) => [
-              CinematicBackdrop(
-                title: _name,
-                image: scope.image,
-                seed: _name,
-                icon: Icons.tv,
-                palette: scope.palette,
-              ),
-            ],
-            body: Column(
-              children: [
-                TabBar(
-                  controller: _tabs,
-                  labelColor: scope.palette.accent,
-                  unselectedLabelColor: TtColors.dim,
-                  indicatorColor: scope.palette.accent,
-                  // Pas de trait sous les onglets : ce serait une ligne de
-                  // coupe entre le fond et le contenu.
-                  dividerColor: Colors.transparent,
-                  indicatorSize: TabBarIndicatorSize.label,
-                  labelStyle: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1,
-                  ),
-                  tabs: const [
-                    Tab(text: 'À propos'),
-                    Tab(text: 'Épisodes'),
-                  ],
-                ),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabs,
+    final watched =
+        ref.watch(watchedKeysProvider(widget.showId)).value ?? <String>{};
+    final all = [
+      for (final s in _seasonNumbers)
+        for (final e in _episodesBySeason[s] ?? <int>[]) (season: s, episode: e)
+    ];
+    final seen =
+        all.where((e) => watched.contains('S${e.season}E${e.episode}')).length;
+    final candidates = all.where((e) {
+      final air = _episodeDates[e.season]?[e.episode];
+      return !watched.contains('S${e.season}E${e.episode}') &&
+          (air == null || !air.isAfter(DateTime.now()));
+    });
+    // Regular episodes drive resumption; specials remain explicitly accessible.
+    final next = candidates.where((e) => e.season > 0).firstOrNull ??
+        candidates.firstOrNull;
+    final selected = _selectedSeason ??
+        next?.season ??
+        _seasonNumbers.where((s) => s > 0).firstOrNull ??
+        _seasonNumbers.firstOrNull;
+    final numbers = _episodesBySeason[selected] ?? <int>[];
+    final visible = numbers
+        .where((e) => !_onlyUnseen || !watched.contains('S${selected}E$e'))
+        .toList();
+    final gap = MediaQuery.sizeOf(context).width < 370 ? 18.0 : 24.0;
+    Widget padded(Widget child, {double bottom = 0}) => Padding(
+        padding: EdgeInsets.fromLTRB(gap, 0, gap, bottom), child: child);
+    void open(int s, int e) => context.push('/episode/${widget.showId}/$s/$e',
+        extra: {'name': _name, 'poster': TvdbClient.posterOf(_details!)});
+    return CustomScrollView(slivers: [
+      SliverToBoxAdapter(
+          child: ValidatedDetailHero(
+              title: _name,
+              kicker: _genresOf(_details!).take(2).join(' · '),
+              subtitle: [_yearOf(_details!), _networkOf(_details!)]
+                  .where((x) => x.isNotEmpty)
+                  .join(' · '),
+              sources: [TvdbClient.posterOf(_details!), _backdrop],
+              onManage: () => _manage(followed))),
+      SliverToBoxAdapter(
+          child: padded(
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(
+              child: Text(followed ? '•  Dans ta collection' : '•  À découvrir',
+                  style:
+                      const TextStyle(fontSize: 11, color: Color(0xFFACA6B5)))),
+          SizedBox(
+              width: 116,
+              child: ModernCommand(
+                  shape: CommandShape.attach,
+                  height: 44,
+                  compact: true,
+                  selected: followed,
+                  label: followed ? 'Ajouté' : 'Ma liste',
+                  onPressed: followed
+                      ? () {}
+                      : () => _guard(() async {
+                            if (!await _addToLibrary()) {
+                              throw StateError('Ajout impossible');
+                            }
+                          }))),
+        ]),
+        const SizedBox(height: 26),
+        Row(children: [
+          const Expanded(
+              child: Text('Ton voyage',
+                  style: TextStyle(fontSize: 11, color: Color(0xFFC9C4D0)))),
+          Expanded(
+              child: Text(
+                  all.isEmpty
+                      ? 'Progression à charger'
+                      : '$seen / ${all.length} vus',
+                  textAlign: TextAlign.end,
+                  style:
+                      const TextStyle(fontSize: 11, color: ModernPalette.lime)))
+        ]),
+        const SizedBox(height: 11),
+        TweenAnimationBuilder<double>(
+            tween: Tween(end: all.isEmpty ? 0 : seen / all.length),
+            duration: motionOf(context, const Duration(milliseconds: 650)),
+            curve: const Cubic(.2, .8, .2, 1),
+            builder: (_, value, _) => LinearProgressIndicator(
+                value: value,
+                minHeight: 5,
+                color: ModernPalette.lime,
+                backgroundColor: const Color(0xFF2D2E31),
+                semanticsLabel:
+                    'Progression de la série : $seen sur ${all.length}')),
+        const SizedBox(height: 9),
+        Text(
+            all.isEmpty
+                ? 'Les épisodes officiels apparaîtront ici.'
+                : '${all.length - seen} épisodes à retrouver',
+            style: const TextStyle(fontSize: 11, color: Color(0xFF908B98))),
+        const SizedBox(height: 26),
+        ModernCommand(
+            shape: CommandShape.nextUp,
+            height: 105,
+            eyebrow: 'ON EN ÉTAIT LÀ',
+            labelSize: 22,
+            label: !followed
+                ? 'Commencer'
+                : next == null
+                    ? 'Explorer les épisodes'
+                    : 'Reprendre',
+            subtitle: next == null
+                ? null
+                : 'Saison ${next.season} · Épisode ${next.episode}',
+            onPressed: _busy
+                ? null
+                : () async {
+                    if (!followed) {
+                      await _offerAdd();
+                      return;
+                    }
+                    if (!_episodesRequested) await _loadEpisodes();
+                    if (!mounted) return;
+                    if (next != null) {
+                      open(next.season, next.episode);
+                    } else {
+                      _selectTab(1);
+                    }
+                  }),
+        const SizedBox(height: 26),
+        GlideControl(
+            dense: true,
+            labels: const ['À propos', 'Épisodes'],
+            index: _tab,
+            onSelected: _selectTab),
+        const SizedBox(height: 22),
+      ]))),
+      if (_tab == 0)
+        SliverToBoxAdapter(
+            child: padded(EntranceFade(
+                key: const ValueKey('series-about'),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _AboutTab(
-                        metaLine: meta,
-                        overview: _overview,
-                        followed: followed,
-                        accent: scope.palette.accent,
-                        onAdd: _addToLibrary,
-                        onOpenEpisodes: () => _tabs.animateTo(1),
-                      ),
-                      if (_loadingEpisodes)
-                        _SeasonsSkeleton(tint: scope.palette.surface)
-                      else if (_episodesError != null)
-                        ErrorRetry(
-                          title: 'Épisodes indisponibles',
-                          message:
-                              'Vérifie ta connexion pour charger les saisons.',
-                          onRetry: () => _loadEpisodes(refresh: true),
-                        )
-                      else
-                        _EpisodesTab(
-                          showId: widget.showId,
-                          showName: _name,
-                          seasonNumbers: _seasonNumbers,
-                          loadSeason: _loadSeason,
-                          episodeName: (s, e) =>
-                              _episodeNames[s]?[e] ?? 'Épisode $e',
-                          onToggle: _toggleEpisode,
-                          onSetSeason: _setSeason,
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (followed)
-            Positioned(
-              top: 0,
-              right: 0,
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 6, 10, 0),
-                  child: Semantics(
-                    button: true,
-                    label: 'Retirer de ma liste',
-                    child: SizedBox(
-                      width: 48,
-                      height: 48,
-                      child: Material(
-                        color: Colors.black.withValues(alpha: 0.42),
-                        shape: const CircleBorder(),
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          onTap: _confirmDelete,
-                          child: const Icon(
-                            Icons.delete_outline,
-                            size: 20,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+                      const DetailSectionHeading('L’histoire',
+                          hint: 'Le début, sans spoiler'),
+                      const SizedBox(height: 12),
+                      Text(
+                          _overview.isEmpty
+                              ? 'Synopsis indisponible.'
+                              : _overview,
+                          style: const TextStyle(
+                              fontSize: 13,
+                              height: 1.85,
+                              color: Color(0xFFB6AFBF))),
+                      const SizedBox(height: 22),
+                      if (selected != null)
+                        Material(
+                            color: const Color(0xFF1D1C23),
+                            borderRadius: BorderRadius.circular(21),
+                            clipBehavior: Clip.antiAlias,
+                            child: ListTile(
+                                contentPadding: const EdgeInsets.all(17),
+                                onTap: () => _selectTab(1),
+                                title: Text(
+                                    selected == 0
+                                        ? 'Épisodes spéciaux'
+                                        : 'Saison $selected',
+                                    style: const TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w500)),
+                                subtitle: Text(
+                                    '${numbers.where((e) => !watched.contains('S${selected}E$e')).length} épisodes non vus',
+                                    style: const TextStyle(fontSize: 11)),
+                                trailing: const Icon(Icons.arrow_forward,
+                                    color: ModernPalette.lilac))),
+                    ])))),
+      if (_tab == 1) ...[
+        SliverToBoxAdapter(
+            child: padded(Column(children: [
+          if (_loadingEpisodes) const LinearProgressIndicator(),
+          if (_episodesError != null)
+            ErrorRetry(
+                title: 'Épisodes indisponibles',
+                message: 'Réessaie pour charger les saisons.',
+                onRetry: () => _loadEpisodes(refresh: true)),
+          if (selected != null)
+            Row(children: [
+              Expanded(
+                  child: DropdownButtonFormField<int>(
+                      initialValue: selected,
+                      key: ValueKey(selected),
+                      isExpanded: true,
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFFE6DCEB)),
+                      decoration: InputDecoration(
+                          isDense: true,
+                          filled: true,
+                          fillColor: const Color(0xFF241E2B),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 14),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none)),
+                      items: [
+                        for (final s in _seasonNumbers)
+                          DropdownMenuItem(
+                              value: s,
+                              child: Text(s == 0 ? 'Spéciaux' : 'Saison $s'))
+                      ],
+                      onChanged: _busy
+                          ? null
+                          : (s) => setState(() => _selectedSeason = s))),
+              const SizedBox(width: 10),
+              Flexible(
+                  child: TextButton(
+                      onPressed: _busy || numbers.isEmpty
+                          ? null
+                          : () => _confirmSeason(selected, numbers, watched),
+                      child: Text(
+                          numbers.every(
+                                  (e) => watched.contains('S${selected}E$e'))
+                              ? 'Tout marquer non vu'
+                              : 'Tout marquer vu',
+                          style: const TextStyle(
+                              color: ModernPalette.lilac, fontSize: 11))))
+            ]),
+          const SizedBox(height: 13),
+          Row(children: [
+            Expanded(
+                child: Wrap(spacing: 7, runSpacing: 4, children: [
+              ChoiceChip(
+                  label: const Text('Tous'),
+                  showCheckmark: false,
+                  selectedColor: ModernPalette.lilac,
+                  backgroundColor: const Color(0xFF241E2B),
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  labelStyle: TextStyle(
+                      fontSize: 12,
+                      color: !_onlyUnseen
+                          ? const Color(0xFF342453)
+                          : const Color(0xFFB7A6C4)),
+                  selected: !_onlyUnseen,
+                  onSelected: (_) => setState(() => _onlyUnseen = false)),
+              ChoiceChip(
+                  label: const Text('Non vus'),
+                  showCheckmark: false,
+                  selectedColor: ModernPalette.lilac,
+                  backgroundColor: const Color(0xFF241E2B),
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  labelStyle: TextStyle(
+                      fontSize: 12,
+                      color: _onlyUnseen
+                          ? const Color(0xFF342453)
+                          : const Color(0xFFB7A6C4)),
+                  selected: _onlyUnseen,
+                  onSelected: (_) => setState(() => _onlyUnseen = true)),
+            ])),
+            IconButton(
+                tooltip: 'Aller à un numéro',
+                onPressed:
+                    selected == null ? null : () => _jump(selected, numbers),
+                icon: const Icon(Icons.search))
+          ]),
+          if (!_loadingEpisodes && _episodesError == null && visible.isEmpty)
+            const Padding(
+                padding: EdgeInsets.all(24),
+                child: Text('Aucun épisode à afficher.')),
+        ]))),
+        SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: gap),
+            sliver: SliverList.builder(
+                itemCount: visible.length,
+                itemBuilder: (context, i) {
+                  final e = visible[i],
+                      isSeen = watched.contains('S${selected}E$e');
+                  return _OfficialEpisodeRow(
+                      number: e,
+                      name: _episodeNames[selected]?[e] ?? 'Épisode $e',
+                      seen: isSeen,
+                      onOpen: () => open(selected!, e),
+                      onToggle: _busy
+                          ? null
+                          : () => _guard(
+                              () => _toggleEpisode(selected!, e, isSeen)));
+                })),
+      ],
+      SliverToBoxAdapter(
+          child: Padding(
+              padding:
+                  EdgeInsets.fromLTRB(gap, 20, gap, bottomNavInset(context)),
+              child: const Text('Ta progression reste entre tes mains.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 10, color: Color(0xFFA79CAB))))),
+    ]);
   }
 
-  int? _totalEpisodes() {
-    if (_episodesBySeason.isEmpty) return null;
-    return _episodesBySeason.values.fold<int>(0, (s, l) => s + l.length);
+  void _selectTab(int value) {
+    setState(() => _tab = value);
+    if (value == 1) _loadEpisodes();
+  }
+
+  Future<void> _guard(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Modification impossible. Réessaie.')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _offerAdd() async {
+    final yes = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+                title: const Text('Ajouter à ma liste'),
+                content: Text(
+                    'Ajoute « $_name » à ta collection pour suivre ses épisodes.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Annuler')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Ajouter'))
+                ]));
+    if (yes == true && mounted) {
+      await _guard(() async {
+        if (!await _addToLibrary()) throw StateError('Ajout impossible');
+      });
+    }
+  }
+
+  Future<void> _manage(bool followed) async {
+    if (_busy) return;
+    if (!followed) {
+      await _offerAdd();
+      return;
+    }
+    await _confirmDelete();
+  }
+
+  Future<void> _confirmSeason(
+      int season, List<int> numbers, Set<String> watched) async {
+    if (!await _requireFollowed() || !mounted) return;
+    final missing =
+        numbers.where((e) => !watched.contains('S${season}E$e')).toList();
+    final clear = missing.isEmpty;
+    final yes = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+                title: Text(clear
+                    ? 'Recommencer la saison $season ?'
+                    : 'Terminer la saison $season ?'),
+                content: Text(clear
+                    ? '${numbers.length} visionnages de cette saison seront retirés de ton historique.'
+                    : '${missing.length} épisodes non vus seront marqués vus. Les visionnages existants sont conservés.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Annuler')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Confirmer'))
+                ]));
+    if (yes == true && mounted) {
+      await _guard(() => _setSeason(season, clear ? numbers : missing, !clear));
+    }
+  }
+
+  Future<void> _jump(int season, List<int> numbers) async {
+    final controller = TextEditingController();
+    String? error;
+    final number = await showDialog<int>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+            builder: (ctx, change) => AlertDialog(
+                    title: const Text('Aller à un épisode'),
+                    content: TextField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                            labelText: 'Numéro dans la saison $season',
+                            errorText: error)),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Annuler')),
+                      FilledButton(
+                          onPressed: () {
+                            final n = int.tryParse(controller.text.trim());
+                            if (n == null || !numbers.contains(n)) {
+                              change(() => error =
+                                  'Ce numéro n’existe pas dans cette saison.');
+                              return;
+                            }
+                            Navigator.pop(ctx, n);
+                          },
+                          child: const Text('Ouvrir la fiche'))
+                    ])));
+    // Let the dialog finish its reverse transition before disposing its field.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    controller.dispose();
+    if (number != null && mounted) {
+      context.push('/episode/${widget.showId}/$season/$number',
+          extra: {'name': _name});
+    }
   }
 
   static List<String> _genresOf(Map<String, dynamic> d) =>
@@ -506,438 +785,78 @@ class _ShowDetailScreenState extends ConsumerState<ShowDetailScreen>
   }
 }
 
-// ------------------------------------------------------------------ Header
-
-// --------------------------------------------------------------- À propos
-
-class _AboutTab extends StatelessWidget {
-  const _AboutTab({
-    required this.metaLine,
-    required this.overview,
-    required this.followed,
-    required this.accent,
-    required this.onAdd,
-    required this.onOpenEpisodes,
-  });
-
-  final String metaLine;
-  final String overview;
-  final bool followed;
-  final Color accent;
-  final Future<bool> Function() onAdd;
-  final VoidCallback onOpenEpisodes;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: EdgeInsets.fromLTRB(20, 18, 20, bottomNavInset(context)),
-      children: [
-        // Le titre vit sur le fond ; ici ne restent que ses informations.
-        if (metaLine.isNotEmpty) ...[
-          Text(
-            metaLine,
-            style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: TtColors.dim,
-            ),
-          ),
-          const SizedBox(height: 18),
-        ],
-        Align(
-          alignment: Alignment.centerLeft,
-          child: followed
-              ? SizedBox(
-                  width: 252,
-                  child: ModernCommand(
-                      shape: CommandShape.nextUp,
-                      label: 'Voir les épisodes',
-                      onPressed: onOpenEpisodes))
-              : AddToListButton(
-                  label: 'Ajouter à ma liste',
-                  inLibrary: followed,
-                  onAdd: onAdd,
-                  failureMessage: 'Impossible d\'ajouter cette série.\n'
-                      'Réessaie dans un instant.',
-                ),
-        ),
-        const SizedBox(height: 26),
-        const MediaSectionTitle('Synopsis'),
-        const SizedBox(height: 8),
-        if (overview.isEmpty)
-          const Text(
-            'Synopsis indisponible.',
-            style: TextStyle(fontSize: 14.5, height: 1.6, color: TtColors.dim),
-          )
-        else
-          ExpandableSynopsis(text: overview, accent: accent),
-      ],
-    );
-  }
-}
-
-// --------------------------------------------------------------- Épisodes
-
-class _EpisodesTab extends ConsumerWidget {
-  const _EpisodesTab({
-    required this.showId,
-    required this.showName,
-    required this.seasonNumbers,
-    required this.loadSeason,
-    required this.episodeName,
-    required this.onToggle,
-    required this.onSetSeason,
-  });
-
-  final int showId;
-  final String showName;
-  final List<int> seasonNumbers;
-  final Future<List<int>> Function(int season) loadSeason;
-  final String Function(int season, int episode) episodeName;
-  final Future<void> Function(int season, int episode, bool watched) onToggle;
-  final Future<void> Function(int season, List<int> eps, bool on) onSetSeason;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final watched =
-        ref.watch(watchedKeysProvider(showId)).value ?? const <String>{};
-    if (seasonNumbers.isEmpty) {
-      return const EmptyState(icon: Icons.tv, message: 'Aucune saison.');
-    }
-    return ListView(
-      padding: EdgeInsets.fromLTRB(12, 12, 12, bottomNavInset(context)),
-      children: [
-        for (final n in seasonNumbers)
-          _SeasonCard(
-            key: ValueKey('season-$n'),
-            season: n,
-            watchedKeys: watched,
-            loadEpisodes: () => loadSeason(n),
-            episodeName: (e) => episodeName(n, e),
-            onOpen: (e) => context.push(
-              '/episode/$showId/$n/$e',
-              extra: {'name': showName},
-            ),
-            onToggle: (e, w) => onToggle(n, e, w),
-            onSetSeason: (eps, on) => onSetSeason(n, eps, on),
-          ),
-      ],
-    );
-  }
-}
-
-/// Cartes de saison en attente : mêmes hauteurs, mêmes marges que les vraies,
-/// pour que rien ne bouge quand la liste arrive.
-class _SeasonsSkeleton extends StatelessWidget {
-  const _SeasonsSkeleton({this.tint});
-
-  /// Teinte de l'ambiance : l'attente s'accorde à la fiche sans s'éclaircir.
-  final Color? tint;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: EdgeInsets.fromLTRB(12, 12, 12, bottomNavInset(context)),
-      physics: const NeverScrollableScrollPhysics(),
-      children: [
-        for (var i = 0; i < 5; i++)
-          Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: SkeletonBox(height: 92, radius: 12, tint: tint),
-          ),
-      ],
-    );
-  }
-}
-
-class _SeasonCard extends StatefulWidget {
-  const _SeasonCard({
-    super.key,
-    required this.season,
-    required this.watchedKeys,
-    required this.loadEpisodes,
-    required this.onOpen,
-    required this.episodeName,
-    required this.onToggle,
-    required this.onSetSeason,
-  });
-
-  final int season;
-  final Set<String> watchedKeys;
-  final Future<List<int>> Function() loadEpisodes;
-  final void Function(int episode) onOpen;
-  final String Function(int episode) episodeName;
-  final Future<void> Function(int episode, bool watched) onToggle;
-  final Future<void> Function(List<int> eps, bool on) onSetSeason;
-
-  @override
-  State<_SeasonCard> createState() => _SeasonCardState();
-}
-
-class _SeasonCardState extends State<_SeasonCard> {
-  bool _expanded = false;
-  List<int>? _eps;
-  bool _loading = false;
-  String? _error;
-
-  int get _watchedInSeason => widget.watchedKeys
-      .where((k) => k.startsWith('S${widget.season}E'))
-      .length;
-
-  Future<void> _toggleExpand() async {
-    if (_expanded) {
-      setState(() => _expanded = false);
-      return;
-    }
-    setState(() => _expanded = true);
-    if (_eps == null && !_loading) {
-      setState(() => _loading = true);
-      try {
-        final eps = await widget.loadEpisodes();
-        if (mounted) setState(() => _eps = eps);
-      } catch (e) {
-        if (mounted) setState(() => _error = '$e');
-      } finally {
-        if (mounted) setState(() => _loading = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final eps = _eps;
-    final total = eps?.length;
-    final watched = _watchedInSeason;
-    final allWatched = total != null && total > 0 && watched >= total;
-    final progress = (total != null && total > 0) ? watched / total : 0.0;
-
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          InkWell(
-            onTap: _toggleExpand,
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Saison ${widget.season}',
-                          style: const TextStyle(
-                            fontSize: 15.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          total != null
-                              ? '$watched / $total vus'
-                              : '$watched vus',
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            color: TtColors.dim,
-                          ),
-                        ),
-                        if (total != null) ...[
-                          const SizedBox(height: 8),
-                          ThinProgressBar(value: progress),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  _SeasonCheck(
-                    allWatched: allWatched,
-                    enabled: eps != null,
-                    onTap: eps == null
-                        ? null
-                        : () => widget.onSetSeason(eps, !allWatched),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(
-                    _expanded ? Icons.expand_less : Icons.expand_more,
-                    color: TtColors.dim,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_expanded) _buildEpisodes(eps),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEpisodes(List<int>? eps) {
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.fromLTRB(14, 6, 14, 14),
-        child: Column(
-          children: [
-            SkeletonBox(height: 18, radius: 4),
-            SizedBox(height: 12),
-            SkeletonBox(height: 18, radius: 4),
-            SizedBox(height: 12),
-            SkeletonBox(width: 180, height: 18, radius: 4),
-          ],
-        ),
-      );
-    }
-    if (_error != null) {
-      return Padding(
-        padding: const EdgeInsets.all(14),
-        child: Text(
-          _error!,
-          style: const TextStyle(fontSize: 13, color: TtColors.dim),
-        ),
-      );
-    }
-    if (eps == null || eps.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(14),
-        child: Text(
-          'Aucun épisode.',
-          style: TextStyle(fontSize: 13, color: TtColors.dim),
-        ),
-      );
-    }
-    return Column(
-      children: [
-        const Divider(height: 1, color: TtColors.surfaceHi),
-        for (final e in eps)
-          _EpisodeRow(
-            number: e,
-            onOpen: () => widget.onOpen(e),
-            name: widget.episodeName(e),
-            watched: widget.watchedKeys.contains('S${widget.season}E$e'),
-            onTap: () => widget.onToggle(
-              e,
-              widget.watchedKeys.contains('S${widget.season}E$e'),
-            ),
-          ),
-        const SizedBox(height: 6),
-      ],
-    );
-  }
-}
-
-class _SeasonCheck extends StatelessWidget {
-  const _SeasonCheck({
-    required this.allWatched,
-    required this.enabled,
-    this.onTap,
-  });
-
-  final bool allWatched;
-  final bool enabled;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label:
-          allWatched ? 'Remettre la saison à non vue' : 'Marquer la saison vue',
-      child: GestureDetector(
-        onTap: enabled ? onTap : null,
-        child: Opacity(
-          opacity: enabled ? 1 : 0.4,
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: allWatched
-                  ? TtColors.teal
-                  : Colors.white.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: allWatched
-                    ? TtColors.teal
-                    : Colors.white.withValues(alpha: 0.22),
-              ),
-            ),
-            child: Icon(
-              Icons.done_all,
-              size: 20,
-              color: allWatched ? const Color(0xFF0C1A15) : TtColors.text,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EpisodeRow extends StatelessWidget {
-  const _EpisodeRow({
-    required this.number,
-    required this.onOpen,
-    required this.name,
-    required this.watched,
-    required this.onTap,
-  });
-
+class _OfficialEpisodeRow extends StatelessWidget {
+  const _OfficialEpisodeRow(
+      {required this.number,
+      required this.name,
+      required this.seen,
+      required this.onOpen,
+      required this.onToggle});
   final int number;
-  final VoidCallback onOpen;
   final String name;
-  final bool watched;
-  final VoidCallback onTap;
-
+  final bool seen;
+  final VoidCallback onOpen;
+  final VoidCallback? onToggle;
   @override
-  Widget build(BuildContext context) {
-    // Cocher un épisode est le geste le plus fréquent de l'app : la coche se
-    // remplit et le titre s'estompe ensemble, en un seul mouvement court.
-    // Rien ne rebondit, rien ne grossit.
-    final duration = motionOf(context, Motion.normal);
-    return InkWell(
-      onTap: onOpen,
+  Widget build(BuildContext context) => DecoratedBox(
+      decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFF29262E)))),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        child: Row(
-          children: [
-            AnimatedSwitcher(
-              duration: duration,
-              switchInCurve: Motion.enter,
-              // Un fondu croisé entre le cercle vide et la coche pleine ;
-              // pas de bascule sèche, pas de rebond.
-              child: IconButton(
-                tooltip: watched ? 'Marquer non vu' : 'Marquer vu',
-                onPressed: onTap,
-                icon: Icon(
-                  watched ? Icons.check_circle : Icons.circle_outlined,
-                  key: ValueKey(watched),
-                  color: watched ? TtColors.amber : TtColors.dim,
-                  size: 24,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(children: [
             Expanded(
-              child: AnimatedDefaultTextStyle(
-                duration: duration,
-                curve: Motion.between,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: watched ? TtColors.dim : TtColors.text,
-                  decoration: watched ? TextDecoration.lineThrough : null,
-                  decorationColor: TtColors.dim,
-                ),
-                child: Text(
-                  '$number. $name',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+                child: InkWell(
+                    onTap: onOpen,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 6, horizontal: 3),
+                        child: Row(children: [
+                          Container(
+                              constraints: const BoxConstraints(minWidth: 49),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 5),
+                              decoration: BoxDecoration(
+                                  color: const Color(0xFF222027),
+                                  borderRadius: BorderRadius.circular(12)),
+                              child: Text('$number',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                      fontSize: 13, color: Color(0xFFA89BB9)))),
+                          const SizedBox(width: 11),
+                          Expanded(
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                Text(name,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFFECE6F5))),
+                                Text(seen ? 'Vu' : 'À découvrir',
+                                    style: const TextStyle(
+                                        fontSize: 10, color: Color(0xFF9A90A6)))
+                              ]))
+                        ])))),
+            const SizedBox(width: 9),
+            TweenAnimationBuilder<double>(
+                tween: Tween(end: seen ? 1 : 0),
+                duration: motionOf(context, const Duration(milliseconds: 500)),
+                curve: const Cubic(.2, 1.5, .3, 1),
+                builder: (context, t, child) =>
+                    Transform.rotate(angle: t * 6.283185, child: child),
+                child: IconButton.filledTonal(
+                    key: ValueKey('series-episode-check-$number'),
+                    onPressed: onToggle,
+                    tooltip: seen ? 'Marquer non vu' : 'Marquer vu',
+                    style: IconButton.styleFrom(
+                        minimumSize: const Size(44, 44),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                        backgroundColor:
+                            seen ? ModernPalette.lime : const Color(0xFF27292A),
+                        foregroundColor: seen
+                            ? const Color(0xFF334523)
+                            : const Color(0xFF92988C)),
+                    icon: const Icon(Icons.check, size: 18))),
+          ])));
 }

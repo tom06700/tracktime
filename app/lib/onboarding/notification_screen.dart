@@ -1,3 +1,4 @@
+import '../brand/nitrate_brand.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -166,13 +167,7 @@ class _NotificationScreenState extends State<NotificationScreen>
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Row(children: [
-                          const Expanded(
-                              child: Text('nitrate',
-                                  style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w500,
-                                      letterSpacing: -1.2))),
+                          const Expanded(child: NitrateWordmark(size: 22)),
                           Text(_result ? '' : '02 / 02',
                               style: const TextStyle(
                                   fontSize: 11,

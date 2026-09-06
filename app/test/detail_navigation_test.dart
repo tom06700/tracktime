@@ -25,45 +25,48 @@ class _Api {
   TvdbClient client({
     Map<String, Object?> series = const {},
     List<(int, int)> episodes = const [],
-  }) => TvdbClient(
-    'test',
-    client: MockClient((req) async {
-      final path = req.url.path;
-      calls.add(path);
-      Object? body;
-      if (path.endsWith('/login')) {
-        return http.Response('{"data":{"token":"t"},"status":"success"}', 200);
-      } else if (path.contains('/series/') && path.endsWith('/extended')) {
-        body = series;
-      } else if (path.contains('/episodes/')) {
-        final page = int.tryParse(req.url.queryParameters['page'] ?? '0');
-        body = {
-          'episodes': page != 0
-              ? const []
-              : [
-                  for (final (s, n) in episodes)
-                    {'seasonNumber': s, 'number': n, 'name': 'S${s}E$n'},
-                ],
-        };
-      } else if (path.contains('/movies/') && path.endsWith('/extended')) {
-        body = {
-          'name': 'Dune',
-          'runtime': 155,
-          'first_release': {'date': '2021-09-15'},
-          'genres': [
-            {'name': 'Science-Fiction'},
-          ],
-        };
-      } else {
-        body = <String, Object?>{};
-      }
-      return http.Response(
-        jsonEncode({'data': body}),
-        200,
-        headers: {'content-type': 'application/json; charset=utf-8'},
+  }) =>
+      TvdbClient(
+        'test',
+        client: MockClient((req) async {
+          final path = req.url.path;
+          calls.add(path);
+          Object? body;
+          if (path.endsWith('/login')) {
+            return http.Response(
+                '{"data":{"token":"t"},"status":"success"}', 200);
+          } else if (path.contains('/series/') && path.endsWith('/extended')) {
+            body = series;
+          } else if (path.contains('/episodes/')) {
+            final page = int.tryParse(req.url.queryParameters['page'] ?? '0');
+            body = {
+              'episodes': page != 0
+                  ? const []
+                  : [
+                      for (final (s, n) in episodes)
+                        {'seasonNumber': s, 'number': n, 'name': 'S${s}E$n'},
+                    ],
+            };
+          } else if (path.contains('/movies/') && path.endsWith('/extended')) {
+            body = {
+              'name': 'Dune',
+              'runtime': 155,
+              'overview': 'Le voyage sur Arrakis.',
+              'first_release': {'date': '2021-09-15'},
+              'genres': [
+                {'name': 'Science-Fiction'},
+              ],
+            };
+          } else {
+            body = <String, Object?>{};
+          }
+          return http.Response(
+            jsonEncode({'data': body}),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        }),
       );
-    }),
-  );
 
   int countContaining(String fragment) =>
       calls.where((c) => c.contains(fragment)).length;
@@ -86,12 +89,9 @@ final _onePiece = <String, Object?>{
 };
 
 Future<void> _pump(
-  WidgetTester tester,
-  AppDatabase db,
-  TvdbClient tvdb,
-  Widget home,
-) async {
-  tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    WidgetTester tester, AppDatabase db, TvdbClient tvdb, Widget home,
+    {Size size = const Size(390, 844), double scale = 1}) async {
+  tester.view.physicalSize = size * 3;
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
 
@@ -101,7 +101,14 @@ Future<void> _pump(
         databaseProvider.overrideWithValue(db),
         tvdbClientProvider.overrideWithValue(tvdb),
       ],
-      child: MaterialApp(theme: buildTheme(), home: home),
+      child: MaterialApp(
+          theme: buildTheme(),
+          builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                  textScaler: TextScaler.linear(scale),
+                  disableAnimations: true),
+              child: child!),
+          home: home),
     ),
   );
   for (var i = 0; i < 6; i++) {
@@ -111,10 +118,10 @@ Future<void> _pump(
 
 /// Base de test avec les clés étrangères actives, comme sur l'appareil.
 AppDatabase _fkDb() => AppDatabase.forTesting(
-  NativeDatabase.memory(
-    setup: (raw) => raw.execute('PRAGMA foreign_keys = ON;'),
-  ),
-);
+      NativeDatabase.memory(
+        setup: (raw) => raw.execute('PRAGMA foreign_keys = ON;'),
+      ),
+    );
 
 Future<void> _frames(WidgetTester tester, [int n = 8]) async {
   for (var i = 0; i < n; i++) {
@@ -123,6 +130,12 @@ Future<void> _frames(WidgetTester tester, [int n = 8]) async {
 }
 
 Future<void> _tapAndSettle(WidgetTester tester, Finder f) async {
+  if (f.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(f, 200,
+        scrollable: find.byType(Scrollable).first);
+  }
+  await tester.ensureVisible(f);
+  await _frames(tester, 2);
   await tester.tap(f);
   await _frames(tester);
 }
@@ -131,7 +144,6 @@ Future<void> _tapAndSettle(WidgetTester tester, Finder f) async {
 /// contrôles de progression deviennent atteignables.
 Future<void> _openSeason(WidgetTester tester) async {
   await _tapAndSettle(tester, find.text('Épisodes'));
-  await _tapAndSettle(tester, find.text('Saison 1'));
 }
 
 Future<void> _settle(WidgetTester tester) async {
@@ -156,7 +168,7 @@ void main() {
 
     // Titre traduit, titre d'origine visible, et l'invitation à ajouter.
     expect(find.text('Luffy prend la mer.'), findsOneWidget);
-    expect(find.text('Ajouter à ma liste'), findsOneWidget);
+    expect(find.text('Ma liste'), findsOneWidget);
     expect(find.text('Dans ma liste'), findsNothing);
 
     await _settle(tester);
@@ -199,8 +211,8 @@ void main() {
       const ShowDetailScreen(showId: 81797, title: 'One Piece'),
     );
 
-    expect(find.text('Voir les épisodes'), findsOneWidget);
-    expect(find.text('Ajouter à ma liste'), findsNothing);
+    expect(find.text('Explorer les épisodes'), findsOneWidget);
+    expect(find.text('Ma liste'), findsNothing);
 
     await _settle(tester);
   });
@@ -225,7 +237,7 @@ void main() {
         const ShowDetailScreen(showId: 81797, title: 'One Piece'),
       );
 
-      await tester.tap(find.text('Épisodes'));
+      await _tapAndSettle(tester, find.text('Épisodes'));
       for (var i = 0; i < 8; i++) {
         await tester.pump(const Duration(milliseconds: 60));
       }
@@ -257,18 +269,18 @@ void main() {
     );
 
     // On regarde les épisodes AVANT d'ajouter : rien n'est écrit.
-    await tester.tap(find.text('Épisodes'));
+    await _tapAndSettle(tester, find.text('Épisodes'));
     for (var i = 0; i < 8; i++) {
       await tester.pump(const Duration(milliseconds: 60));
     }
     expect(await db.select(db.episodes).get(), isEmpty);
 
     // Puis on ajoute : le cache d'épisodes doit rattraper son retard.
-    await tester.tap(find.text('À propos'));
+    await _tapAndSettle(tester, find.text('À propos'));
     for (var i = 0; i < 8; i++) {
       await tester.pump(const Duration(milliseconds: 60));
     }
-    await tester.tap(find.text('Ajouter à ma liste'));
+    await _tapAndSettle(tester, find.text('Ma liste'));
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 60));
     }
@@ -296,17 +308,7 @@ void main() {
     await _openSeason(tester);
     await _tapAndSettle(
       tester,
-      find
-          .descendant(
-            of: find
-                .ancestor(
-                  of: find.textContaining('1. S1E1'),
-                  matching: find.byType(InkWell),
-                )
-                .first,
-            matching: find.byType(IconButton),
-          )
-          .first,
+      find.byKey(const ValueKey('series-episode-check-1')),
     );
 
     // Rien n'est entré dans la bibliothèque, et l'utilisateur sait pourquoi.
@@ -333,7 +335,7 @@ void main() {
       );
 
       await _openSeason(tester);
-      await _tapAndSettle(tester, find.byIcon(Icons.done_all));
+      await _tapAndSettle(tester, find.text('Tout marquer vu'));
 
       expect(await db.showById(81797), isNull);
       expect(await db.select(db.watchedEpisodes).get(), isEmpty);
@@ -360,30 +362,21 @@ void main() {
       const ShowDetailScreen(showId: 81797, title: 'One Piece'),
     );
 
-    await _tapAndSettle(tester, find.text('Ajouter à ma liste'));
+    await _tapAndSettle(tester, find.text('Ma liste'));
     expect(await db.showById(81797), isNotNull);
 
     await _openSeason(tester);
     await _tapAndSettle(
       tester,
-      find
-          .descendant(
-            of: find
-                .ancestor(
-                  of: find.textContaining('1. S1E1'),
-                  matching: find.byType(InkWell),
-                )
-                .first,
-            matching: find.byType(IconButton),
-          )
-          .first,
+      find.byKey(const ValueKey('series-episode-check-1')),
     );
 
     final watched = await db.select(db.watchedEpisodes).get();
     expect(watched.map((w) => 'S${w.season}E${w.episode}'), ['S1E1']);
 
     // Et la saison entière passe elle aussi.
-    await _tapAndSettle(tester, find.byIcon(Icons.done_all));
+    await _tapAndSettle(tester, find.text('Tout marquer vu'));
+    await _tapAndSettle(tester, find.text('Confirmer'));
     final all = await db.select(db.watchedEpisodes).get();
     expect(all, hasLength(2));
 
@@ -407,7 +400,7 @@ void main() {
     expect(find.text('Dune'), findsOneWidget);
     // Durée formatée, pas « 155 min ».
     expect(find.textContaining('2 h 35'), findsOneWidget);
-    expect(find.text('Ajouter à ma liste'), findsOneWidget);
+    expect(find.bySemanticsLabel('Ajouter à ma liste'), findsOneWidget);
 
     await _settle(tester);
   });
@@ -489,9 +482,133 @@ void main() {
       const MovieDetailScreen(movieId: 1406, title: 'Dune'),
     );
 
-    expect(find.text('Marquer comme vu'), findsOneWidget);
-    expect(find.text('Ajouter à ma liste'), findsNothing);
+    expect(find.text('Marquer vu'), findsOneWidget);
+    expect(find.text('Ma liste'), findsNothing);
 
+    await _settle(tester);
+  });
+
+  testWidgets(
+      'saison longue : accès direct officiel, trous et spéciaux sans écriture',
+      (tester) async {
+    final db = _fkDb();
+    addTearDown(db.close);
+    final api = _Api();
+    final opened = <String>[];
+    final router = GoRouter(routes: [
+      GoRoute(
+          path: '/',
+          builder: (_, _) =>
+              const ShowDetailScreen(showId: 81797, title: 'One Piece')),
+      GoRoute(
+          path: '/episode/:id/:season/:number',
+          builder: (_, state) {
+            opened.add(
+                '${state.pathParameters['season']}/${state.pathParameters['number']}');
+            return const Scaffold(body: Text('Fiche officielle'));
+          }),
+    ]);
+    addTearDown(router.dispose);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(overrides: [
+      databaseProvider.overrideWithValue(db),
+      tvdbClientProvider
+          .overrideWithValue(api.client(series: _onePiece, episodes: [
+        (0, 3),
+        for (var n = 1; n <= 1236; n++)
+          if (n != 1200) (1, n),
+      ])),
+    ], child: MaterialApp.router(theme: buildTheme(), routerConfig: router)));
+    await _frames(tester);
+    await _openSeason(tester);
+    expect(find.byType(IconButton).evaluate().length, lessThan(25),
+        reason: 'La longue saison reste virtualisée.');
+    await _tapAndSettle(tester, find.byTooltip('Aller à un numéro'));
+    await tester.enterText(find.byType(TextField), '1200');
+    await _tapAndSettle(tester, find.text('Ouvrir la fiche'));
+    expect(
+        find.text('Ce numéro n’existe pas dans cette saison.'), findsOneWidget);
+    expect(opened, isEmpty);
+    await tester.enterText(find.byType(TextField), '1236');
+    await _tapAndSettle(tester, find.text('Ouvrir la fiche'));
+    await _frames(tester);
+    expect(opened, ['1/1236']);
+    expect(await db.showById(81797), isNull);
+    expect(await db.allWatchedEpisodes(), isEmpty);
+    router.pop();
+    await _frames(tester);
+    await _tapAndSettle(tester, find.byType(DropdownButtonFormField<int>));
+    await _tapAndSettle(tester, find.text('Spéciaux').last);
+    await _tapAndSettle(tester, find.byTooltip('Aller à un numéro'));
+    await tester.enterText(find.byType(TextField), '3');
+    await _tapAndSettle(tester, find.text('Ouvrir la fiche'));
+    await _frames(tester);
+    expect(opened, ['1/1236', '0/3']);
+    expect(await db.allWatchedEpisodes(), isEmpty);
+    await _settle(tester);
+  });
+
+  for (final film in [false, true]) {
+    testWidgets(
+        'fiche ${film ? 'film' : 'série'} : petit écran et texte doublé',
+        (tester) async {
+      final db = _fkDb();
+      addTearDown(db.close);
+      final api = _Api();
+      await _pump(
+          tester,
+          db,
+          api.client(series: {
+            ..._onePiece,
+            'name': 'Une très longue histoire à travers les océans du monde',
+          }, episodes: [
+            (1, 1236)
+          ]),
+          film
+              ? const MovieDetailScreen(movieId: 1406, title: 'Dune')
+              : const ShowDetailScreen(
+                  showId: 81797, title: 'Une très longue histoire'),
+          size: const Size(320, 740),
+          scale: 2);
+      expect(tester.takeException(), isNull);
+      if (!film) {
+        await _tapAndSettle(tester, find.text('Épisodes'));
+        await _tapAndSettle(tester, find.byTooltip('Aller à un numéro'));
+        expect(tester.takeException(), isNull);
+        await _tapAndSettle(tester, find.text('Annuler'));
+      } else {
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
+        await _frames(tester);
+        expect(tester.takeException(), isNull);
+      }
+      expect(await db.allWatchedEpisodes(), isEmpty);
+      await _settle(tester);
+    });
+  }
+
+  testWidgets('film : ajout explicite, visionnage unique, résumé et annulation',
+      (tester) async {
+    final db = _fkDb();
+    addTearDown(db.close);
+    await _pump(tester, db, _Api().client(),
+        const MovieDetailScreen(movieId: 1406, title: 'Dune'));
+    await _tapAndSettle(tester, find.text('Marquer vu'));
+    expect(find.text('Ajouter à ma liste'), findsOneWidget);
+    expect(await db.movieById(1406), isNull);
+    await _tapAndSettle(tester, find.text('Annuler'));
+    expect(await db.movieById(1406), isNull);
+    await _tapAndSettle(tester, find.text('Marquer vu'));
+    await _tapAndSettle(tester, find.text('Ajouter'));
+    expect((await db.movieById(1406))!.watchedAt, isNull);
+    await _tapAndSettle(tester, find.text('Marquer vu'));
+    expect((await db.movieById(1406))!.watchedAt, isNotNull);
+    expect(await db.select(db.movies).get(), hasLength(1));
+    expect(find.text('Film vu'), findsOneWidget);
+    await _tapAndSettle(tester, find.text('Annuler'));
+    expect((await db.movieById(1406))!.watchedAt, isNull);
+    expect(find.text('Film vu'), findsNothing);
     await _settle(tester);
   });
 

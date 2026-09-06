@@ -38,7 +38,9 @@ class HomeShell extends ConsumerWidget {
     // occupe jusqu'à la safe area) : pas de barre — elle porterait un titre
     // qui chevaucherait le contenu au défilement. Elle a son propre bouton
     // Réglages flottant. Les autres onglets gardent la barre « Nitrate ».
-    final immersive = tab == HomeTab.profile || tab == HomeTab.series;
+    final immersive = tab == HomeTab.profile ||
+        tab == HomeTab.series ||
+        tab == HomeTab.explorer;
     return Scaffold(
       extendBody: true,
       appBar: immersive

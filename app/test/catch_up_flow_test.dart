@@ -17,10 +17,10 @@ import 'package:tracktime/tmdb/tvdb.dart';
 
 /// Base avec les clés étrangères actives, comme sur l'appareil.
 AppDatabase _db() => AppDatabase.forTesting(
-  NativeDatabase.memory(
-    setup: (raw) => raw.execute('PRAGMA foreign_keys = ON;'),
-  ),
-);
+      NativeDatabase.memory(
+        setup: (raw) => raw.execute('PRAGMA foreign_keys = ON;'),
+      ),
+    );
 
 const _showId = 81797;
 
@@ -36,38 +36,38 @@ final _series = <String, Object?>{
 };
 
 TvdbClient _client(int episodeCount) => TvdbClient(
-  'test',
-  client: MockClient((req) async {
-    final path = req.url.path;
-    if (path.endsWith('/login')) {
-      return http.Response('{"data":{"token":"t"}}', 200);
-    }
-    Object? body = <String, Object?>{};
-    if (path.contains('/series/') && path.endsWith('/extended')) {
-      body = _series;
-    } else if (path.contains('/episodes/')) {
-      body = {
-        'episodes': [
-          for (var n = 1; n <= episodeCount; n++)
-            {
-              'seasonNumber': 1,
-              'number': n,
-              'name': 'Épisode $n',
-              'overview': 'Résumé $n',
-            },
-        ],
-      };
-    }
-    return http.Response(
-      jsonEncode({
-        'data': body,
-        'links': {'next': null},
+      'test',
+      client: MockClient((req) async {
+        final path = req.url.path;
+        if (path.endsWith('/login')) {
+          return http.Response('{"data":{"token":"t"}}', 200);
+        }
+        Object? body = <String, Object?>{};
+        if (path.contains('/series/') && path.endsWith('/extended')) {
+          body = _series;
+        } else if (path.contains('/episodes/')) {
+          body = {
+            'episodes': [
+              for (var n = 1; n <= episodeCount; n++)
+                {
+                  'seasonNumber': 1,
+                  'number': n,
+                  'name': 'Épisode $n',
+                  'overview': 'Résumé $n',
+                },
+            ],
+          };
+        }
+        return http.Response(
+          jsonEncode({
+            'data': body,
+            'links': {'next': null},
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
       }),
-      200,
-      headers: {'content-type': 'application/json; charset=utf-8'},
     );
-  }),
-);
 
 Future<void> _frames(WidgetTester tester, [int n = 8]) async {
   for (var i = 0; i < n; i++) {
@@ -76,6 +76,12 @@ Future<void> _frames(WidgetTester tester, [int n = 8]) async {
 }
 
 Future<void> _tap(WidgetTester tester, Finder f) async {
+  if (f.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(f, 200,
+        scrollable: find.byType(Scrollable).first);
+  }
+  await tester.ensureVisible(f);
+  await _frames(tester, 2);
   await tester.ensureVisible(f);
   await _frames(tester, 2);
   await tester.tap(f);
@@ -106,7 +112,6 @@ Future<void> _openEpisodes(
   );
   await _frames(tester);
   await _tap(tester, find.text('Épisodes'));
-  await _tap(tester, find.text('Saison 1'));
 }
 
 Future<void> _settle(WidgetTester tester) async {
@@ -127,8 +132,8 @@ Future<AppDatabase> _followedShow({required int watchedUpTo}) async {
 }
 
 Set<int> _watchedNumbers(List<WatchedEpisode> rows) => {
-  for (final w in rows) w.episode,
-};
+      for (final w in rows) w.episode,
+    };
 
 void main() {
   group('setEpisodesWatched', () {
@@ -188,17 +193,7 @@ void main() {
       await _openEpisodes(tester, db);
       await _tap(
         tester,
-        find
-            .descendant(
-              of: find
-                  .ancestor(
-                    of: find.textContaining('10. Épisode 10'),
-                    matching: find.byType(InkWell),
-                  )
-                  .first,
-              matching: find.byType(IconButton),
-            )
-            .first,
+        find.byKey(const ValueKey('series-episode-check-10')),
       );
 
       expect(
@@ -220,17 +215,7 @@ void main() {
       await _openEpisodes(tester, db);
       await _tap(
         tester,
-        find
-            .descendant(
-              of: find
-                  .ancestor(
-                    of: find.textContaining('10. Épisode 10'),
-                    matching: find.byType(InkWell),
-                  )
-                  .first,
-              matching: find.byType(IconButton),
-            )
-            .first,
+        find.byKey(const ValueKey('series-episode-check-10')),
       );
       await _tap(tester, find.text('Tout marquer comme vu'));
 
@@ -249,17 +234,7 @@ void main() {
       await _openEpisodes(tester, db);
       await _tap(
         tester,
-        find
-            .descendant(
-              of: find
-                  .ancestor(
-                    of: find.textContaining('10. Épisode 10'),
-                    matching: find.byType(InkWell),
-                  )
-                  .first,
-              matching: find.byType(IconButton),
-            )
-            .first,
+        find.byKey(const ValueKey('series-episode-check-10')),
       );
       await _tap(tester, find.text('Seulement cet épisode'));
 
@@ -276,17 +251,7 @@ void main() {
       await _openEpisodes(tester, db);
       await _tap(
         tester,
-        find
-            .descendant(
-              of: find
-                  .ancestor(
-                    of: find.textContaining('10. Épisode 10'),
-                    matching: find.byType(InkWell),
-                  )
-                  .first,
-              matching: find.byType(IconButton),
-            )
-            .first,
+        find.byKey(const ValueKey('series-episode-check-10')),
       );
 
       expect(find.text('Tout marquer comme vu'), findsNothing);
@@ -303,17 +268,7 @@ void main() {
       await _openEpisodes(tester, db);
       await _tap(
         tester,
-        find
-            .descendant(
-              of: find
-                  .ancestor(
-                    of: find.textContaining('10. Épisode 10'),
-                    matching: find.byType(InkWell),
-                  )
-                  .first,
-              matching: find.byType(IconButton),
-            )
-            .first,
+        find.byKey(const ValueKey('series-episode-check-10')),
       );
 
       expect(find.text('Tout marquer comme vu'), findsNothing);
@@ -332,17 +287,7 @@ void main() {
       await _openEpisodes(tester, db);
       await _tap(
         tester,
-        find
-            .descendant(
-              of: find
-                  .ancestor(
-                    of: find.textContaining('10. Épisode 10'),
-                    matching: find.byType(InkWell),
-                  )
-                  .first,
-              matching: find.byType(IconButton),
-            )
-            .first,
+        find.byKey(const ValueKey('series-episode-check-10')),
       );
 
       expect(find.text('Tout marquer comme vu'), findsNothing);
