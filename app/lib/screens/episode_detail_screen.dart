@@ -607,9 +607,7 @@ class _EpisodePageState extends ConsumerState<_EpisodePage>
                                 minHeight: 4,
                                 color: ModernPalette.lime,
                                 backgroundColor: const Color(0xFF292B2C),
-                                semanticsLabel: 'Progression de cette saison',
-                                semanticsValue:
-                                    '${widget.seen} sur ${widget.total} épisodes vus')),
+                                semanticsLabel: 'Progression de cette saison : ${widget.seen} sur ${widget.total} épisodes vus')),
                         const SizedBox(height: 26),
                         Wrap(
                             alignment: WrapAlignment.spaceBetween,
