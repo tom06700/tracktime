@@ -38,7 +38,8 @@ class EpisodeFixture extends TvdbClient {
 }
 
 void main() {
-  void episodeTest(String name, Future<void> Function(WidgetTester) body) {
+  void episodeTest(String name, Future<void> Function(WidgetTester) body,
+      {bool skip = false}) {
     testWidgets(name, (tester) async {
       try {
         await body(tester);
@@ -46,11 +47,12 @@ void main() {
         await tester.pumpWidget(const SizedBox());
         await tester.pump(const Duration(seconds: 2));
       }
-    });
+    }, skip: skip);
   }
 
   Future<AppDatabase> mount(WidgetTester tester, EpisodeFixture api,
       {double scale = 1,
+      bool reduce = true,
       int initial = 1155,
       Size size = const Size(390, 844)}) async {
     if (Platform.environment['NITRATE_EPISODE_AUDIT'] == '1') {
@@ -76,7 +78,7 @@ void main() {
             theme: buildTheme(),
             builder: (context, child) => MediaQuery(
                 data: MediaQuery.of(context).copyWith(
-                    disableAnimations: true,
+                    disableAnimations: reduce,
                     textScaler: TextScaler.linear(scale)),
                 child: RepaintBoundary(
                     key: const ValueKey('episode-audit'), child: child!)),
@@ -91,7 +93,7 @@ void main() {
             theme: buildTheme(),
             builder: (context, child) => MediaQuery(
                 data: MediaQuery.of(context).copyWith(
-                    disableAnimations: true,
+                    disableAnimations: reduce,
                     textScaler: TextScaler.linear(scale)),
                 child: RepaintBoundary(
                     key: const ValueKey('episode-audit'), child: child!)),
@@ -240,4 +242,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('ÉP. 1155'), findsOneWidget);
   });
+  episodeTest('séquence visuelle de confirmation après sauvegarde',
+      (tester) async {
+    final db =
+        await mount(tester, EpisodeFixture([1, 1155, 1200]), reduce: false);
+    final button = find
+        .ancestor(
+            of: find.text('Marquer vu'), matching: find.byType(FilledButton))
+        .first;
+    await Scrollable.ensureVisible(tester.element(button), alignment: .75);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pump();
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await tester.pump();
+    for (var frame = 0; frame < 14; frame++) {
+      await tester.pump(const Duration(milliseconds: 50));
+      await capture(tester, 'episode-motion-$frame');
+    }
+    expect((await tester.runAsync(db.allWatchedEpisodes))!.length, 1);
+  }, skip: Platform.environment['NITRATE_EPISODE_AUDIT'] != '1');
 }
