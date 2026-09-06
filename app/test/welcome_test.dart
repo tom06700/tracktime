@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tracktime/onboarding/welcome_screen.dart';
+import 'package:tracktime/onboarding/flight_painter.dart';
 import 'package:tracktime/theme.dart';
 
 void main() {
@@ -27,6 +28,35 @@ void main() {
     await tester.pumpWidget(page(true));
     await tester.pumpAndSettle();
     expect(tester.binding.hasScheduledFrame, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('envol derrière le header jusqu’au bord supérieur',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTheme(),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          padding: const EdgeInsets.only(top: 59, bottom: 34),
+          disableAnimations: true,
+        ),
+        child: child!,
+      ),
+      home: WelcomeScreen(onFinish: () async {}),
+    ));
+    await tester.pump();
+    final flight = find.byWidgetPredicate(
+        (w) => w is CustomPaint && w.painter is FlightPainter);
+    final bounds = tester.getRect(flight);
+    expect(bounds.top, 0);
+    expect(bounds.left, 0);
+    expect(bounds.right, 390);
+    expect(tester.getRect(find.text('nitrate')).top, greaterThanOrEqualTo(59));
+    expect(find.text('Passer').hitTestable(), findsOneWidget);
+    expect(find.text('C’est parti').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

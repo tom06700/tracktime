@@ -87,6 +87,28 @@ void main() {
     await tester.pump();
   }
 
+  testWidgets('libellés centrés avec ou sans cloche et après permission',
+      (tester) async {
+    final permission = FakePermission()
+      ..current = NotificationAccess.authorized;
+    await mount(tester, permission, () {});
+    void centered(String label) {
+      final text = find.text(label);
+      final button =
+          find.ancestor(of: text, matching: find.byType(FilledButton));
+      expect(
+          tester.getCenter(text).dx, closeTo(tester.getCenter(button).dx, .1));
+    }
+
+    centered('Continuer');
+    await tester.pumpWidget(const SizedBox());
+    permission.current = NotificationAccess.notDetermined;
+    await mount(tester, permission, () {});
+    centered('Activer les notifications');
+    await tap(tester, 'Activer les notifications');
+    centered('Découvrir Nitrate');
+  });
+
   testWidgets('Plus tard continue sans jamais demander la permission',
       (tester) async {
     final permission = FakePermission();

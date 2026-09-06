@@ -17,6 +17,40 @@ void main() {
               child: Scaffold(
                   body: Center(child: SizedBox(width: 280, child: child)))));
 
+  for (final count in [2, 4]) {
+    testWidgets('capsule à $count onglets reste dans le rail en mouvement',
+        (tester) async {
+      var selected = 0;
+      final labels = List.generate(count, (i) => 'Onglet $i');
+      await tester.pumpWidget(host(StatefulBuilder(
+          builder: (context, setState) => GlideControl(
+              labels: labels,
+              navigation: count == 4,
+              index: selected,
+              onSelected: (i) => setState(() => selected = i)))));
+      final track = tester.getRect(find.byType(GlideControl)).deflate(6);
+      var transition = 0;
+      for (final target in [count - 1, 0, count - 1, 0]) {
+        await tester.tap(find.text(labels[target]));
+        await tester.pump();
+        for (var frame = 0; frame < 36; frame++) {
+          await tester.pump(const Duration(milliseconds: 20));
+          final capsule =
+              tester.getRect(find.byKey(const ValueKey('glide-capsule')));
+          expect(capsule.left, greaterThanOrEqualTo(track.left - .1));
+          expect(capsule.right, lessThanOrEqualTo(track.right + .1));
+          // Reverse one transition before it settles.
+          if (transition == 2 && frame == 5) {
+            await tester.tap(find.text(labels[0]));
+            await tester.pump();
+          }
+        }
+        transition++;
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
       'une commande attend la vraie sauvegarde et bloque le double appui',
       (tester) async {

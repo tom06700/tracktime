@@ -38,15 +38,24 @@ void main() {
 
     Widget host(Widget page) => MaterialApp(
         theme: buildTheme(), home: RepaintBoundary(key: key, child: page));
-    await tester.pumpWidget(host(WelcomeScreen(onFinish: () async {})));
-    bool ready() => tester.widgetList<CustomPaint>(find.byType(CustomPaint)).any(
-      (w) => w.painter is FlightPainter &&
-          (w.painter! as FlightPainter).sprites.length == flightAssets.length);
+    await tester.pumpWidget(host(MediaQuery(
+        data: const MediaQueryData(
+            size: Size(390, 844),
+            padding: EdgeInsets.only(top: 59, bottom: 34)),
+        child: WelcomeScreen(onFinish: () async {}))));
+    bool ready() =>
+        tester.widgetList<CustomPaint>(find.byType(CustomPaint)).any((w) =>
+            w.painter is FlightPainter &&
+            (w.painter! as FlightPainter).sprites.length ==
+                flightAssets.length);
     for (var attempt = 0; attempt < 40 && !ready(); attempt++) {
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)));
       await tester.pump();
     }
-    expect(ready(), isTrue, reason: 'Les 12 objets doivent être décodés avant la séquence de captures.');
+    expect(ready(), isTrue,
+        reason:
+            'Les 12 objets doivent être décodés avant la séquence de captures.');
     for (var i = 0; i < 90; i++) {
       await tester.pump(const Duration(milliseconds: 33));
       if (i % 6 == 0) await capture('motion-intro-${i ~/ 6}');
@@ -76,30 +85,46 @@ void main() {
       await tester.pumpAndSettle();
       await capture('03-${shape.name}');
     }
-    await tester.pumpWidget(host(Scaffold(
-        body: Padding(
-            padding: const EdgeInsets.all(20),
-            child:
-                Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              GlideControl(
-                  labels: const ['À voir', 'À venir'],
-                  index: 0,
-                  onSelected: (_) {}),
-              const SizedBox(height: 36),
-              GlideControl(
-                  navigation: true,
-                  labels: const ['Séries', 'Films', 'Explorer', 'Profil'],
-                  icons: const [
-                    Icons.layers_outlined,
-                    Icons.movie_outlined,
-                    Icons.search,
-                    Icons.person_outline
-                  ],
-                  index: 1,
-                  onSelected: (_) {}),
-            ])))));
+    var tab = 0, section = 0;
+    await tester.pumpWidget(host(StatefulBuilder(
+        builder: (context, setState) => Scaffold(
+            body: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      GlideControl(
+                          labels: const ['À voir', 'À venir'],
+                          index: section,
+                          onSelected: (i) => setState(() => section = i)),
+                      const SizedBox(height: 36),
+                      GlideControl(
+                          navigation: true,
+                          labels: const [
+                            'Séries',
+                            'Films',
+                            'Explorer',
+                            'Profil'
+                          ],
+                          icons: const [
+                            Icons.layers_outlined,
+                            Icons.movie_outlined,
+                            Icons.search,
+                            Icons.person_outline
+                          ],
+                          index: tab,
+                          onSelected: (i) => setState(() => tab = i)),
+                    ]))))));
     await tester.pumpAndSettle();
     await capture('04-glide-navigation');
+    for (final destination in ['Profil', 'Séries', 'À venir', 'À voir']) {
+      await tester.tap(find.text(destination));
+      await tester.pump();
+      for (var frame = 0; frame < 14; frame++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        if (frame % 2 == 0) await capture('edge-$destination-$frame');
+      }
+    }
     await tester.pumpWidget(host(NotificationScreen(
         onFinish: () async {}, permission: const _AuditPermission())));
     await tester
@@ -109,13 +134,22 @@ void main() {
     }
     await capture('05-notifications');
     await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(host(NotificationScreen(
+        onFinish: () async {},
+        permission: const _AuditPermission(authorized: true))));
+    await tester.pump();
+    await capture('06-notifications-continue');
+    await tester.pumpWidget(const SizedBox());
     expect(tester.takeException(), isNull);
   }, skip: Platform.environment['NITRATE_DESIGN_AUDIT'] != '1');
 }
 
 // Presentation fixture only. Real channel behavior is covered separately.
 class _AuditPermission extends NotificationPermission {
-  const _AuditPermission();
+  const _AuditPermission({this.authorized = false});
+  final bool authorized;
   @override
-  Future<NotificationAccess> status() async => NotificationAccess.notDetermined;
+  Future<NotificationAccess> status() async => authorized
+      ? NotificationAccess.authorized
+      : NotificationAccess.notDetermined;
 }

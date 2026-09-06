@@ -388,16 +388,19 @@ class GlideControl extends StatelessWidget {
                 padding: const EdgeInsets.all(6),
                 child: SizedBox(
                     height: height,
-                    child: Stack(children: [
+                    child: Stack(clipBehavior: Clip.none, children: [
                       AnimatedPositioned(
                           duration: motionOf(context,
                               Duration(milliseconds: navigation ? 650 : 700)),
-                          curve: const Cubic(.22, 1.25, .3, 1),
+                          // Translation stays inside the track, including jumps
+                          // between the first and last tabs.
+                          curve: const Cubic(.22, 1, .3, 1),
                           left: index * width,
                           top: 0,
                           bottom: 0,
                           width: width,
                           child: DecoratedBox(
+                              key: const ValueKey('glide-capsule'),
                               decoration: BoxDecoration(
                                   color: navigation
                                       ? const Color(0xFFE7EBF2)
