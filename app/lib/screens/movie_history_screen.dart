@@ -6,7 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../db/database.dart';
 import '../providers.dart';
 import '../theme.dart';
-import '../widgets/async_icon_button.dart';
+import '../movies/confirm_removal.dart';
+import '../movies/widgets/movie_actions_menu.dart';
 import '../widgets/editorial_heading.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
@@ -70,7 +71,8 @@ class MovieHistoryScreen extends ConsumerWidget {
             return const EmptyPrompt(
               icon: Icons.check_circle_outline,
               title: 'Aucun film vu pour l\'instant',
-              message: 'Les films que tu marques comme vus '
+              message:
+                  'Les films que tu marques comme vus '
                   'apparaîtront ici.',
             );
           }
@@ -80,7 +82,8 @@ class MovieHistoryScreen extends ConsumerWidget {
             itemBuilder: (context, i) => i == 0
                 ? EditorialHeading(
                     eyebrow: '${feed.history.length} films vus',
-                    title: 'Après le générique.')
+                    title: 'Après le générique.',
+                  )
                 : _WatchedRow(movie: feed.history[i - 1]),
           );
         },
@@ -172,11 +175,31 @@ class _WatchedRow extends ConsumerWidget {
                   ],
                 ),
               ),
-              AsyncIconButton(
-                icon: const Icon(Icons.replay, size: 19),
-                color: TtColors.dim,
-                tooltip: 'Remettre dans ma liste',
-                onPressed: () => _restore(context, ref),
+              MovieActionsMenu(
+                title: movie.title,
+                watched: true,
+                onAction: (action) async {
+                  try {
+                    if (action == MovieAction.remove) {
+                      if (!await confirmMovieRemoval(context, movie) ||
+                          !context.mounted) {
+                        return;
+                      }
+                      await ref.read(databaseProvider).deleteMovie(movie.id);
+                    } else {
+                      await _restore(context, ref);
+                    }
+                  } catch (e, st) {
+                    debugPrint('Action historique film impossible : $e\n$st');
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Modification impossible. Réessaie.'),
+                        ),
+                      );
+                    }
+                  }
+                },
               ),
             ],
           ),

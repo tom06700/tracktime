@@ -16,6 +16,8 @@ import '../widgets/media_image.dart';
 import '../widgets/modern_controls.dart';
 import '../widgets/states.dart';
 import '../widgets/press_response.dart';
+import '../widgets/collection_button.dart';
+import '../widgets/collection_screen_header.dart';
 
 class ShowsScreen extends ConsumerStatefulWidget {
   const ShowsScreen({super.key});
@@ -50,9 +52,9 @@ Future<void> _refresh(BuildContext context, WidgetRef ref) async {
 }
 
 void _openEpisode(BuildContext context, NextUp n) => context.push(
-      '/episode/${n.show.id}/${n.season}/${n.episode}',
-      extra: {'name': n.show.name, 'poster': n.show.poster},
-    );
+  '/episode/${n.show.id}/${n.season}/${n.episode}',
+  extra: {'name': n.show.name, 'poster': n.show.poster},
+);
 
 Future<void> _markWatched(BuildContext context, WidgetRef ref, NextUp n) async {
   final db = ref.read(databaseProvider);
@@ -60,20 +62,27 @@ Future<void> _markWatched(BuildContext context, WidgetRef ref, NextUp n) async {
   if (!context.mounted) return;
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
+    ..showSnackBar(
+      SnackBar(
         content: Text('${n.show.name} · épisode enregistré'),
         action: SnackBarAction(
-            label: 'Annuler',
-            onPressed: () async {
-              try {
-                await db.setEpisodeUnwatched(n.show.id, n.season, n.episode);
-              } catch (_) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Annulation impossible. Réessaie.')));
-                }
+          label: 'Annuler',
+          onPressed: () async {
+            try {
+              await db.setEpisodeUnwatched(n.show.id, n.season, n.episode);
+            } catch (_) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Annulation impossible. Réessaie.'),
+                  ),
+                );
               }
-            })));
+            }
+          },
+        ),
+      ),
+    );
 }
 
 class _ShowsScreenState extends ConsumerState<ShowsScreen>
@@ -103,36 +112,23 @@ class _ShowsScreenState extends ConsumerState<ShowsScreen>
       key: const ValueKey('series-scroll'),
       headerSliverBuilder: (context, scrolled) => [
         SliverToBoxAdapter(
-          child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                child: Column(children: [
-                  Row(children: [
-                    const Expanded(child: NitrateWordmark(size: 22)),
-                    IconButton(
-                        tooltip: 'Mes séries',
-                        onPressed: () => context.push('/series'),
-                        icon: const Icon(Icons.video_library_outlined)),
-                    IconButton(
-                        tooltip: 'Réglages',
-                        onPressed: () => context.push('/settings'),
-                        icon: const Icon(Icons.settings_outlined, size: 21)),
-                  ]),
-                  const SizedBox(height: 16),
-                  GlideControl(
-                      dense: true,
-                      labels: const ['À voir', 'À venir'],
-                      index: _tabs.index,
-                      onSelected: (i) => _tabs.animateTo(i,
-                          duration: motionOf(
-                              context, const Duration(milliseconds: 300)))),
-                ]),
-              )),
-        )
+          child: CollectionScreenHeader(
+            collectionButton: CollectionButton(
+              onPressed: () => context.push('/series'),
+            ),
+            labels: const ['À voir', 'À venir'],
+            index: _tabs.index,
+            onSelected: (i) => _tabs.animateTo(
+              i,
+              duration: motionOf(context, const Duration(milliseconds: 300)),
+            ),
+          ),
+        ),
       ],
       body: TabBarView(
-          controller: _tabs, children: const [_ToWatchTab(), _UpcomingTab()]),
+        controller: _tabs,
+        children: const [_ToWatchTab(), _UpcomingTab()],
+      ),
     );
   }
 }
@@ -152,7 +148,8 @@ class _ToWatchTab extends ConsumerWidget {
         debugPrint('Séries — chargement du fil impossible : $e\n$st');
         return ErrorRetry(
           title: 'Impossible de charger tes séries',
-          message: 'Tes données sont toujours là. '
+          message:
+              'Tes données sont toujours là. '
               'Réessaie dans un instant.',
           onRetry: () => ref.invalidate(showsProvider),
         );
@@ -202,7 +199,8 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
       if (!mounted) return;
       setState(() => _confirmed = true);
       await Future<void>.delayed(
-          motionOf(context, const Duration(milliseconds: 620)));
+        motionOf(context, const Duration(milliseconds: 620)),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -237,19 +235,26 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
         padding: EdgeInsets.only(bottom: bottomNavInset(context)),
         children: [
           const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 18),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('À reprendre.',
-                        style: TextStyle(
-                            fontSize: 23,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: -1)),
-                    SizedBox(height: 4),
-                    Text('Juste un épisode de plus.',
-                        style: TextStyle(color: TtColors.dim, fontSize: 13)),
-                  ])),
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'À reprendre.',
+                  style: TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -1,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Juste un épisode de plus.',
+                  style: TextStyle(color: TtColors.dim, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
           if (hero != null)
             ContinueWatchingHero(
               // La clé lie l'état de la carte à l'épisode : la validation ne
@@ -265,40 +270,57 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                    color: ModernPalette.surface,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                        color: ModernPalette.lilac.withValues(alpha: .22))),
-                child: Row(children: [
-                  IconButton(
+                  color: ModernPalette.surface,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: ModernPalette.lilac.withValues(alpha: .22),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
                       tooltip: 'Œuvre précédente',
                       onPressed: _holding == null
                           ? () => select(selectedIndex - 1)
                           : null,
-                      icon: const Icon(Icons.arrow_back,
-                          color: ModernPalette.lilac)),
-                  Expanded(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: ModernPalette.lilac,
+                      ),
+                    ),
+                    Expanded(
                       child: Text(
-                          'À l’affiche · ${selectedIndex + 1} / ${queue.length}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              fontSize: 13, color: ModernPalette.lilac))),
-                  IconButton(
+                        'À l’affiche · ${selectedIndex + 1} / ${queue.length}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: ModernPalette.lilac,
+                        ),
+                      ),
+                    ),
+                    IconButton(
                       tooltip: 'Œuvre suivante',
                       onPressed: _holding == null
                           ? () => select(selectedIndex + 1)
                           : null,
-                      icon: const Icon(Icons.arrow_forward,
-                          color: ModernPalette.lilac)),
-                ]),
+                      icon: const Icon(
+                        Icons.arrow_forward,
+                        color: ModernPalette.lilac,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           if (next.isNotEmpty) ...[
             const SizedBox(height: 32),
             const Padding(
-                padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
-                child: Text('Dans ta\nrotation',
-                    style: TextStyle(color: TtColors.dim))),
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(
+                'Dans ta\nrotation',
+                style: TextStyle(color: TtColors.dim),
+              ),
+            ),
             _Carousel(
               height: 220 + (MediaQuery.textScalerOf(context).scale(40) - 40),
               itemCount: next.length,
@@ -418,7 +440,8 @@ class _UpcomingTabState extends ConsumerState<_UpcomingTab> {
         debugPrint('Séries — chargement des sorties impossible : $e\n$st');
         return ErrorRetry(
           title: 'Impossible de charger les prochaines sorties',
-          message: 'Tes données sont toujours là. '
+          message:
+              'Tes données sont toujours là. '
               'Réessaie dans un instant.',
           onRetry: () => ref.invalidate(showsProvider),
         );
@@ -430,7 +453,8 @@ class _UpcomingTabState extends ConsumerState<_UpcomingTab> {
             onAction: () => _refresh(context, ref),
             icon: Icons.event_outlined,
             title: 'Rien d\'annoncé',
-            message: 'Ajoute des séries en cours de diffusion — '
+            message:
+                'Ajoute des séries en cours de diffusion — '
                 'leurs prochaines dates apparaîtront ici.',
           );
         }
@@ -635,59 +659,60 @@ class _DayCounter extends StatelessWidget {
 }
 
 class _QueuePoster extends StatelessWidget {
-  const _QueuePoster(
-      {required this.next, required this.onTap, required this.selected});
+  const _QueuePoster({
+    required this.next,
+    required this.onTap,
+    required this.selected,
+  });
   final bool selected;
   final NextUp next;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: 112,
-        child: Semantics(
-          button: true,
-          selected: selected,
-          label: '${next.show.name}, ${next.code}, afficher à la une',
-          child: PressTarget(
-            onTap: onTap,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AnimatedContainer(
-                  duration:
-                      motionOf(context, const Duration(milliseconds: 220)),
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                          width: 2,
-                          color: selected
-                              ? ModernPalette.lilac
-                              : Colors.transparent)),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(9),
-                    child: SizedBox(
-                      height: 164,
-                      width: 112,
-                      child: MediaImage(
-                        sources: [next.show.poster, next.still],
-                        seed: next.show.name,
-                      ),
-                    ),
+    width: 112,
+    child: Semantics(
+      button: true,
+      selected: selected,
+      label: '${next.show.name}, ${next.code}, afficher à la une',
+      child: PressTarget(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AnimatedContainer(
+              duration: motionOf(context, const Duration(milliseconds: 220)),
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  width: 2,
+                  color: selected ? ModernPalette.lilac : Colors.transparent,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: SizedBox(
+                  height: 164,
+                  width: 112,
+                  child: MediaImage(
+                    sources: [next.show.poster, next.still],
+                    seed: next.show.name,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  next.show.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(height: 8),
+            Text(
+              next.show.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _CinemaEmpty extends StatelessWidget {
@@ -695,55 +720,55 @@ class _CinemaEmpty extends StatelessWidget {
   final VoidCallback onExplore;
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-        padding: EdgeInsets.only(bottom: bottomNavInset(context)),
-        child: Column(
-          children: [
-            SizedBox(
-              height: 290,
-              width: double.infinity,
-              child: Image.asset(
-                'assets/images/empty_cinema.webp',
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
-                children: [
-                  Text(
-                    'Ta liste est vide',
-                    textAlign: TextAlign.center,
-                    style: NitrateBrand.display(42),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Les histoires restent.\nRetrouve ici celles que tu veux suivre.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15,
-                      height: 1.5,
-                      color: TtColors.dim,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  FilledButton.icon(
-                    onPressed: onExplore,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Explorer les séries'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: NitrateBrand.ivory,
-                      foregroundColor: NitrateBrand.ink,
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: const StadiumBorder(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    padding: EdgeInsets.only(bottom: bottomNavInset(context)),
+    child: Column(
+      children: [
+        SizedBox(
+          height: 290,
+          width: double.infinity,
+          child: Image.asset(
+            'assets/images/empty_cinema.webp',
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+          ),
         ),
-      );
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Column(
+            children: [
+              Text(
+                'Ta liste est vide',
+                textAlign: TextAlign.center,
+                style: NitrateBrand.display(42),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Les histoires restent.\nRetrouve ici celles que tu veux suivre.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 1.5,
+                  color: TtColors.dim,
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: onExplore,
+                icon: const Icon(Icons.add),
+                label: const Text('Explorer les séries'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: NitrateBrand.ivory,
+                  foregroundColor: NitrateBrand.ink,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: const StadiumBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -751,7 +776,10 @@ class _SectionHeader extends StatelessWidget {
   final String title;
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-      child: Text(title,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500)));
+    padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+    child: Text(
+      title,
+      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500),
+    ),
+  );
 }

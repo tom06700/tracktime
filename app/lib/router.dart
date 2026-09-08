@@ -10,6 +10,7 @@ import 'screens/history_screen.dart';
 import 'screens/movie_detail_screen.dart';
 import 'screens/movie_history_screen.dart';
 import 'shell.dart';
+import 'notifications/screen.dart';
 import 'motion.dart';
 import 'onboarding/welcome_screen.dart';
 
@@ -33,6 +34,7 @@ final router = GoRouter(
                 }
               },
             )),
+    GoRoute(path: '/notifications', builder: (_, _) => const NotificationsScreen()),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
     GoRoute(path: '/import', builder: (_, _) => const ImportPage()),
     GoRoute(path: '/series', builder: (_, _) => const SeriesLibraryScreen()),

@@ -41,14 +41,14 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
   String? _error;
   CatchUpReceipt? _receipt;
   double _offset = 0;
-  late final AnimationController _drag =
-      AnimationController.unbounded(vsync: this)
-        ..addListener(() {
-          if (mounted) setState(() => _offset = _drag.value);
-        });
+  late final AnimationController _drag;
   @override
   void initState() {
     super.initState();
+    _drag = AnimationController.unbounded(vsync: this)
+      ..addListener(() {
+        if (mounted) setState(() => _offset = _drag.value);
+      });
     _load();
   }
 

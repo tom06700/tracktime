@@ -11,14 +11,14 @@ void main() {
   ];
 
   Widget host(int selected, ValueChanged<int> onSelected) => MaterialApp(
-        home: Scaffold(
-          bottomNavigationBar: NitrateNavBar(
-            items: items,
-            selectedIndex: selected,
-            onSelected: onSelected,
-          ),
-        ),
-      );
+    home: Scaffold(
+      bottomNavigationBar: NitrateNavBar(
+        items: items,
+        selectedIndex: selected,
+        onSelected: onSelected,
+      ),
+    ),
+  );
 
   testWidgets('taper un autre onglet le notifie', (tester) async {
     final taps = <int>[];
@@ -71,8 +71,9 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('le socle couvre les marges et la safe area sous la navigation',
-      (tester) async {
+  testWidgets('la navigation conserve ses marges jusqu’au bas de l’écran', (
+    tester,
+  ) async {
     await tester.pumpWidget(host(0, (_) {}));
     final foundation = find.byKey(const ValueKey('navigation-foundation'));
     final rect = tester.getRect(foundation);
@@ -80,7 +81,6 @@ void main() {
     expect(rect.left, 0);
     expect(rect.right, screen.width);
     expect(rect.bottom, screen.height);
-    expect(tester.widget<ColoredBox>(foundation).color.a, 1);
   });
 
   testWidgets('les zones tactiles dépassent 44 px', (tester) async {
@@ -95,5 +95,69 @@ void main() {
       expect(size.height, greaterThanOrEqualTo(44));
       expect(size.width, greaterThanOrEqualTo(44));
     }
+  });
+  testWidgets(
+    'glisser sans maintien sélectionne chaque onglet une seule fois',
+    (t) async {
+      var selected = 0;
+      final visits = <int>[];
+      await t.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) => Scaffold(
+              bottomNavigationBar: NitrateNavBar(
+                items: items,
+                selectedIndex: selected,
+                onSelected: (i) {
+                  visits.add(i);
+                  setState(() => selected = i);
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      final gesture = await t.startGesture(t.getCenter(find.text('Séries')));
+      await t.pump(const Duration(milliseconds: 10));
+      expect(visits, isEmpty);
+      for (final label in ['Films', 'Explorer', 'Profil']) {
+        await gesture.moveTo(t.getCenter(find.text(label)));
+        await t.pump(const Duration(milliseconds: 30));
+      }
+      expect(visits, [1, 2, 3]);
+      await gesture.moveBy(const Offset(1, 0));
+      await gesture.up();
+      await t.pump();
+      expect(visits, [1, 2, 3]);
+      expect(selected, 3);
+    },
+  );
+
+  testWidgets('un glissement rapide sélectionne immédiatement la destination', (
+    t,
+  ) async {
+    final visits = <int>[];
+    await t.pumpWidget(host(0, visits.add));
+    final gesture = await t.startGesture(t.getCenter(find.text('Séries')));
+    await t.pump(const Duration(milliseconds: 80));
+    await gesture.moveTo(t.getCenter(find.text('Profil')));
+    await gesture.up();
+    await t.pump();
+    expect(visits, [3]);
+  });
+
+  testWidgets('quitter la barre verticalement interrompt la sélection', (
+    t,
+  ) async {
+    final visits = <int>[];
+    await t.pumpWidget(host(0, visits.add));
+    final gesture = await t.startGesture(t.getCenter(find.text('Séries')));
+    await t.pump(const Duration(milliseconds: 10));
+    await gesture.moveTo(
+      t.getCenter(find.text('Profil')) - const Offset(0, 160),
+    );
+    await gesture.up();
+    await t.pump();
+    expect(visits, isEmpty);
   });
 }

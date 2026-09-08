@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../profile/sections.dart' show watchlistItems;
 import '../profile/tonight.dart';
 import '../motion.dart';
-import '../brand/nitrate_brand.dart';
+import '../widgets/nitrate_home_button.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
@@ -29,8 +29,7 @@ void openMediaDetail(
   required int id,
   required bool isSeries,
   required String title,
-}) =>
-    context.push(isSeries ? '/show/$id' : '/movie/$id', extra: title);
+}) => context.push(isSeries ? '/show/$id' : '/movie/$id', extra: title);
 
 /// Filtre appliqué aux résultats de recherche.
 enum SearchFilter { all, series, movies }
@@ -109,12 +108,12 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   /// Le filtre s'applique localement : la requête a déjà tout ramené, inutile
   /// de rappeler l'API pour restreindre.
   List<MediaSearchResult> get _filtered => switch (_filter) {
-        SearchFilter.all => _results,
-        SearchFilter.series =>
-          _results.where((r) => r.type == SearchMediaType.series).toList(),
-        SearchFilter.movies =>
-          _results.where((r) => r.type == SearchMediaType.movie).toList(),
-      };
+    SearchFilter.all => _results,
+    SearchFilter.series =>
+      _results.where((r) => r.type == SearchMediaType.series).toList(),
+    SearchFilter.movies =>
+      _results.where((r) => r.type == SearchMediaType.movie).toList(),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -128,22 +127,22 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
           title: 'Séries populaires',
           data: series,
           provider: popularSeriesProvider,
-          type: SearchMediaType.series
+          type: SearchMediaType.series,
         ),
       if (_filter != SearchFilter.series)
         (
           title: 'Films populaires',
           data: films,
           provider: popularMoviesProvider,
-          type: SearchMediaType.movie
+          type: SearchMediaType.movie,
         ),
       if (_filter != SearchFilter.series)
         (
           title: 'Sorties annoncées',
           data: upcoming,
           provider: upcomingReleasesProvider,
-          type: SearchMediaType.movie
-        )
+          type: SearchMediaType.movie,
+        ),
     ];
     final found = <String>{};
     final discovery = <MediaSearchResult>[];
@@ -152,13 +151,16 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
         final id = (m['id'] as num?)?.toInt();
         final name = '${m['name'] ?? ''}';
         if (!found.add('${g.type}-$id-$name')) continue;
-        discovery.add(MediaSearchResult(
+        discovery.add(
+          MediaSearchResult(
             tvdbId: id,
             name: name,
             type: g.type,
             aliases: const [],
             image: m['image'] as String?,
-            year: m['year']?.toString()));
+            year: m['year']?.toString(),
+          ),
+        );
       }
     }
     final items = searching ? _filtered : discovery;
@@ -170,215 +172,282 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     final columns = scale > 1.6
         ? 1
         : MediaQuery.sizeOf(context).width > 600
-            ? 3
-            : 2;
+        ? 3
+        : 2;
     final width =
         (MediaQuery.sizeOf(context).width - 44 - (columns - 1) * 13) / columns;
-    final tonight = watchlistItems(ref.watch(moviesProvider).value ?? [],
-        ref.watch(showsProvider).value ?? []);
+    final tonight = watchlistItems(
+      ref.watch(moviesProvider).value ?? [],
+      ref.watch(showsProvider).value ?? [],
+    );
     return CustomScrollView(
-        key: const PageStorageKey('explorer-feed'),
-        slivers: [
-          SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                  22, MediaQuery.paddingOf(context).top + 20, 22, 0),
-              sliver: SliverToBoxAdapter(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                    Row(children: [
-                      const Expanded(child: NitrateWordmark(size: 22)),
-                      IconButton.filledTonal(
-                          tooltip: 'Ouvrir mon profil',
-                          onPressed: () => ref
-                              .read(homeTabProvider.notifier)
-                              .select(HomeTab.profile),
-                          style: IconButton.styleFrom(
-                              backgroundColor: ModernPalette.lilac),
-                          icon: Text(profile?.emoji ?? '🍿',
-                              style: const TextStyle(fontSize: 20)))
-                    ]),
-                    const SizedBox(height: 27),
-                    const Text('LA PROCHAINE HISTOIRE',
-                        style: TextStyle(
-                            fontSize: 10,
-                            letterSpacing: 1.7,
-                            color: Color(0xFFC1ADC9))),
-                    const SizedBox(height: 9),
-                    const Text('Tu pars où ?',
-                        style: TextStyle(
-                            fontSize: 36,
-                            height: 1.1,
-                            letterSpacing: -1.7,
-                            fontWeight: FontWeight.w400)),
-                    const SizedBox(height: 11),
-                    const Text('Films, séries et anime. Suis ton envie.',
-                        style:
-                            TextStyle(fontSize: 12, color: Color(0xFFA79BAD))),
-                    const SizedBox(height: 24),
-                    TextField(
-                        controller: _controller,
-                        autocorrect: false,
-                        textInputAction: TextInputAction.search,
-                        onChanged: _onChanged,
-                        onSubmitted: _search,
-                        decoration: InputDecoration(
-                            hintText: 'Un titre, une nouvelle obsession…',
-                            prefixIcon: const Icon(Icons.search, size: 18),
-                            suffixIcon: _controller.text.isEmpty
-                                ? null
-                                : IconButton(
-                                    tooltip: 'Effacer',
-                                    onPressed: () {
-                                      _controller.clear();
-                                      _search('');
-                                    },
-                                    icon: const Icon(Icons.close)),
-                            filled: true,
-                            fillColor: const Color(0xFF25212C),
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(21),
-                                borderSide:
-                                    const BorderSide(color: Color(0xFF41354E))),
-                            enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(21),
-                                borderSide: const BorderSide(
-                                    color: Color(0xFF41354E))))),
-                    const SizedBox(height: 15),
-                    GlideControl(
-                        dense: true,
-                        labels: const ['Tout', 'Séries', 'Films'],
-                        index: _filter.index,
-                        onSelected: (i) =>
-                            setState(() => _filter = SearchFilter.values[i])),
-                    const SizedBox(height: 22),
-                    if (!searching && featured != null)
-                      Padding(
-                          padding: const EdgeInsets.only(bottom: 23),
-                          child: Material(
-                              borderRadius: BorderRadius.circular(24),
-                              clipBehavior: Clip.antiAlias,
-                              child: InkWell(
-                                  onTap: () => openMediaDetail(context,
-                                      id: featured.tvdbId!,
-                                      isSeries: true,
-                                      title: featured.name),
-                                  child: ConstrainedBox(
-                                      constraints:
-                                          const BoxConstraints(minHeight: 150),
-                                      child: Stack(
-                                          alignment: Alignment.center,
-                                          children: [
-                                            Positioned.fill(
-                                                child: MediaImage(
-                                                    sources: [featured.image],
-                                                    seed: featured.name,
-                                                    icon: Icons.tv)),
-                                            const Positioned.fill(
-                                                child: DecoratedBox(
-                                                    decoration: BoxDecoration(
-                                                        gradient:
-                                                            LinearGradient(
-                                                                colors: [
-                                                  Color(0xE615141E),
-                                                  Color(0x55000000)
-                                                ])))),
-                                            const Padding(
-                                                padding: EdgeInsets.all(20),
-                                                child: Row(children: [
-                                                  Expanded(
-                                                      child: Column(
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .start,
-                                                          mainAxisAlignment:
-                                                              MainAxisAlignment
-                                                                  .center,
-                                                          children: [
-                                                        Text('À DÉCOUVRIR',
-                                                            style: TextStyle(
-                                                                fontSize: 9,
-                                                                letterSpacing:
-                                                                    1.5)),
-                                                        SizedBox(height: 6),
-                                                        Text(
-                                                            'Change\nd’univers.',
-                                                            style: TextStyle(
-                                                                fontSize: 24,
-                                                                height: 1.15,
-                                                                letterSpacing:
-                                                                    -.7))
-                                                      ])),
-                                                  Icon(Icons.north_east)
-                                                ]))
-                                          ]))))),
-                    Row(children: [
-                      Expanded(
-                          child: Text(searching ? 'Résultats' : 'À explorer',
-                              style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w500))),
-                      Text('${items.length} titres',
-                          style: const TextStyle(
-                              fontSize: 11, color: Color(0xFFB5A6C1)))
-                    ]),
-                    const SizedBox(height: 12),
-                    if (searching && _error != null)
-                      ErrorRetry(
-                          title: 'Recherche indisponible',
-                          message: 'Vérifie ta connexion et réessaie.',
-                          onRetry: () => _search(_controller.text)),
-                    if (!searching)
-                      for (final g in groups)
-                        if (g.data.hasError)
-                          ListTile(
-                              title: Text(g.title),
-                              subtitle: const Text('Chargement indisponible'),
-                              trailing: IconButton(
-                                  tooltip: 'Réessayer : ${g.title}',
-                                  onPressed: () => ref.invalidate(g.provider),
-                                  icon: const Icon(Icons.refresh))),
-                    if (searching
+      key: const PageStorageKey('explorer-feed'),
+      slivers: [
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(
+            22,
+            MediaQuery.paddingOf(context).top + 20,
+            22,
+            0,
+          ),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(child: NitrateHomeButton()),
+                    IconButton.filledTonal(
+                      tooltip: 'Ouvrir mon profil',
+                      onPressed: () => ref
+                          .read(homeTabProvider.notifier)
+                          .select(HomeTab.profile),
+                      style: IconButton.styleFrom(
+                        backgroundColor: ModernPalette.lilac,
+                      ),
+                      icon: Text(
+                        profile?.emoji ?? '🍿',
+                        style: const TextStyle(fontSize: 20),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 27),
+                const Text(
+                  'LA PROCHAINE HISTOIRE',
+                  style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 1.7,
+                    color: Color(0xFFC1ADC9),
+                  ),
+                ),
+                const SizedBox(height: 9),
+                const Text(
+                  'Tu pars où ?',
+                  style: TextStyle(
+                    fontSize: 36,
+                    height: 1.1,
+                    letterSpacing: -1.7,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 11),
+                const Text(
+                  'Films, séries et anime. Suis ton envie.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFFA79BAD)),
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: _controller,
+                  autocorrect: false,
+                  textInputAction: TextInputAction.search,
+                  onChanged: _onChanged,
+                  onSubmitted: _search,
+                  decoration: InputDecoration(
+                    hintText: 'Un titre, une nouvelle obsession…',
+                    prefixIcon: const Icon(Icons.search, size: 18),
+                    suffixIcon: _controller.text.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Effacer',
+                            onPressed: () {
+                              _controller.clear();
+                              _search('');
+                            },
+                            icon: const Icon(Icons.close),
+                          ),
+                    filled: true,
+                    fillColor: const Color(0xFF25212C),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(21),
+                      borderSide: const BorderSide(color: Color(0xFF41354E)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(21),
+                      borderSide: const BorderSide(color: Color(0xFF41354E)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                GlideControl(
+                  dense: true,
+                  labels: const ['Tout', 'Séries', 'Films'],
+                  index: _filter.index,
+                  onSelected: (i) =>
+                      setState(() => _filter = SearchFilter.values[i]),
+                ),
+                const SizedBox(height: 22),
+                if (!searching && featured != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 23),
+                    child: Material(
+                      borderRadius: BorderRadius.circular(24),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => openMediaDetail(
+                          context,
+                          id: featured.tvdbId!,
+                          isSeries: true,
+                          title: featured.name,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 150),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Positioned.fill(
+                                child: MediaImage(
+                                  sources: [featured.image],
+                                  seed: featured.name,
+                                  icon: Icons.tv,
+                                ),
+                              ),
+                              const Positioned.fill(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Color(0xE615141E),
+                                        Color(0x55000000),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.all(20),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'À DÉCOUVRIR',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              letterSpacing: 1.5,
+                                            ),
+                                          ),
+                                          SizedBox(height: 6),
+                                          Text(
+                                            'Change\nd’univers.',
+                                            style: TextStyle(
+                                              fontSize: 24,
+                                              height: 1.15,
+                                              letterSpacing: -.7,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Icon(Icons.north_east),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        searching ? 'Résultats' : 'À explorer',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${items.length} titres',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFFB5A6C1),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (searching && _error != null)
+                  ErrorRetry(
+                    title: 'Recherche indisponible',
+                    message: 'Vérifie ta connexion et réessaie.',
+                    onRetry: () => _search(_controller.text),
+                  ),
+                if (!searching)
+                  for (final g in groups)
+                    if (g.data.hasError)
+                      ListTile(
+                        title: Text(g.title),
+                        subtitle: const Text('Chargement indisponible'),
+                        trailing: IconButton(
+                          tooltip: 'Réessayer : ${g.title}',
+                          onPressed: () => ref.invalidate(g.provider),
+                          icon: const Icon(Icons.refresh),
+                        ),
+                      ),
+                if (searching ? _loading : groups.any((g) => g.data.isLoading))
+                  const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: LinearProgressIndicator(),
+                  ),
+                if (items.isEmpty &&
+                    !(searching
                         ? _loading
-                        : groups.any((g) => g.data.isLoading))
-                      const Padding(
-                          padding: EdgeInsets.all(20),
-                          child: LinearProgressIndicator()),
-                    if (items.isEmpty &&
-                        !(searching
-                            ? _loading
-                            : groups.any((g) => g.data.isLoading)))
-                      Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                              searching
-                                  ? 'Aucun résultat. Essaie une autre orthographe.'
-                                  : 'Aucun titre disponible pour le moment.',
-                              textAlign: TextAlign.center)),
-                  ]))),
-          SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              sliver: SliverGrid.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: columns,
-                      crossAxisSpacing: 13,
-                      mainAxisSpacing: 23,
-                      mainAxisExtent: width * 1.325 + 72 * scale),
-                  itemCount: items.length,
-                  itemBuilder: (context, i) => EntranceFade(
-                      key: ValueKey(
-                          '${items[i].type}-${items[i].tvdbId}-${items[i].name}'),
-                      child: _CatalogueCard(result: items[i])))),
-          if (!searching && tonight.length >= 2)
-            SliverToBoxAdapter(
-                child: Padding(
-                    padding: const EdgeInsets.all(22),
-                    child: ModernCommand(
-                        shape: CommandShape.surprise,
-                        label: 'Quoi regarder ce soir ?',
-                        subtitle: 'Dans ta propre collection',
-                        onPressed: () => showTonightPicker(context, tonight)))),
-          SliverToBoxAdapter(child: SizedBox(height: bottomNavInset(context))),
-        ]);
+                        : groups.any((g) => g.data.isLoading)))
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      searching
+                          ? 'Aucun résultat. Essaie une autre orthographe.'
+                          : 'Aucun titre disponible pour le moment.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          sliver: SliverGrid.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              crossAxisSpacing: 13,
+              mainAxisSpacing: 23,
+              mainAxisExtent: width * 1.325 + 72 * scale,
+            ),
+            itemCount: items.length,
+            itemBuilder: (context, i) => EntranceFade(
+              key: ValueKey(
+                '${items[i].type}-${items[i].tvdbId}-${items[i].name}',
+              ),
+              child: _CatalogueCard(result: items[i]),
+            ),
+          ),
+        ),
+        if (!searching && tonight.length >= 2)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(22),
+              child: ModernCommand(
+                shape: CommandShape.surprise,
+                label: 'Quoi regarder ce soir ?',
+                subtitle: 'Dans ta propre collection',
+                onPressed: () => showTonightPicker(context, tonight),
+              ),
+            ),
+          ),
+        SliverToBoxAdapter(child: SizedBox(height: bottomNavInset(context))),
+      ],
+    );
   }
 }
 
@@ -389,58 +458,80 @@ class _CatalogueCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final r = result, isSeries = r.type == SearchMediaType.series;
     final already = isSeries
-        ? (ref.watch(showsProvider).value ?? [])
-            .any((s) => s.show.id == r.tvdbId)
+        ? (ref.watch(showsProvider).value ?? []).any(
+            (s) => s.show.id == r.tvdbId,
+          )
         : (ref.watch(moviesProvider).value ?? []).any((m) => m.id == r.tvdbId);
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      AspectRatio(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AspectRatio(
           aspectRatio: 2 / 2.65,
           child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Stack(fit: StackFit.expand, children: [
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
                 Semantics(
-                    button: true,
-                    label: 'Ouvrir la fiche de ${r.name}',
-                    child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: r.tvdbId == null
-                            ? null
-                            : () => openMediaDetail(context,
-                                id: r.tvdbId!,
-                                isSeries: isSeries,
-                                title: r.name),
-                        child: MediaImage(
-                            sources: [r.image],
-                            seed: r.name,
-                            icon: isSeries ? Icons.tv : Icons.movie_outlined))),
+                  button: true,
+                  label: 'Ouvrir la fiche de ${r.name}',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: r.tvdbId == null
+                        ? null
+                        : () => openMediaDetail(
+                            context,
+                            id: r.tvdbId!,
+                            isSeries: isSeries,
+                            title: r.name,
+                          ),
+                    child: MediaImage(
+                      sources: [r.image],
+                      seed: r.name,
+                      icon: isSeries ? Icons.tv : Icons.movie_outlined,
+                    ),
+                  ),
+                ),
                 if (r.canAdd)
                   Positioned(
-                      right: 9,
-                      bottom: 9,
-                      child: AddButton(
-                          id: r.tvdbId!,
-                          isSeries: isSeries,
-                          name: r.name,
-                          already: already,
-                          compact: true)),
-              ]))),
-      const SizedBox(height: 9),
-      Text(r.name,
+                    right: 9,
+                    bottom: 9,
+                    child: AddButton(
+                      id: r.tvdbId!,
+                      isSeries: isSeries,
+                      name: r.name,
+                      already: already,
+                      compact: true,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 9),
+        Text(
+          r.name,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w500, height: 1.3)),
-      const SizedBox(height: 4),
-      Text(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
           [
             isSeries ? 'Série' : 'Film',
             if (r.year != null) r.year!,
-            if (r.originalName != null) r.originalName!
+            if (r.originalName != null) r.originalName!,
           ].join(' · '),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 10, color: Color(0xFFA397AE))),
-    ]);
+          style: const TextStyle(fontSize: 10, color: Color(0xFFA397AE)),
+        ),
+      ],
+    );
   }
 }
 
@@ -496,8 +587,9 @@ class _AddButtonState extends ConsumerState<AddButton> {
   @override
   Widget build(BuildContext context) {
     final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    final duration =
-        reduceMotion ? Duration.zero : const Duration(milliseconds: 200);
+    final duration = reduceMotion
+        ? Duration.zero
+        : const Duration(milliseconds: 200);
 
     final label = widget.already
         ? 'Déjà dans ta liste : ${widget.name}'

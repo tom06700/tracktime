@@ -1,4 +1,4 @@
-import '../brand/nitrate_brand.dart';
+import '../widgets/nitrate_home_button.dart';
 import '../profile/identity_editor.dart';
 import '../widgets/media_image.dart';
 import '../widgets/modern_controls.dart';
@@ -71,10 +71,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     final universe = ref.watch(universeProvider).value;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
-        child: Material(
-            color: ModernPalette.background,
-            child: _content(context, universe)));
+      value: SystemUiOverlayStyle.light,
+      child: Material(
+        color: ModernPalette.background,
+        child: _content(context, universe),
+      ),
+    );
   }
 
   Widget _content(BuildContext context, Universe? universe) {
@@ -89,12 +91,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     // Chaque section apparaît en fondu quand elle entre à l'écran (léger
     // stagger pour les premières, visibles dès l'ouverture).
     Widget sec(int i, List<Widget> children) => Reveal(
-          delayMs: i < 3 ? i * 90 : 0,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: children,
-          ),
-        );
+      delayMs: i < 3 ? i * 90 : 0,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
 
     // Pas d'AppBar sur le Profil : le décor remplit tout, le contenu démarre
     // juste sous la safe area (en laissant la place au bouton Réglages).
@@ -104,14 +106,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       padding: EdgeInsets.fromLTRB(0, topInset, 0, bottomNavInset(context)),
       children: [
         Padding(
-            padding: const EdgeInsets.fromLTRB(22, 0, 22, 27),
-            child: Row(children: [
-              const Expanded(child: NitrateWordmark(size: 22)),
+          padding: const EdgeInsets.fromLTRB(22, 0, 22, 27),
+          child: Row(
+            children: [
+              const Expanded(child: NitrateHomeButton()),
               IconButton.filledTonal(
-                  tooltip: 'Réglages',
-                  onPressed: () => context.push('/settings'),
-                  icon: const Icon(Icons.tune, size: 19))
-            ])),
+                tooltip: 'Réglages',
+                onPressed: () => context.push('/settings'),
+                icon: const Icon(Icons.tune, size: 19),
+              ),
+            ],
+          ),
+        ),
 
         // ── Identité cosmique ──
         sec(0, [
@@ -145,31 +151,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ]),
 
         Padding(
-            padding: const EdgeInsets.fromLTRB(22, 24, 22, 0),
-            child: ModernCommand(
-                shape: CommandShape.surprise,
-                label: 'Quoi regarder ce soir ?',
-                subtitle: 'Un choix dans ta propre collection.',
-                onPressed: () => showTonightPicker(context, tonight))),
+          padding: const EdgeInsets.fromLTRB(22, 24, 22, 0),
+          child: ModernCommand(
+            shape: CommandShape.surprise,
+            label: 'Quoi regarder ce soir ?',
+            subtitle: 'Un choix dans ta propre collection.',
+            onPressed: () => showTonightPicker(context, tonight),
+          ),
+        ),
         _RecentStories(),
         Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 22),
-            child: Column(children: [
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          child: Column(
+            children: [
               ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Modifier mon profil',
-                      style: TextStyle(fontSize: 12)),
-                  trailing: const Icon(Icons.north_east, size: 17),
-                  onTap: profileAsync.value == null
-                      ? null
-                      : () => editProfile(context, profileAsync.value!)),
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  'Modifier mon profil',
+                  style: TextStyle(fontSize: 12),
+                ),
+                trailing: const Icon(Icons.north_east, size: 17),
+                onTap: profileAsync.value == null
+                    ? null
+                    : () => editProfile(context, profileAsync.value!),
+              ),
               ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Réglages & données',
-                      style: TextStyle(fontSize: 12)),
-                  trailing: const Icon(Icons.north_east, size: 17),
-                  onTap: () => context.push('/settings')),
-            ])),
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  'Réglages & données',
+                  style: TextStyle(fontSize: 12),
+                ),
+                trailing: const Icon(Icons.north_east, size: 17),
+                onTap: () => context.push('/settings'),
+              ),
+            ],
+          ),
+        ),
         // ── À l'affiche (aperçu, la page dédiée montre tout) ──
         sec(2, [
           UniverseSectionTitle(
@@ -185,9 +202,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ]),
 
         // ── Pellicule de genres ──
-        sec(3, [
-          if (universe != null) GenreFilmStrip(universe: universe),
-        ]),
+        sec(3, [if (universe != null) GenreFilmStrip(universe: universe)]),
 
         // ── Activité ──
         sec(4, [
@@ -274,69 +289,97 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await exportBackup(ref.read(databaseProvider));
     } catch (e) {
       debugPrint('Export impossible : $e');
-      messenger.showSnackBar(const SnackBar(
-          content: Text('Impossible de créer la sauvegarde. Réessaie.')));
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Impossible de créer la sauvegarde. Réessaie.'),
+        ),
+      );
     }
   }
 }
 
 /// Petit bouton rond « verre » flottant (Réglages), lisible sur le décor.
 class _UniverseHeader extends ConsumerWidget {
-  const _UniverseHeader(
-      {required this.profile,
-      required this.tagline,
-      required this.palette,
-      required this.memberSince});
+  const _UniverseHeader({
+    required this.profile,
+    required this.tagline,
+    required this.palette,
+    required this.memberSince,
+  });
   final Profile profile;
   final String tagline, memberSince;
   final List<Color> palette;
   @override
   Widget build(BuildContext context, WidgetRef ref) => Padding(
-      padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
-      child: Column(children: [
-        Row(children: [
-          Transform.rotate(
+    padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+    child: Column(
+      children: [
+        Row(
+          children: [
+            Transform.rotate(
               angle: -.105,
               child: Material(
-                  color: ModernPalette.lilac,
-                  borderRadius: BorderRadius.circular(24),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                      onTap: () => editProfile(context, profile),
-                      child: SizedBox(
-                          width: 68,
-                          height: 68,
-                          child: Center(
-                              child: Text(profile.emoji,
-                                  style: const TextStyle(fontSize: 32))))))),
-          const SizedBox(width: 15),
-          Expanded(
+                color: ModernPalette.lilac,
+                borderRadius: BorderRadius.circular(24),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => editProfile(context, profile),
+                  child: SizedBox(
+                    width: 68,
+                    height: 68,
+                    child: Center(
+                      child: Text(
+                        profile.emoji,
+                        style: const TextStyle(fontSize: 32),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
               child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                const Text('TON CARNET DE BORD',
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'TON CARNET DE BORD',
                     style: TextStyle(
-                        fontSize: 10,
-                        letterSpacing: 1.7,
-                        color: Color(0xFFC1ADC9))),
-                Text(profile.displayName,
+                      fontSize: 10,
+                      letterSpacing: 1.7,
+                      color: Color(0xFFC1ADC9),
+                    ),
+                  ),
+                  Text(
+                    profile.displayName,
                     style: const TextStyle(
-                        fontSize: 31,
-                        height: 1.1,
-                        letterSpacing: -1.2,
-                        fontWeight: FontWeight.w400)),
-                const SizedBox(height: 6),
-                const Text('Chaque histoire laisse une trace.',
-                    style: TextStyle(fontSize: 11, color: Color(0xFFB09FBB))),
-              ])),
-        ]),
+                      fontSize: 31,
+                      height: 1.1,
+                      letterSpacing: -1.2,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Chaque histoire laisse une trace.',
+                    style: TextStyle(fontSize: 11, color: Color(0xFFB09FBB)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         Align(
-            alignment: Alignment.centerLeft,
-            child: Text(memberSince,
-                style:
-                    const TextStyle(fontSize: 10, color: Color(0xFF93889F)))),
-      ]));
+          alignment: Alignment.centerLeft,
+          child: Text(
+            memberSince,
+            style: const TextStyle(fontSize: 10, color: Color(0xFF93889F)),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _HeroStats extends StatelessWidget {
@@ -344,101 +387,144 @@ class _HeroStats extends StatelessWidget {
   final WatchStats stats;
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.fromLTRB(22, 20, 22, 0),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    padding: const EdgeInsets.fromLTRB(22, 20, 22, 0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         Container(
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-                color: const Color(0xFFD2BFF8),
-                borderRadius: BorderRadius.circular(27)),
-            child: Stack(children: [
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: const Color(0xFFD2BFF8),
+            borderRadius: BorderRadius.circular(27),
+          ),
+          child: Stack(
+            children: [
               Positioned(
-                  right: -50,
-                  bottom: -75,
-                  child: Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              width: 26, color: const Color(0xA6B499DE))))),
+                right: -50,
+                bottom: -75,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      width: 26,
+                      color: const Color(0xA6B499DE),
+                    ),
+                  ),
+                ),
+              ),
               Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 23, vertical: 24),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('TEMPS DE VISIONNAGE ESTIMÉ',
-                            style: TextStyle(
-                                fontSize: 9,
-                                letterSpacing: 1.7,
-                                color: Color(0xFF645174))),
-                        const SizedBox(height: 14),
-                        Text(fmtTime(stats.totalMinutes),
-                            style: const TextStyle(
-                                fontSize: 49,
-                                height: 1.1,
-                                letterSpacing: -2,
-                                fontWeight: FontWeight.w400,
-                                color: Color(0xFF32233F))),
-                        const SizedBox(height: 9),
-                        const Text(
-                            'Calculé à partir de tes films et épisodes vus.',
-                            style: TextStyle(
-                                fontSize: 11, color: Color(0xFF645172))),
-                      ]))
-            ])),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 23,
+                  vertical: 24,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'TEMPS DE VISIONNAGE ESTIMÉ',
+                      style: TextStyle(
+                        fontSize: 9,
+                        letterSpacing: 1.7,
+                        color: Color(0xFF645174),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      fmtTime(stats.totalMinutes),
+                      style: const TextStyle(
+                        fontSize: 49,
+                        height: 1.1,
+                        letterSpacing: -2,
+                        fontWeight: FontWeight.w400,
+                        color: Color(0xFF32233F),
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    const Text(
+                      'Calculé à partir de tes films et épisodes vus.',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF645172)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 15),
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _MiniStat(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _MiniStat(
               value: '${stats.episodeCount}',
               label: 'épisodes vus',
-              onTap: () => context.push('/history')),
-          const SizedBox(width: 7),
-          _MiniStat(
+              onTap: () => context.push('/history'),
+            ),
+            const SizedBox(width: 7),
+            _MiniStat(
               value: '${stats.moviesSeen}',
               label: 'films vus',
-              onTap: () => context.push('/movie-history')),
-          const SizedBox(width: 7),
-          _MiniStat(
+              onTap: () => context.push('/movie-history'),
+            ),
+            const SizedBox(width: 7),
+            _MiniStat(
               value: '${stats.showCount}',
               label: 'séries suivies',
-              onTap: () => context.push('/series')),
-        ]),
+              onTap: () => context.push('/series'),
+            ),
+          ],
+        ),
         const SizedBox(height: 10),
-        Text('${stats.doneShowCount} séries terminées',
-            style: const TextStyle(fontSize: 11, color: Color(0xFFAD9CB8))),
-      ]));
+        Text(
+          '${stats.doneShowCount} séries terminées',
+          style: const TextStyle(fontSize: 11, color: Color(0xFFAD9CB8)),
+        ),
+      ],
+    ),
+  );
 }
 
 class _MiniStat extends StatelessWidget {
-  const _MiniStat(
-      {required this.value, required this.label, required this.onTap});
+  const _MiniStat({
+    required this.value,
+    required this.label,
+    required this.onTap,
+  });
   final String value, label;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => Expanded(
-      child: Material(
-          color: const Color(0xFF222028),
-          borderRadius: BorderRadius.circular(18),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-              onTap: onTap,
-              child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 16, horizontal: 7),
-                  child: Column(children: [
-                    Text(value,
-                        style: const TextStyle(
-                            fontSize: 25,
-                            height: 1.2,
-                            fontWeight: FontWeight.w400)),
-                    const SizedBox(height: 6),
-                    Text(label,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: 10, color: Color(0xFFAD9CB8)))
-                  ])))));
+    child: Material(
+      color: const Color(0xFF222028),
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 7),
+          child: Column(
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 25,
+                  height: 1.2,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 10, color: Color(0xFFAD9CB8)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 // ──────────────────────────────── Données ──────────────────────────────────
@@ -534,10 +620,10 @@ class _TileDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Divider(
-        height: 1,
-        indent: 56,
-        color: Colors.white.withValues(alpha: 0.08),
-      );
+    height: 1,
+    indent: 56,
+    color: Colors.white.withValues(alpha: 0.08),
+  );
 }
 
 class _RecentStories extends ConsumerWidget {
@@ -547,33 +633,37 @@ class _RecentStories extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final episodes = ref.watch(watchHistoryProvider).value ?? [];
     final movies = ref.watch(moviesProvider).value ?? [];
-    final entries = <({
-      String title,
-      String subtitle,
-      String? image,
-      DateTime at,
-      String route,
-      Object? extra
-    })>[
-      for (final e in episodes)
-        (
-          title: e.show.name,
-          subtitle: '${e.code} · ${frenchDate(e.watchedAt)}',
-          image: e.show.poster,
-          at: e.watchedAt,
-          route: '/episode/${e.show.id}/${e.season}/${e.episode}',
-          extra: {'name': e.show.name}
-        ),
-      for (final m in movies.where((m) => m.watchedAt != null))
-        (
-          title: m.title,
-          subtitle: 'Film vu · ${frenchDate(m.watchedAt!)}',
-          image: m.poster,
-          at: m.watchedAt!,
-          route: '/movie/${m.id}',
-          extra: m.title
-        ),
-    ]..sort((a, b) => b.at.compareTo(a.at));
+    final entries =
+        <
+            ({
+              String title,
+              String subtitle,
+              String? image,
+              DateTime at,
+              String route,
+              Object? extra,
+            })
+          >[
+            for (final e in episodes)
+              (
+                title: e.show.name,
+                subtitle: '${e.code} · ${frenchDate(e.watchedAt)}',
+                image: e.show.poster,
+                at: e.watchedAt,
+                route: '/episode/${e.show.id}/${e.season}/${e.episode}',
+                extra: {'name': e.show.name},
+              ),
+            for (final m in movies.where((m) => m.watchedAt != null))
+              (
+                title: m.title,
+                subtitle: 'Film vu · ${frenchDate(m.watchedAt!)}',
+                image: m.poster,
+                at: m.watchedAt!,
+                route: '/movie/${m.id}',
+                extra: m.title,
+              ),
+          ]
+          ..sort((a, b) => b.at.compareTo(a.at));
     Widget row(int index, {bool inSheet = false}) {
       final e = entries[index];
       return ListTile(
@@ -583,69 +673,102 @@ class _RecentStories extends ConsumerWidget {
           context.push(e.route, extra: e.extra);
         },
         leading: ClipRRect(
-            borderRadius: BorderRadius.circular(11),
-            child: SizedBox(
-                width: 43,
-                height: 57,
-                child: MediaImage(
-                    sources: [e.image],
-                    seed: e.title,
-                    icon: Icons.movie_outlined))),
+          borderRadius: BorderRadius.circular(11),
+          child: SizedBox(
+            width: 43,
+            height: 57,
+            child: MediaImage(
+              sources: [e.image],
+              seed: e.title,
+              icon: Icons.movie_outlined,
+            ),
+          ),
+        ),
         title: Text(e.title, style: const TextStyle(fontSize: 12)),
-        subtitle: Text(e.subtitle,
-            style: const TextStyle(fontSize: 10, color: Color(0xFFAA9BB4))),
-        trailing:
-            const Icon(Icons.north_east, size: 16, color: ModernPalette.lilac),
+        subtitle: Text(
+          e.subtitle,
+          style: const TextStyle(fontSize: 10, color: Color(0xFFAA9BB4)),
+        ),
+        trailing: const Icon(
+          Icons.north_east,
+          size: 16,
+          color: ModernPalette.lilac,
+        ),
       );
     }
 
     if (expanded) {
       return SafeArea(
-          child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
-              child: Column(children: [
-                Row(children: [
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          child: Column(
+            children: [
+              Row(
+                children: [
                   const Expanded(
-                      child: Text('Ton historique',
-                          style: TextStyle(fontSize: 22))),
+                    child: Text(
+                      'Ton historique',
+                      style: TextStyle(fontSize: 22),
+                    ),
+                  ),
                   IconButton(
-                      tooltip: 'Fermer',
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close))
-                ]),
-                if (entries.isEmpty)
-                  const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text('Ton premier visionnage apparaîtra ici.')),
-                Expanded(
-                    child: ListView.builder(
-                        itemCount: entries.length,
-                        itemBuilder: (_, i) => row(i, inSheet: true))),
-              ])));
+                    tooltip: 'Fermer',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              if (entries.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text('Ton premier visionnage apparaîtra ici.'),
+                ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: entries.length,
+                  itemBuilder: (_, i) => row(i, inSheet: true),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
     return Padding(
-        padding: const EdgeInsets.fromLTRB(22, 25, 22, 12),
-        child:
-            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            const Expanded(
-                child: Text('Dernières histoires',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.w500))),
-            TextButton(
+      padding: const EdgeInsets.fromLTRB(22, 25, 22, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Dernières histoires',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+              ),
+              TextButton(
                 onPressed: () => showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: ModernPalette.background,
-                    builder: (_) => const FractionallySizedBox(
-                        heightFactor: .85,
-                        child: _RecentStories(expanded: true))),
-                child: const Text('Tout voir'))
-          ]),
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: ModernPalette.background,
+                  builder: (_) => const FractionallySizedBox(
+                    heightFactor: .85,
+                    child: _RecentStories(expanded: true),
+                  ),
+                ),
+                child: const Text('Tout voir'),
+              ),
+            ],
+          ),
           if (entries.isEmpty)
-            const Text('Ton premier visionnage apparaîtra ici.',
-                style: TextStyle(color: TtColors.dim)),
+            const Text(
+              'Ton premier visionnage apparaîtra ici.',
+              style: TextStyle(color: TtColors.dim),
+            ),
           for (var i = 0; i < entries.length.clamp(0, 3); i++) row(i),
-        ]));
+        ],
+      ),
+    );
   }
 }

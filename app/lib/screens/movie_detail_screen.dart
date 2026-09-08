@@ -1,3 +1,5 @@
+import '../movies/confirm_removal.dart';
+import '../movies/widgets/movie_actions_menu.dart';
 import 'package:go_router/go_router.dart';
 import '../db/database.dart';
 import '../motion.dart';
@@ -98,8 +100,9 @@ class _ContentState extends ConsumerState<_Content> {
       await action();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Modification impossible. Réessaie.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Modification impossible. Réessaie.')),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -113,62 +116,57 @@ class _ContentState extends ConsumerState<_Content> {
   }
 
   Future<void> _toggle(Movie? movie) => _run(() async {
-        if (movie == null) {
-          final yes = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                      title: const Text('Ajouter à ma liste'),
-                      content: const Text(
-                          'Ajoute ce film à ta collection avant de suivre son visionnage.'),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Annuler')),
-                        FilledButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Ajouter'))
-                      ]));
-          if (yes == true && mounted) await _add();
-          return;
-        }
-        final db = ref.read(databaseProvider);
-        await db.toggleMovieWatched(movie);
-        final saved = await db.movieById(movie.id);
-        if (!mounted) return;
-        setState(() => _revealed = false);
-        if (movie.watchedAt == null && saved?.watchedAt != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: const Text('Visionnage enregistré.'),
-              action: SnackBarAction(
-                  label: 'Annuler',
-                  onPressed: () => _run(() async {
-                        final current = await db.movieById(movie.id);
-                        if (current != null &&
-                            current.watchedAt == saved!.watchedAt) {
-                          await db.toggleMovieWatched(current);
-                        }
-                      }))));
-        }
-      });
+    if (movie == null) {
+      final yes = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Ajouter à ma liste'),
+          content: const Text(
+            'Ajoute ce film à ta collection avant de suivre son visionnage.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Ajouter'),
+            ),
+          ],
+        ),
+      );
+      if (yes == true && mounted) await _add();
+      return;
+    }
+    final db = ref.read(databaseProvider);
+    await db.toggleMovieWatched(movie);
+    final saved = await db.movieById(movie.id);
+    if (!mounted) return;
+    setState(() => _revealed = false);
+    if (movie.watchedAt == null && saved?.watchedAt != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Visionnage enregistré.'),
+          action: SnackBarAction(
+            label: 'Annuler',
+            onPressed: () => _run(() async {
+              final current = await db.movieById(movie.id);
+              if (current != null && current.watchedAt == saved!.watchedAt) {
+                await db.toggleMovieWatched(current);
+              }
+            }),
+          ),
+        ),
+      );
+    }
+  });
   Future<void> _manage(Movie? movie) async {
     if (movie == null) {
       await _run(_add);
       return;
     }
-    final yes = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-                title: const Text('Retirer ce film ?'),
-                content: Text(
-                    '« ${movie.title} » et son visionnage seront retirés de ta collection.'),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Annuler')),
-                  FilledButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Retirer'))
-                ]));
+    final yes = await confirmMovieRemoval(context, movie);
     if (yes == true && mounted) {
       await _run(() => ref.read(databaseProvider).deleteMovie(movie.id));
     }
@@ -185,125 +183,194 @@ class _ContentState extends ConsumerState<_Content> {
     final seen = local?.watchedAt != null, visible = seen || _revealed;
     final overview = movie.overview?.trim() ?? '';
     final gap = MediaQuery.sizeOf(context).width < 370 ? 17.0 : 23.0;
-    return CustomScrollView(slivers: [
-      SliverToBoxAdapter(
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
           child: ValidatedDetailHero(
-              title: movie.title,
-              film: true,
-              sources: [movie.poster, movie.backdrop],
-              kicker: movie.genres.take(2).join(' · '),
-              subtitle: movie.originalTitle ?? '',
-              onManage: _busy ? null : () => _manage(local))),
-      SliverPadding(
+            title: movie.title,
+            film: true,
+            sources: [movie.poster, movie.backdrop],
+            kicker: movie.genres.take(2).join(' · '),
+            subtitle: movie.originalTitle ?? '',
+            managementAction: local == null
+                ? IconButton.filledTonal(
+                    tooltip: 'Ajouter à ma liste',
+                    onPressed: _busy ? null : () => _manage(null),
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xBC15171B),
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.add, size: 20),
+                  )
+                : MovieActionsMenu(
+                    title: movie.title,
+                    watched: seen,
+                    diameter: 40,
+                    enabled: !_busy,
+                    onAction: (action) => action == MovieAction.remove
+                        ? _manage(local)
+                        : _toggle(local),
+                  ),
+          ),
+        ),
+        SliverPadding(
           padding: EdgeInsets.fromLTRB(gap, 9, gap, bottomNavInset(context)),
-          sliver: SliverList.list(children: [
-            Row(children: [
-              Expanded(
-                  child: Text(
+          sliver: SliverList.list(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
                       [
                         if (movie.year != null) movie.year!,
-                        if (movie.runtime != null) fmtTime(movie.runtime!)
+                        if (movie.runtime != null) fmtTime(movie.runtime!),
                       ].join(' · '),
                       style: const TextStyle(
-                          fontSize: 11, color: Color(0xFFB9ACB7)))),
-              Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-                  decoration: BoxDecoration(
+                        fontSize: 11,
+                        color: Color(0xFFB9ACB7),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
                       color: const Color(0xFF2D2437),
-                      borderRadius: BorderRadius.circular(15)),
-                  child: Text(seen ? 'Vu' : 'À voir',
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Text(
+                      seen ? 'Vu' : 'À voir',
                       style: const TextStyle(
-                          fontSize: 11, color: Color(0xFFD1B3ED))))
-            ]),
-            const SizedBox(height: 20),
-            Row(children: [
-              Expanded(
-                  child: ModernCommand(
+                        fontSize: 11,
+                        color: Color(0xFFD1B3ED),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ModernCommand(
                       shape: CommandShape.softCheck,
                       height: 63,
                       labelSize: 13,
                       trailingIndicator: false,
                       selected: seen,
                       label: seen ? 'Film vu' : 'Marquer vu',
-                      onPressed: _busy ? null : () => _toggle(local))),
-              const SizedBox(width: 9),
-              SizedBox(
-                  width: 64,
-                  child: Semantics(
+                      onPressed: _busy ? null : () => _toggle(local),
+                    ),
+                  ),
+                  const SizedBox(width: 9),
+                  SizedBox(
+                    width: 64,
+                    child: Semantics(
                       label: local == null
                           ? 'Ajouter à ma liste'
                           : 'Film dans ma liste',
                       child: ModernCommand(
-                          shape: CommandShape.attach,
-                          height: 63,
-                          compact: true,
-                          label: '',
-                          selected: local != null,
-                          onPressed: _busy
-                              ? null
-                              : local != null
-                                  ? () {}
-                                  : () => _run(_add))))
-            ]),
-            const SizedBox(height: 12),
-            Text(
+                        shape: CommandShape.attach,
+                        height: 63,
+                        compact: true,
+                        label: '',
+                        selected: local != null,
+                        onPressed: _busy
+                            ? null
+                            : local != null
+                            ? () {}
+                            : () => _run(_add),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
                 seen
                     ? 'Vu le ${frenchDate(local!.watchedAt!)}'
                     : 'Un film à retrouver dans ta collection.',
-                style: const TextStyle(fontSize: 11, color: Color(0xFFB2C6A0))),
-            const SizedBox(height: 25),
-            DetailSectionHeading('L’histoire',
-                hint: visible ? 'Résumé affiché' : 'À révéler'),
-            const SizedBox(height: 12),
-            if (overview.isEmpty)
-              const Text('Synopsis indisponible.',
-                  style: TextStyle(color: TtColors.dim))
-            else if (!visible)
-              FilledButton.tonal(
+                style: const TextStyle(fontSize: 11, color: Color(0xFFB2C6A0)),
+              ),
+              const SizedBox(height: 25),
+              DetailSectionHeading(
+                'L’histoire',
+                hint: visible ? 'Résumé affiché' : 'À révéler',
+              ),
+              const SizedBox(height: 12),
+              if (overview.isEmpty)
+                const Text(
+                  'Synopsis indisponible.',
+                  style: TextStyle(color: TtColors.dim),
+                )
+              else if (!visible)
+                FilledButton.tonal(
                   onPressed: () => setState(() => _revealed = true),
                   style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, 80),
-                      backgroundColor: const Color(0xFF1D1B22),
-                      foregroundColor: const Color(0xFFD1BFDF),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18))),
-                  child: const Wrap(spacing: 9, children: [
-                    Icon(Icons.visibility_outlined, size: 16),
-                    Text('Révéler le résumé')
-                  ]))
-            else
-              EntranceFade(
-                  child: Text(overview,
-                      style: const TextStyle(
-                          fontSize: 13,
-                          height: 1.8,
-                          color: Color(0xFFB9AEBB)))),
-            if (visible && !seen && overview.isNotEmpty)
-              Align(
+                    minimumSize: const Size(0, 80),
+                    backgroundColor: const Color(0xFF1D1B22),
+                    foregroundColor: const Color(0xFFD1BFDF),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  child: const Wrap(
+                    spacing: 9,
+                    children: [
+                      Icon(Icons.visibility_outlined, size: 16),
+                      Text('Révéler le résumé'),
+                    ],
+                  ),
+                )
+              else
+                EntranceFade(
+                  child: Text(
+                    overview,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.8,
+                      color: Color(0xFFB9AEBB),
+                    ),
+                  ),
+                ),
+              if (visible && !seen && overview.isNotEmpty)
+                Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton(
-                      onPressed: () => setState(() => _revealed = false),
-                      child: const Text('Masquer le résumé'))),
-            const SizedBox(height: 25),
-            if (movie.releaseDate != null)
-              MediaFactRow(
-                  label: 'Sortie', value: frenchDate(movie.releaseDate!)),
-            if (movie.director != null)
-              MediaFactRow(label: 'Réalisation', value: movie.director!),
-            if (movie.studio != null)
-              MediaFactRow(label: 'Studio', value: movie.studio!),
-            if (movie.cast.isNotEmpty)
-              MediaFactRow(label: 'Avec', value: movie.cast.take(4).join(', ')),
-            const SizedBox(height: 8),
-            TextButton(
+                    onPressed: () => setState(() => _revealed = false),
+                    child: const Text('Masquer le résumé'),
+                  ),
+                ),
+              const SizedBox(height: 25),
+              if (movie.releaseDate != null)
+                MediaFactRow(
+                  label: 'Sortie',
+                  value: frenchDate(movie.releaseDate!),
+                ),
+              if (movie.director != null)
+                MediaFactRow(label: 'Réalisation', value: movie.director!),
+              if (movie.studio != null)
+                MediaFactRow(label: 'Studio', value: movie.studio!),
+              if (movie.cast.isNotEmpty)
+                MediaFactRow(
+                  label: 'Avec',
+                  value: movie.cast.take(4).join(', '),
+                ),
+              const SizedBox(height: 8),
+              TextButton(
                 onPressed: () {
                   ref.read(homeTabProvider.notifier).select(HomeTab.explorer);
                   context.go('/');
                 },
-                child: const Text('Trouver ma prochaine histoire ↗')),
-          ])),
-    ]);
+                child: const Text('Trouver ma prochaine histoire ↗'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

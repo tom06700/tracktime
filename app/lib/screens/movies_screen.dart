@@ -1,3 +1,4 @@
+import '../movies/confirm_removal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,8 +12,8 @@ import '../motion.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
-import '../widgets/editorial_heading.dart';
-import '../widgets/modern_controls.dart';
+import '../widgets/collection_screen_header.dart';
+import '../widgets/films_seen_button.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
 import '../widgets/skeleton.dart';
@@ -33,10 +34,10 @@ String movieMeta(Movie m, {bool includeYear = true}) {
 }
 
 Future<void> _sync(WidgetRef ref) => backfillMovieMeta(
-      ref.read(databaseProvider),
-      ref.read(tvdbClientProvider),
-      throttle: () => Future.delayed(const Duration(milliseconds: 120)),
-    );
+  ref.read(databaseProvider),
+  ref.read(tvdbClientProvider),
+  throttle: () => Future.delayed(const Duration(milliseconds: 120)),
+);
 
 class MoviesScreen extends ConsumerStatefulWidget {
   const MoviesScreen({super.key});
@@ -60,17 +61,28 @@ class _MoviesScreenState extends ConsumerState<MoviesScreen> {
       length: 2,
       child: Column(
         children: [
-          Builder(builder: (context) {
-            final tabs = DefaultTabController.of(context);
-            return Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                child: AnimatedBuilder(
-                    animation: tabs,
-                    builder: (context, _) => GlideControl(
-                        labels: const ['Ma liste', 'Sorties'],
-                        index: tabs.index,
-                        onSelected: tabs.animateTo)));
-          }),
+          Builder(
+            builder: (context) {
+              final tabs = DefaultTabController.of(context);
+              return AnimatedBuilder(
+                animation: tabs,
+                builder: (context, _) => CollectionScreenHeader(
+                  collectionButton: FilmsSeenButton(
+                    onPressed: () => context.push('/movie-history'),
+                  ),
+                  labels: const ['Ma liste', 'Sorties'],
+                  index: tabs.index,
+                  onSelected: (i) => tabs.animateTo(
+                    i,
+                    duration: motionOf(
+                      context,
+                      const Duration(milliseconds: 300),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
           const Expanded(
             child: TabBarView(children: [_LibraryTab(), _ReleasesTab()]),
           ),
@@ -90,7 +102,7 @@ class _LibraryTab extends ConsumerWidget {
     final feedAsync = ref.watch(movieFeedProvider);
 
     return feedAsync.when(
-      loading: () => const _GridSkeleton(),
+      loading: () => const _GridSkeleton(withHeading: true),
       error: (e, st) {
         debugPrint('Films — chargement impossible : $e\n$st');
         return ErrorRetry(
@@ -107,7 +119,8 @@ class _LibraryTab extends ConsumerWidget {
           return EmptyPrompt(
             icon: Icons.movie_outlined,
             title: 'Aucun film dans ta liste',
-            message: 'Ajoute les films que tu veux voir '
+            message:
+                'Ajoute les films que tu veux voir '
                 'et retrouve-les ici.',
             actionLabel: 'Explorer les films',
             onAction: () =>
@@ -135,12 +148,23 @@ class _LibraryGrid extends ConsumerWidget {
 
     Future<void> act(Movie m, MovieAction a) async {
       HapticFeedback.lightImpact();
-      switch (a) {
-        case MovieAction.markWatched:
-        case MovieAction.markUnwatched:
-          await db.toggleMovieWatched(m);
-        case MovieAction.remove:
-          await db.deleteMovie(m.id);
+      try {
+        switch (a) {
+          case MovieAction.markWatched:
+          case MovieAction.markUnwatched:
+            await db.toggleMovieWatched(m);
+          case MovieAction.remove:
+            if (!await confirmMovieRemoval(context, m) || !context.mounted) {
+              return;
+            }
+            await db.deleteMovie(m.id);
+        }
+      } catch (error, stack) {
+        debugPrint('Action film impossible : $error\n$stack');
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Modification impossible. Réessaie.')),
+        );
       }
     }
 
@@ -154,12 +178,7 @@ class _LibraryGrid extends ConsumerWidget {
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          SliverToBoxAdapter(
-              child: EditorialHeading(
-            eyebrow: '${library.length} films à découvrir',
-            title: 'Ta prochaine séance.',
-            description: 'Les films que tu as gardés pour plus tard.',
-          )),
+          SliverToBoxAdapter(child: _LibraryHeading(count: library.length)),
           if (library.isEmpty)
             const SliverToBoxAdapter(
               child: Padding(
@@ -178,36 +197,43 @@ class _LibraryGrid extends ConsumerWidget {
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              sliver: SliverGrid(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount:
-                      MediaQuery.textScalerOf(context).scale(14) > 21 ? 1 : 2,
-                  crossAxisSpacing: 13,
-                  mainAxisSpacing: 20,
-                  // Affiche 2:3 plus deux lignes de texte.
-                  childAspectRatio: 0.52,
-                ),
-                delegate: SliverChildBuilderDelegate((context, i) {
-                  final m = library[i];
-                  // Apparition échelonnée sur les toutes premières affiches
-                  // seulement : au-delà, la cascade se verrait plus que la
-                  // grille. Le décalage total reste sous 150 ms.
-                  return EntranceFade(
-                    // La clé lie la carte au film, pas à sa position : quand
-                    // un film vu quitte la grille, le suivant prend sa place
-                    // sans hériter de l'état de son bouton « vu ».
-                    key: ValueKey(m.id),
-                    delay: Motion.staggerAt(i),
-                    child: MoviePosterCard(
-                      movie: m,
-                      metaLine: movieMeta(m),
-                      onTap: () =>
-                          context.push('/movie/${m.id}', extra: m.title),
-                      onAction: (a) => act(m, a),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverLayoutBuilder(
+                builder: (context, constraints) {
+                  final scaler = MediaQuery.textScalerOf(context);
+                  final columns = scaler.scale(14) > 21 ? 1 : 2;
+                  final width =
+                      (constraints.crossAxisExtent - 13 * (columns - 1)) /
+                      columns;
+                  return SliverGrid(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      crossAxisSpacing: 13,
+                      mainAxisSpacing: 22,
+                      mainAxisExtent: MoviePosterCard.heightFor(width, scaler),
                     ),
+                    delegate: SliverChildBuilderDelegate((context, i) {
+                      final m = library[i];
+                      // Apparition échelonnée sur les toutes premières affiches
+                      // seulement : au-delà, la cascade se verrait plus que la
+                      // grille. Le décalage total reste sous 150 ms.
+                      return EntranceFade(
+                        // La clé lie la carte au film, pas à sa position : quand
+                        // un film vu quitte la grille, le suivant prend sa place
+                        // sans hériter de l'état de son bouton « vu ».
+                        key: ValueKey(m.id),
+                        delay: Motion.staggerAt(i),
+                        child: MoviePosterCard(
+                          movie: m,
+                          metaLine: movieMeta(m),
+                          onTap: () =>
+                              context.push('/movie/${m.id}', extra: m.title),
+                          onAction: (a) => act(m, a),
+                        ),
+                      );
+                    }, childCount: library.length),
                   );
-                }, childCount: library.length),
+                },
               ),
             ),
           if (watchedCount > 0)
@@ -219,6 +245,36 @@ class _LibraryGrid extends ConsumerWidget {
   }
 }
 
+class _LibraryHeading extends StatelessWidget {
+  const _LibraryHeading({required this.count});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Ta prochaine séance.',
+          style: TextStyle(
+            fontSize: 23,
+            fontWeight: FontWeight.w500,
+            letterSpacing: -1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          count == 0
+              ? 'Ta liste est à jour.'
+              : '$count ${count == 1 ? 'film à découvrir' : 'films à découvrir'}.',
+          style: const TextStyle(color: TtColors.dim, fontSize: 13),
+        ),
+      ],
+    ),
+  );
+}
+
 class _WatchedLink extends StatelessWidget {
   const _WatchedLink({required this.count});
 
@@ -227,7 +283,7 @@ class _WatchedLink extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
       child: Semantics(
         button: true,
         child: InkWell(
@@ -295,7 +351,8 @@ class _ReleasesTab extends ConsumerWidget {
           return const EmptyPrompt(
             icon: Icons.event_outlined,
             title: 'Aucune sortie annoncée',
-            message: 'Ajoute des films pas encore sortis — '
+            message:
+                'Ajoute des films pas encore sortis — '
                 'leur date apparaîtra ici.',
           );
         }
@@ -417,30 +474,85 @@ class _ReleaseRow extends StatelessWidget {
 
 /// Silhouette de la grille pendant le chargement.
 class _GridSkeleton extends StatelessWidget {
-  const _GridSkeleton();
+  const _GridSkeleton({this.withHeading = false});
+  final bool withHeading;
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+    final scaler = MediaQuery.textScalerOf(context);
+    return CustomScrollView(
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 13,
-        mainAxisSpacing: 20,
-        childAspectRatio: 0.52,
-      ),
-      itemCount: 6,
-      itemBuilder: (_, _) => const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: SkeletonBox(radius: 14)),
-          SizedBox(height: 8),
-          SkeletonBox(height: 14, radius: 4),
-          SizedBox(height: 6),
-          SkeletonBox(width: 80, height: 11, radius: 4),
-        ],
-      ),
+      slivers: [
+        if (withHeading)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonBox(
+                    width: 220,
+                    height: scaler.scale(23) * 1.2,
+                    radius: 5,
+                  ),
+                  const SizedBox(height: 4),
+                  SkeletonBox(
+                    width: 132,
+                    height: scaler.scale(13) * 1.2,
+                    radius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          sliver: SliverLayoutBuilder(
+            builder: (context, constraints) {
+              final columns = scaler.scale(14) > 21 ? 1 : 2;
+              final width =
+                  (constraints.crossAxisExtent - 13 * (columns - 1)) / columns;
+              return SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: 13,
+                  mainAxisSpacing: 22,
+                  mainAxisExtent: MoviePosterCard.heightFor(width, scaler),
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (_, _) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const AspectRatio(
+                        aspectRatio: 2 / 3,
+                        child: SkeletonBox(radius: 18),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: scaler.scale(14.5) * 1.3 * 2,
+                        child: Align(
+                          alignment: Alignment.topLeft,
+                          child: SkeletonBox(
+                            height: scaler.scale(14.5),
+                            radius: 4,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      SkeletonBox(
+                        width: width * .7,
+                        height: scaler.scale(12),
+                        radius: 4,
+                      ),
+                    ],
+                  ),
+                  childCount: 6,
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

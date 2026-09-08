@@ -35,6 +35,7 @@ flutter:
     - assets/objects/
     - assets/images/launch_mark.png
     - assets/images/empty_cinema.webp
+    - assets/images/collection_posters.png
   fonts:
     - family: Inter
       fonts:

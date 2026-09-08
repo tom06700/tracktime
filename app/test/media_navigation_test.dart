@@ -11,6 +11,7 @@ import 'package:tracktime/providers.dart';
 import 'package:tracktime/profile/sections.dart';
 import 'package:tracktime/screens/movie_history_screen.dart';
 import 'package:tracktime/screens/movies_screen.dart';
+import 'package:tracktime/movies/widgets/movie_poster_card.dart';
 import 'package:tracktime/settings/prefs.dart';
 import 'package:tracktime/theme.dart';
 import 'package:tracktime/tmdb/tvdb.dart';
@@ -174,7 +175,13 @@ void main() {
     await _mount(tester, db, const MoviesScreen(), opened);
     // Au centre de l'affiche : ni le titre en dessous, ni les deux boutons
     // posés dans les coins.
-    await tester.tapAt(tester.getCenter(find.byType(AspectRatio).first));
+    final poster = find
+        .descendant(
+          of: find.byType(MoviePosterCard).first,
+          matching: find.byType(AspectRatio),
+        )
+        .first;
+    await tester.tapAt(tester.getCenter(poster));
     await _navigate(tester);
 
     expect(opened, hasLength(1));

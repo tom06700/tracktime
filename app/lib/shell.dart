@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'screens/explorer_screen.dart';
 import 'screens/movies_screen.dart';
 import 'screens/profile_screen.dart';
 import 'providers.dart';
 import 'screens/shows_screen.dart';
-import 'brand/nitrate_brand.dart';
 import 'widgets/nav_bar.dart';
+import 'widgets/scroll_navigation.dart';
 
 /// Coquille principale : 4 onglets (Séries · Films · Explorer · Profil) dans
 /// un IndexedStack, surmontant le socle de navigation.
@@ -34,41 +33,9 @@ class HomeShell extends ConsumerWidget {
       ExplorerScreen(),
       ProfileScreen(),
     ];
-    // Le Profil est une page immersive plein écran (le décor « cinéma »
-    // occupe jusqu'à la safe area) : pas de barre — elle porterait un titre
-    // qui chevaucherait le contenu au défilement. Elle a son propre bouton
-    // Réglages flottant. Les autres onglets gardent la barre « Nitrate ».
-    final immersive = tab == HomeTab.profile ||
-        tab == HomeTab.series ||
-        tab == HomeTab.explorer;
-    return Scaffold(
-      extendBody: true,
-      appBar: immersive
-          ? null
-          : AppBar(
-              titleSpacing: 20,
-              toolbarHeight: 72,
-              title: const NitrateWordmark(size: 22),
-              actions: [
-                if (tab == HomeTab.series)
-                  IconButton(
-                    tooltip: 'Mes séries',
-                    icon: const Icon(Icons.video_library_outlined),
-                    onPressed: () => context.push('/series'),
-                  ),
-                if (tab == HomeTab.movies)
-                  IconButton(
-                    tooltip: 'Films vus',
-                    icon: const Icon(Icons.history),
-                    onPressed: () => context.push('/movie-history'),
-                  ),
-                IconButton(
-                  icon: const Icon(Icons.settings_outlined),
-                  tooltip: 'Réglages',
-                  onPressed: () => context.push('/settings'),
-                ),
-              ],
-            ),
+    // Each screen owns its header; Séries and Films share the same geometry.
+    return ScrollNavigationScaffold(
+      tabIndex: tab,
       // TickerMode : gèle les animations des onglets cachés (ex. le fond
       // vivant du Profil), l'IndexedStack gardant leur état.
       // Changement d'onglet instantané : aucune couche d'opacité ni de

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -5,8 +6,8 @@ import '../../db/database.dart';
 import '../../theme.dart';
 import '../../widgets/media_image.dart';
 
-/// Action proposée dans le menu d'une affiche.
-enum MovieAction { markWatched, markUnwatched, remove }
+import 'movie_actions_menu.dart';
+export 'movie_actions_menu.dart' show MovieAction;
 
 /// Affiche d'un film dans la grille. L'image porte la carte ; les actions
 /// secondaires vivent dans un menu, pour ne pas parsemer la grille de boutons.
@@ -21,7 +22,7 @@ class MoviePosterCard extends StatelessWidget {
   });
 
   final Movie movie;
-  final ValueChanged<MovieAction> onAction;
+  final FutureOr<void> Function(MovieAction) onAction;
 
   /// Ouverture de la fiche. Les boutons posés sur l'affiche restent hors de
   /// cette zone, pour qu'un tap dessus ne navigue pas.
@@ -32,8 +33,17 @@ class MoviePosterCard extends StatelessWidget {
 
   final bool watched;
 
+  /// Reserve two lines for both title and metadata, including larger text.
+  static double heightFor(double width, TextScaler scaler) =>
+      width * 1.5 +
+      10 +
+      scaler.scale(14.5) * 1.3 * 2 +
+      4 +
+      scaler.scale(12) * 1.4 * 2;
+
   @override
   Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
     return Semantics(
       button: true,
       label: [
@@ -58,17 +68,35 @@ class MoviePosterCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(18),
                     child: MediaImage(
                       sources: [movie.poster],
                       seed: movie.title,
                       icon: Icons.movie_outlined,
                     ),
                   ),
+                  IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0x24FFFFFF)),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.transparent,
+                            Color(0x66080B13),
+                          ],
+                          stops: [0, .6, 1],
+                        ),
+                      ),
+                    ),
+                  ),
                   Positioned(
-                    top: 2,
-                    right: 2,
-                    child: _ActionMenu(
+                    top: 4,
+                    right: 4,
+                    child: MovieActionsMenu(
                       watched: watched,
                       title: movie.title,
                       onAction: onAction,
@@ -76,7 +104,7 @@ class MoviePosterCard extends StatelessWidget {
                   ),
                   if (!watched)
                     Positioned(
-                      left: 6,
+                      left: 8,
                       bottom: 6,
                       child: _MarkWatchedButton(
                         title: movie.title,
@@ -86,78 +114,39 @@ class MoviePosterCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              movie.title,
-              // Deux lignes : un titre long ne doit pas être tronqué dès que
-              // l'utilisateur agrandit le texte.
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w700,
-                height: 1.25,
-                color: TtColors.text,
+            const SizedBox(height: 10),
+            SizedBox(
+              height: scaler.scale(14.5) * 1.3 * 2,
+              child: Text(
+                movie.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w500,
+                  height: 1.3,
+                  letterSpacing: -.25,
+                  color: TtColors.text,
+                ),
               ),
             ),
-            if (metaLine != null) ...[
-              const SizedBox(height: 2),
-              Text(
-                metaLine!,
-                maxLines: 1,
+            const SizedBox(height: 4),
+            SizedBox(
+              height: scaler.scale(12) * 1.4 * 2,
+              child: Text(
+                metaLine ?? '',
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12.5, color: TtColors.dim),
+                style: const TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: TtColors.dim,
+                ),
               ),
-            ],
+            ),
           ],
         ),
       ),
-    );
-  }
-}
-
-/// Menu « ••• » posé sur l'affiche. Zone tactile de 44 px, comme tout bouton,
-/// même si le pictogramme est petit.
-class _ActionMenu extends StatelessWidget {
-  const _ActionMenu({
-    required this.watched,
-    required this.title,
-    required this.onAction,
-  });
-
-  final bool watched;
-  final String title;
-  final ValueChanged<MovieAction> onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<MovieAction>(
-      tooltip: 'Actions pour $title',
-      icon: const Icon(Icons.more_horiz, size: 19, color: Colors.white),
-      iconSize: 19,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-      color: TtColors.surfaceHi,
-      onSelected: (a) {
-        HapticFeedback.selectionClick();
-        onAction(a);
-      },
-      itemBuilder: (context) => [
-        if (watched)
-          const PopupMenuItem(
-            value: MovieAction.markUnwatched,
-            child: Text('Remettre à voir'),
-          )
-        else
-          const PopupMenuItem(
-            value: MovieAction.markWatched,
-            child: Text('Marquer comme vu'),
-          ),
-        const PopupMenuItem(
-          value: MovieAction.remove,
-          child: Text('Retirer de ma liste'),
-        ),
-      ],
     );
   }
 }
@@ -193,38 +182,52 @@ class _MarkWatchedButtonState extends State<_MarkWatchedButton> {
   @override
   Widget build(BuildContext context) {
     final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    return Semantics(
-      button: true,
-      label: 'Marquer ${widget.title} comme vu',
-      child: GestureDetector(
-        onTap: _tap,
-        // Zone tactile de 44 px, alors que la pastille visible en fait 32.
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Center(
+    return Tooltip(
+      message: 'Marquer comme vu',
+      excludeFromSemantics: true,
+      child: Semantics(
+        label: 'Marquer ${widget.title} comme vu',
+        child: TextButton(
+          // Keep consuming taps during confirmation so they cannot open the
+          // parent card. _tap already ignores repeated confirmations.
+          onPressed: _tap,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            minimumSize: const Size(72, 44),
+          ),
+          child: ExcludeSemantics(
             child: AnimatedContainer(
               duration: reduceMotion
                   ? Duration.zero
                   : const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-              width: 32,
-              height: 32,
+              curve: Curves.easeOutCubic,
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
               decoration: BoxDecoration(
-                color: _confirmed
-                    ? TtColors.amber
-                    : Colors.black.withValues(alpha: 0.55),
-                shape: BoxShape.circle,
+                color: _confirmed ? TtColors.amber : const Color(0xE61A1B25),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: _confirmed
-                      ? TtColors.amber
-                      : Colors.white.withValues(alpha: 0.5),
+                  color: _confirmed ? TtColors.amber : const Color(0x66D6CBE5),
                 ),
               ),
-              child: Icon(
-                Icons.check,
-                size: 18,
-                color: _confirmed ? TtColors.bg : Colors.white,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check,
+                    size: 16,
+                    color: _confirmed ? TtColors.bg : const Color(0xFFE5D9F6),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Vu',
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.1,
+                      fontWeight: FontWeight.w600,
+                      color: _confirmed ? TtColors.bg : const Color(0xFFF2EDF7),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -17,8 +17,12 @@ import 'package:tracktime/theme.dart';
 
 /// Monte l'écran Séries sur une base en mémoire, sans réseau : le fil se
 /// recompose depuis la base comme dans l'app.
-Future<AppDatabase> _pump(WidgetTester tester,
-    {bool seed = true, int otherShows = 0, GoRouter? router}) async {
+Future<AppDatabase> _pump(
+  WidgetTester tester, {
+  bool seed = true,
+  int otherShows = 0,
+  GoRouter? router,
+}) async {
   final db = AppDatabase.forTesting(NativeDatabase.memory());
   addTearDown(() async {
     await tester.pumpWidget(const SizedBox.shrink());
@@ -57,7 +61,7 @@ Future<AppDatabase> _pump(WidgetTester tester,
         season: 1,
         episode: 1,
         airDate: Value(DateTime.now().subtract(const Duration(days: 1))),
-      )
+      ),
     ]);
   }
 
@@ -69,13 +73,23 @@ Future<AppDatabase> _pump(WidgetTester tester,
       ],
       child: router == null
           ? MaterialApp(
-              theme: buildTheme(), home: const Scaffold(body: ShowsScreen()))
+              theme: buildTheme(),
+              home: const Scaffold(body: ShowsScreen()),
+            )
           : MaterialApp.router(theme: buildTheme(), routerConfig: router),
     ),
   );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 50));
   return db;
+}
+
+// The collection icon has an intentional seven-second loop. Wait only for
+// scrolling and navigation here; its animation is covered separately.
+Future<void> _advance(WidgetTester tester) async {
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 80));
+  }
 }
 
 /// Démonte l'arbre puis avance l'horloge simulée : sans ça, les timers de
@@ -89,84 +103,97 @@ Future<void> _settle(WidgetTester tester) async {
 /// Client TheTVDB muet : les écrans déclenchent une synchro au montage, et son
 /// échec réseau lèverait une erreur asynchrone non gérée en plein test.
 TvdbClient _silentTvdb() => TvdbClient(
-      'test',
-      client: MockClient(
-        (_) async =>
-            http.Response('{"data":{"token":"t"},"status":"success"}', 200),
-      ),
-    );
+  'test',
+  client: MockClient(
+    (_) async =>
+        http.Response('{"data":{"token":"t"},"status":"success"}', 200),
+  ),
+);
 
 void main() {
-  testWidgets('changer l’affiche boucle sans modifier les visionnages',
-      (tester) async {
+  testWidgets('changer l’affiche boucle sans modifier les visionnages', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(320, 700);
     tester.view.devicePixelRatio = 1;
     tester.platformDispatcher.textScaleFactorTestValue = 2;
     addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     final db = await _pump(tester, otherShows: 1);
-    for (var i = 0;
-        i < 8 && find.byTooltip('Œuvre suivante').evaluate().isEmpty;
-        i++) {
-      await tester.drag(find.byKey(const PageStorageKey('to-watch-feed')),
-          const Offset(0, -250));
-      await tester.pumpAndSettle();
+    for (
+      var i = 0;
+      i < 8 && find.byTooltip('Œuvre suivante').evaluate().isEmpty;
+      i++
+    ) {
+      await tester.drag(
+        find.byKey(const PageStorageKey('to-watch-feed')),
+        const Offset(0, -250),
+      );
+      await _advance(tester);
     }
     await tester.ensureVisible(find.byTooltip('Œuvre suivante'));
-    await tester.pumpAndSettle();
+    await _advance(tester);
     expect(find.text('À l’affiche · 1 / 2'), findsOneWidget);
     await tester.tap(find.byTooltip('Œuvre suivante'));
-    await tester.pumpAndSettle();
+    await _advance(tester);
     expect(find.text('À l’affiche · 2 / 2'), findsOneWidget);
     await tester.tap(find.byTooltip('Œuvre suivante'));
-    await tester.pumpAndSettle();
+    await _advance(tester);
     expect(find.text('À l’affiche · 1 / 2'), findsOneWidget);
     await tester.tap(find.byTooltip('Œuvre précédente'));
-    await tester.pumpAndSettle();
+    await _advance(tester);
     expect(find.text('À l’affiche · 2 / 2'), findsOneWidget);
     expect(await tester.runAsync(db.allWatchedEpisodes), isEmpty);
     expect(tester.takeException(), isNull);
     await _settle(tester);
   });
 
-  testWidgets('toute la carte ouvre l’épisode, marquer vu reste indépendant',
-      (tester) async {
+  testWidgets('toute la carte ouvre l’épisode, marquer vu reste indépendant', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    final router = GoRouter(routes: [
-      GoRoute(
+    final router = GoRouter(
+      routes: [
+        GoRoute(
           path: '/',
-          builder: (_, state) => const Scaffold(body: ShowsScreen())),
-      GoRoute(
+          builder: (_, state) => const Scaffold(body: ShowsScreen()),
+        ),
+        GoRoute(
           path: '/episode/:id/:season/:episode',
           builder: (_, state) => Scaffold(
-              body: Text('Épisode ouvert ${state.pathParameters['episode']}'))),
-    ]);
+            body: Text('Épisode ouvert ${state.pathParameters['episode']}'),
+          ),
+        ),
+      ],
+    );
     addTearDown(router.dispose);
     final db = await _pump(tester, router: router);
     try {
       final card = find.byKey(const ValueKey('continue-watching-open'));
       for (final area in ['image', 'titre', 'espace']) {
         await Scrollable.ensureVisible(tester.element(card), alignment: .1);
-        await tester.pumpAndSettle();
+        await _advance(tester);
         final rect = tester.getRect(card);
         if (area == 'titre') {
           await tester.tap(find.text('Severance'));
         } else {
-          await tester.tapAt(area == 'image'
-              ? rect.topCenter + const Offset(0, 30)
-              : rect.bottomCenter - const Offset(0, 5));
+          await tester.tapAt(
+            area == 'image'
+                ? rect.topCenter + const Offset(0, 30)
+                : rect.bottomCenter - const Offset(0, 5),
+          );
         }
-        await tester.pumpAndSettle();
+        await _advance(tester);
         expect(find.text('Épisode ouvert 4'), findsOneWidget);
         expect((await tester.runAsync(db.allWatchedEpisodes))!, isEmpty);
         router.pop();
-        await tester.pumpAndSettle();
+        await _advance(tester);
       }
       final command = find.text('Marquer vu');
       await Scrollable.ensureVisible(tester.element(command), alignment: .5);
-      await tester.pumpAndSettle();
+      await _advance(tester);
       await tester.tap(command);
       await tester.runAsync(db.allWatchedEpisodes);
       await tester.pump();
@@ -180,8 +207,9 @@ void main() {
       await _settle(tester);
     }
   });
-  testWidgets('À venir remplace la carte, retour À voir la rétablit',
-      (tester) async {
+  testWidgets('À venir remplace la carte, retour À voir la rétablit', (
+    tester,
+  ) async {
     await _pump(tester);
     expect(find.text('Severance'), findsOneWidget);
     await tester.tap(find.text('À venir'));
@@ -195,19 +223,23 @@ void main() {
     await _settle(tester);
   });
 
-  testWidgets('le haut de page défile avec la carte au lieu de la découper',
-      (tester) async {
+  testWidgets('le haut de page défile avec la carte au lieu de la découper', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 650);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await _pump(tester, otherShows: 3);
     final before = tester.getTopLeft(find.byType(NitrateWordmark)).dy;
-    await tester.drag(find.byKey(const PageStorageKey('to-watch-feed')),
-        const Offset(0, -260));
+    await tester.drag(
+      find.byKey(const PageStorageKey('to-watch-feed')),
+      const Offset(0, -260),
+    );
     await tester.pump(const Duration(seconds: 1));
     expect(
-        tester.getTopLeft(find.byType(NitrateWordmark, skipOffstage: false)).dy,
-        lessThan(before));
+      tester.getTopLeft(find.byType(NitrateWordmark, skipOffstage: false)).dy,
+      lessThan(before),
+    );
     expect(tester.takeException(), isNull);
     await _settle(tester);
   });
@@ -272,36 +304,38 @@ void main() {
     await _settle(tester);
   });
 
-  testWidgets('marquer comme vu enregistre puis passe au suivant', (
-    tester,
-  ) async {
-    final db = await _pump(tester);
+  testWidgets(
+    'marquer comme vu enregistre puis passe au suivant',
+    (tester) async {
+      final db = await _pump(tester);
 
-    await tester.ensureVisible(find.text('Marquer vu'));
-    await tester.pump();
-    expect(find.text('Marquer vu').hitTestable(), findsOneWidget);
-    await tester.tap(find.text('Marquer vu'));
-    await tester.pump();
+      await tester.ensureVisible(find.text('Marquer vu'));
+      await tester.pump();
+      expect(find.text('Marquer vu').hitTestable(), findsOneWidget);
+      await tester.tap(find.text('Marquer vu'));
+      await tester.pump();
 
-    // La base en mémoire peut terminer pendant pump ; le test de commande
-    // contrôle séparément l’absence de succès avant la fin d’une écriture.
-    await tester.pump(const Duration(milliseconds: 100));
+      // La base en mémoire peut terminer pendant pump ; le test de commande
+      // contrôle séparément l’absence de succès avant la fin d’une écriture.
+      await tester.pump(const Duration(milliseconds: 100));
 
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
 
-    final watched = (await tester.runAsync(db.allWatchedEpisodes))!;
-    expect(watched, hasLength(1));
-    expect(watched.single.season, 2);
-    expect(watched.single.episode, 4);
+      final watched = (await tester.runAsync(db.allWatchedEpisodes))!;
+      expect(watched, hasLength(1));
+      expect(watched.single.season, 2);
+      expect(watched.single.episode, 4);
 
-    // Laisser la confirmation se terminer après la lecture effective de la base.
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-    await tester.pump(const Duration(milliseconds: 50));
-    expect(find.textContaining('S02 · E05'), findsWidgets);
-    await _settle(tester);
-  }, timeout: const Timeout(Duration(seconds: 45)));
+      // Laisser la confirmation se terminer après la lecture effective de la base.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.textContaining('S02 · E05'), findsWidgets);
+      await _settle(tester);
+    },
+    timeout: const Timeout(Duration(seconds: 45)),
+  );
 
   testWidgets('l\'onglet À venir regroupe par échéance', (tester) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());

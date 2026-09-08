@@ -1,0 +1,24 @@
+<svg class="drawing" viewBox="0 0 200 176" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="rim-proof" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f1dece"/><stop offset=".52" stop-color="#b9a1d2"/><stop offset="1" stop-color="#8278aa"/></linearGradient>
+        <linearGradient id="frame-proof" x1="0" y1="0" x2=".5" y2="1"><stop stop-color="#686185"/><stop offset="1" stop-color="#2e304d"/></linearGradient>
+        <linearGradient id="sky-proof" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#a49ccf"/><stop offset="1" stop-color="#596791"/></linearGradient>
+        <radialGradient id="iris-proof" cx=".35" cy=".25" r=".9"><stop stop-color="#ffd7b4"/><stop offset="1" stop-color="#be817e"/></radialGradient>
+        <clipPath id="eye-proof"><path class="eye-shape" d="M50 85 C72 50 128 50 150 85 C128 120 72 120 50 85Z"/></clipPath>
+      </defs>
+      <g class="film" transform="translate(100 88) rotate(-7) translate(-100 -88)">
+        <rect x="22" y="37" width="159" height="113" rx="20" fill="#090a12" opacity=".25"/>
+        <rect x="20" y="28" width="160" height="116" rx="18" fill="url(#rim-proof)"/>
+        <rect x="22" y="30" width="156" height="111" rx="16" fill="url(#frame-proof)"/>
+        <rect x="39" y="37" width="122" height="96" rx="10" fill="#20263c" stroke="#a49abe" stroke-opacity=".42"/>
+        <path d="M40 48 Q40 38 51 38 H148" fill="none" stroke="#e9dbe9" stroke-opacity=".25" stroke-linecap="round"/>
+        <rect x="27" y="40" width="7" height="10" rx="2" fill="#191e33"/><rect x="166" y="40" width="7" height="10" rx="2" fill="#191e33"/><rect x="27" y="61" width="7" height="10" rx="2" fill="#191e33"/><rect x="166" y="61" width="7" height="10" rx="2" fill="#191e33"/><rect x="27" y="82" width="7" height="10" rx="2" fill="#191e33"/><rect x="166" y="82" width="7" height="10" rx="2" fill="#191e33"/><rect x="27" y="103" width="7" height="10" rx="2" fill="#191e33"/><rect x="166" y="103" width="7" height="10" rx="2" fill="#191e33"/><rect x="27" y="124" width="7" height="10" rx="2" fill="#191e33"/><rect x="166" y="124" width="7" height="10" rx="2" fill="#191e33"/>
+        <path class="eye-outline eye-shape" d="M50 85 C72 50 128 50 150 85 C128 120 72 120 50 85Z" fill="#eee0e6"/>
+        <g clip-path="url(#eye-proof)">
+          <rect x="49" y="57" width="102" height="58" fill="url(#sky-proof)"/>
+          <g class="landscape"><path d="M43 110 L71 81 L85 91 L113 65 L157 111 V126 H43Z" fill="#5b628c"/><path d="M47 115 L81 91 L100 111 L130 83 L162 113 V126 H47Z" fill="#39486c"/><path d="M39 122 Q80 104 108 116 T163 111 V130 H39Z" fill="#263753"/></g>
+          <g class="iris"><circle cx="100" cy="85" r="20" fill="url(#iris-proof)"/><circle cx="100" cy="85" r="11" fill="#27283e"/><circle cx="95" cy="80" r="3.4" fill="#f9eadc"/></g>
+        </g>
+        <path class="eye-border eye-shape" d="M50 85 C72 50 128 50 150 85 C128 120 72 120 50 85Z" fill="none" stroke="#efdfec" stroke-width="2.4" stroke-linejoin="round"/>
+        <path d="M81 122 H119" stroke="#b6a6cc" stroke-width="2" stroke-linecap="round" opacity=".55"/>
+      </g></svg>

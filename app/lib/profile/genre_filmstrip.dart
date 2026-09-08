@@ -79,8 +79,7 @@ class GenreFilmStrip extends StatefulWidget {
 class _GenreFilmStripState extends State<GenreFilmStrip>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late List<_Slice> _items = _slices(widget.universe);
-  late final AnimationController _motion = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1190), value: 1);
+  late final AnimationController _motion;
   String? _active;
   int _previous = 0, _revision = 0;
   double _oldAngle = -20, _newAngle = -20;
@@ -89,6 +88,8 @@ class _GenreFilmStripState extends State<GenreFilmStrip>
   @override
   void initState() {
     super.initState();
+    _motion = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1190), value: 1);
     WidgetsBinding.instance.addObserver(this);
   }
 
