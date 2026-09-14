@@ -1,0 +1,7 @@
+# Sélecteur de saisons Nitrate
+
+Le champ de formulaire est remplacé par un bouton compact et un panneau modal depuis le bas. Le bouton conserve le libellé de saison, avec bordure lilas discrète et chevron qui pivote à l'ouverture. Le panneau reprend les surfaces sombres de l'application, des lignes espacées, une sélection lilas et une fermeture explicite ou par glissement.
+
+Pour les séries longues, une liste construite à la demande s'ouvre autour de la saison active. Les spéciaux restent nommés « Spéciaux ». La sélection ferme le panneau et utilise le callback existant pour revenir au premier épisode. Fermer ou choisir à nouveau la saison active ne modifie rien. Aucune écriture de visionnage. Animations réduites selon le réglage système ; hauteur des lignes adaptée au texte agrandi.
+
+Validation locale : 33 tests réussis (sélecteur, navigation et fiches médias), analyse ciblée sans problème. Les cas couverts comprennent 31 saisons avec sélection de la saison 23, annulation, changement de saison, spéciaux, écran 320 × 740 et texte doublé. Version profile installée et vérifiée sur l’iPhone après reconnexion : ouverture du panneau, rendu lilas de la saison active, passage à la saison 2 avec premier épisode visible, réouverture puis fermeture sans changer la sélection. Captures dans /tmp/nitrate-season-selector. Aucun marquage de visionnage effectué. Automatisation arrêtée après vérification.

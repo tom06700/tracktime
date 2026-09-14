@@ -97,7 +97,7 @@ void main() {
     }
   });
   testWidgets(
-    'glisser sans maintien sélectionne chaque onglet une seule fois',
+    'glisser prévisualise puis sélectionne uniquement au relâchement',
     (t) async {
       var selected = 0;
       final visits = <int>[];
@@ -124,27 +124,29 @@ void main() {
         await gesture.moveTo(t.getCenter(find.text(label)));
         await t.pump(const Duration(milliseconds: 30));
       }
-      expect(visits, [1, 2, 3]);
+      expect(visits, isEmpty);
+      expect(selected, 0);
       await gesture.moveBy(const Offset(1, 0));
       await gesture.up();
       await t.pump();
-      expect(visits, [1, 2, 3]);
+      expect(visits, [3]);
       expect(selected, 3);
     },
   );
 
-  testWidgets('un glissement rapide sélectionne immédiatement la destination', (
-    t,
-  ) async {
-    final visits = <int>[];
-    await t.pumpWidget(host(0, visits.add));
-    final gesture = await t.startGesture(t.getCenter(find.text('Séries')));
-    await t.pump(const Duration(milliseconds: 80));
-    await gesture.moveTo(t.getCenter(find.text('Profil')));
-    await gesture.up();
-    await t.pump();
-    expect(visits, [3]);
-  });
+  testWidgets(
+    'un glissement rapide sélectionne la destination au relâchement',
+    (t) async {
+      final visits = <int>[];
+      await t.pumpWidget(host(0, visits.add));
+      final gesture = await t.startGesture(t.getCenter(find.text('Séries')));
+      await t.pump(const Duration(milliseconds: 80));
+      await gesture.moveTo(t.getCenter(find.text('Profil')));
+      await gesture.up();
+      await t.pump();
+      expect(visits, [3]);
+    },
+  );
 
   testWidgets('quitter la barre verticalement interrompt la sélection', (
     t,
@@ -157,6 +159,17 @@ void main() {
       t.getCenter(find.text('Profil')) - const Offset(0, 160),
     );
     await gesture.up();
+    await t.pump();
+    expect(visits, isEmpty);
+  });
+  testWidgets('annuler le geste ne change pas la page', (t) async {
+    final visits = <int>[];
+    await t.pumpWidget(host(0, visits.add));
+    final gesture = await t.startGesture(t.getCenter(find.text('Séries')));
+    await gesture.moveTo(t.getCenter(find.text('Profil')));
+    await t.pump();
+    expect(visits, isEmpty);
+    await gesture.cancel();
     await t.pump();
     expect(visits, isEmpty);
   });

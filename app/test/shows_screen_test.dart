@@ -13,6 +13,7 @@ import 'package:tracktime/settings/prefs.dart';
 import 'package:tracktime/tmdb/tvdb.dart';
 import 'package:tracktime/screens/shows_screen.dart';
 import 'package:tracktime/series/feed.dart';
+import 'package:tracktime/series/widgets/continue_watching_hero.dart';
 import 'package:tracktime/theme.dart';
 
 /// Monte l'écran Séries sur une base en mémoire, sans réseau : le fil se
@@ -111,6 +112,66 @@ TvdbClient _silentTvdb() => TvdbClient(
 );
 
 void main() {
+  testWidgets('un nouveau visionnage remet la série récente en grande carte', (tester) async {
+    final db = await _pump(tester, otherShows: 1);
+    await _advance(tester);
+    final now = DateTime.now();
+    await (() async {
+      await db.upsertEpisodes([
+        for (final n in [2, 3]) EpisodesCompanion.insert(
+          showId: 100, season: 1, episode: n,
+        ),
+      ]);
+      await db.setEpisodeWatched(1, 2, 4, at: now.subtract(const Duration(days: 2)));
+      await db.setEpisodeWatched(100, 1, 1, at: now.subtract(const Duration(days: 1)));
+    })();
+    await _advance(tester);
+    int heroId() => tester.widget<ContinueWatchingHero>(find.byType(ContinueWatchingHero)).next.show.id;
+    expect(heroId(), 100);
+    for (var i = 0; i < 8 && find.byTooltip('Œuvre suivante').evaluate().isEmpty; i++) {
+      await tester.drag(find.byKey(const PageStorageKey('to-watch-feed')), const Offset(0, -250));
+      await _advance(tester);
+    }
+    await tester.ensureVisible(find.byTooltip('Œuvre suivante'));
+    await _advance(tester);
+    await tester.tap(find.byTooltip('Œuvre suivante'));
+    await _advance(tester);
+    expect(heroId(), 1);
+    // Une synchro des métadonnées ne vole pas la sélection manuelle.
+    await db.upsertShow(
+      const ShowsCompanion(id: Value(100), name: Value('Nom actualisé')),
+    );
+    await _advance(tester);
+    expect(heroId(), 1);
+    await db.setEpisodeWatched(100, 1, 2, at: now);
+    await _advance(tester);
+    expect(heroId(), 100);
+    expect(tester.widget<ContinueWatchingHero>(find.byType(ContinueWatchingHero)).next.episode, 3);
+    await _settle(tester);
+  });
+
+  testWidgets(
+    'la vue d’ensemble conserve les séries et revient à la grande carte',
+    (tester) async {
+      await _pump(tester, otherShows: 5);
+      await _advance(tester);
+      await tester.tap(find.byTooltip('Vue d’ensemble'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1200));
+      expect(find.byKey(const ValueKey('series-overview')), findsOneWidget);
+      expect(find.text('Severance'), findsOneWidget);
+      await tester.tap(find.byTooltip('Grande carte'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1200));
+      expect(
+        find.byKey(const ValueKey('continue-watching-open')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await _settle(tester);
+    },
+  );
+
   testWidgets('changer l’affiche boucle sans modifier les visionnages', (
     tester,
   ) async {
@@ -268,7 +329,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('Ta liste est vide'), findsOneWidget);
+    expect(find.text('Un nouveau monde t’attend.'), findsOneWidget);
+    expect(find.bySemanticsLabel('Traverser la porte vers Explorer'), findsOneWidget);
     expect(captured.read(homeTabProvider), HomeTab.series);
 
     await tester.ensureVisible(find.text('Explorer les séries'));

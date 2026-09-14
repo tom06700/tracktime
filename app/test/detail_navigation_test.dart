@@ -90,7 +90,8 @@ final _onePiece = <String, Object?>{
 
 Future<void> _pump(
     WidgetTester tester, AppDatabase db, TvdbClient tvdb, Widget home,
-    {Size size = const Size(390, 844), double scale = 1}) async {
+    {Size size = const Size(390, 844), double scale = 1,
+      bool disableAnimations = true}) async {
   tester.view.physicalSize = size * 3;
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
@@ -106,7 +107,7 @@ Future<void> _pump(
           builder: (context, child) => MediaQuery(
               data: MediaQuery.of(context).copyWith(
                   textScaler: TextScaler.linear(scale),
-                  disableAnimations: true),
+                  disableAnimations: disableAnimations),
               child: child!),
           home: home),
     ),
@@ -152,6 +153,101 @@ Future<void> _settle(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('terminer toute la saison conserve la saison affichée', (tester) async {
+    final db = _fkDb();
+    addTearDown(db.close);
+    await db.upsertShow(ShowsCompanion.insert(id: const Value(81797), name: 'One Piece'));
+    await _pump(tester, db, _Api().client(series: _onePiece,
+      episodes: [(1, 1), (1, 2), (2, 1)]),
+      const ShowDetailScreen(showId: 81797, title: 'One Piece'));
+    await _openSeason(tester);
+    await _tapAndSettle(tester, find.text('Non vus'));
+    await _tapAndSettle(tester, find.text('Tout marquer vu'));
+    await _tapAndSettle(tester, find.text('Confirmer'));
+    await _frames(tester, 15);
+    expect(find.text('Saison terminée'), findsOneWidget);
+    expect(find.text('Saison 1'), findsOneWidget);
+    expect((await db.allWatchedEpisodes()).length, 2);
+    await _settle(tester);
+  });
+  testWidgets('le dernier épisode se retire sans changer automatiquement de saison', (tester) async {
+    final db = _fkDb();
+    addTearDown(db.close);
+    await db.upsertShow(ShowsCompanion.insert(id: const Value(81797), name: 'One Piece'));
+    await _pump(tester, db, _Api().client(series: _onePiece,
+      episodes: [(1, 1), (2, 1)]),
+      const ShowDetailScreen(showId: 81797, title: 'One Piece'),
+      disableAnimations: false);
+    await _openSeason(tester);
+    await _tapAndSettle(tester, find.text('Non vus'));
+    await _frames(tester, 18);
+    await tester.ensureVisible(find.byKey(const ValueKey('series-episode-check-1')));
+    await _frames(tester);
+    await tester.tap(find.byKey(const ValueKey('series-episode-check-1')));
+    await _frames(tester, 2);
+    expect(find.text('S1E1'), findsOneWidget);
+    await _frames(tester, 16);
+    expect(find.text('S1E1'), findsNothing);
+    expect(find.text('Saison terminée'), findsOneWidget);
+    expect(find.text('Saison 1'), findsOneWidget);
+    await _tapAndSettle(tester, find.text('Saison suivante · 2'));
+    await _frames(tester, 15);
+    expect(find.text('S2E1').hitTestable(), findsOneWidget);
+    final watched = await db.allWatchedEpisodes();
+    expect(watched.length, 1);
+    expect(watched.single.season, 1);
+    await _settle(tester);
+  });
+  testWidgets('une saison terminée garde les filtres à la même place', (tester) async {
+    final db = _fkDb();
+    addTearDown(db.close);
+    await db.upsertShow(ShowsCompanion.insert(id: const Value(81797), name: 'One Piece'));
+    await _pump(tester, db, _Api().client(series: _onePiece,
+      episodes: [for (var n = 1; n <= 20; n++) (1, n)]),
+      const ShowDetailScreen(showId: 81797, title: 'One Piece'));
+    await db.setSeasonWatched(81797, 1, [for (var n = 1; n <= 20; n++) n], true);
+    await _frames(tester);
+    await _openSeason(tester);
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -1000));
+    await _frames(tester);
+    final selector = find.byKey(const ValueKey('season-selector'));
+    final before = tester.getTopLeft(selector).dy;
+    await tester.tap(find.text('Non vus'));
+    await _frames(tester, 15);
+    expect(tester.getTopLeft(selector).dy, closeTo(before, 1));
+    expect(find.text('Saison terminée'), findsOneWidget);
+    expect(find.text('20 épisodes vus'), findsOneWidget);
+    await tester.tap(find.text('Revoir les épisodes'));
+    await _frames(tester);
+    expect(find.text('S1E1').hitTestable(), findsOneWidget);
+    expect(tester.getTopLeft(selector).dy, closeTo(before, 1));
+    await _settle(tester);
+  });
+  testWidgets('le retour et le titre de série restent visibles après défilement', (tester) async {
+    final db = _fkDb();
+    addTearDown(db.close);
+    await _pump(tester, db,
+      _Api().client(series: _onePiece, episodes: [for (var n = 1; n <= 100; n++) (1, n), (2, 1), (2, 2)]),
+      const ShowDetailScreen(showId: 81797, title: 'One Piece'));
+    await _openSeason(tester);
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -1100));
+    await _frames(tester);
+    expect(find.byTooltip('Retour').hitTestable(), findsOneWidget);
+    expect(find.byKey(const ValueKey('series-compact-title')).hitTestable(), findsOneWidget);
+    expect(find.byKey(const ValueKey('season-selector')).hitTestable(), findsOneWidget);
+    expect(find.text('Non vus').hitTestable(), findsOneWidget);
+    await tester.tap(find.text('Non vus'));
+    await _frames(tester);
+    expect(find.text('S1E1').hitTestable(), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('season-selector')));
+    await _frames(tester);
+    await tester.tap(find.text('Saison 2').last);
+    await _frames(tester);
+    expect(find.text('S2E1').hitTestable(), findsOneWidget);
+    expect(find.text('Non vus').hitTestable(), findsOneWidget);
+    expect(await db.allWatchedEpisodes(), isEmpty);
+    await _settle(tester);
+  });
   testWidgets('la fiche série s\'ouvre sans que la série soit suivie', (
     tester,
   ) async {
@@ -525,7 +621,12 @@ void main() {
     await _openSeason(tester);
     expect(find.byType(IconButton).evaluate().length, lessThan(25),
         reason: 'La longue saison reste virtualisée.');
-    await _tapAndSettle(tester, find.byTooltip('Aller à un numéro'));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -1400));
+    await _frames(tester);
+    final positionBeforeEpisode = tester.state<ScrollableState>(find.byType(Scrollable).first).position.pixels;
+    expect(positionBeforeEpisode, greaterThan(1000));
+    await tester.tap(find.byTooltip('Aller à un numéro'));
+    await _frames(tester);
     await tester.enterText(find.byType(TextField), '1200');
     await _tapAndSettle(tester, find.text('Ouvrir la fiche'));
     expect(
@@ -539,7 +640,10 @@ void main() {
     expect(await db.allWatchedEpisodes(), isEmpty);
     router.pop();
     await _frames(tester);
-    await _tapAndSettle(tester, find.byType(DropdownButtonFormField<int>));
+    expect(tester.state<ScrollableState>(find.byType(Scrollable).first).position.pixels,
+        closeTo(positionBeforeEpisode, 1));
+    expect(find.text('Saison 1').hitTestable(), findsOneWidget);
+    await _tapAndSettle(tester, find.byKey(const ValueKey('season-selector')));
     await _tapAndSettle(tester, find.text('Spéciaux').last);
     await _tapAndSettle(tester, find.byTooltip('Aller à un numéro'));
     await tester.enterText(find.byType(TextField), '3');
@@ -577,7 +681,7 @@ void main() {
         await _tapAndSettle(tester, find.text('Épisodes'));
         await _tapAndSettle(tester, find.byTooltip('Aller à un numéro'));
         expect(tester.takeException(), isNull);
-        await _tapAndSettle(tester, find.text('Annuler'));
+        await _tapAndSettle(tester, find.byTooltip('Annuler'));
       } else {
         await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
         await _frames(tester);

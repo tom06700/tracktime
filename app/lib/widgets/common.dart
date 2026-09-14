@@ -1,3 +1,4 @@
+import 'artwork_image.dart';
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
@@ -143,7 +144,7 @@ class PosterBox extends StatelessWidget {
     if (path == null || path.isEmpty) return placeholder;
     return ClipRRect(
       borderRadius: radius,
-      child: Image.network(
+      child: ArtworkImage(
         imageUrl(path),
         width: w,
         height: h,

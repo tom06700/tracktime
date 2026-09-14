@@ -1,3 +1,4 @@
+import '../widgets/artwork_image.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -9,7 +10,7 @@ import '../widgets/common.dart';
 import '../widgets/glass.dart';
 import 'sections.dart';
 
-/// « Quoi regarder ce soir ? » : le projecteur balaie ta liste de lecture et
+/// « Que regarder ce soir ? » : le projecteur balaie ta liste de lecture et
 /// s'arrête au hasard sur un titre. Relance possible ; « Ouvrir la fiche »
 /// pour les séries.
 Future<void> showTonightPicker(BuildContext context, List<WatchItem> items) {
@@ -279,7 +280,7 @@ class _PickerPoster extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: path == null || path.isEmpty
           ? fallback
-          : Image.network(
+          : ArtworkImage(
               imageUrl(path, size: 'w342'),
               width: _w,
               height: _h,

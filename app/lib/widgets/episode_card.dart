@@ -1,3 +1,4 @@
+import 'artwork_image.dart';
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
@@ -139,7 +140,7 @@ class _Still extends StatelessWidget {
       ),
     );
 
-    Widget imageOr(String url, Widget fallback) => Image.network(
+    Widget imageOr(String url, Widget fallback) => ArtworkImage(
           url,
           width: w,
           height: double.infinity,

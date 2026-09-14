@@ -11,6 +11,7 @@ import '../widgets/editorial_heading.dart';
 import '../widgets/media_image.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/states.dart';
+import '../widgets/nitrate_banner.dart';
 
 /// Historique de visionnage : tous les épisodes vus, du plus récent au plus
 /// ancien. Sorti du fil principal, où il repoussait le contenu à regarder.
@@ -118,11 +119,12 @@ class _HistoryRow extends ConsumerWidget {
         .read(databaseProvider)
         .setEpisodeUnwatched(entry.show.id, entry.season, entry.episode);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(content: Text('${entry.code} remis à « non vu »')),
-      );
+    NitrateMessenger.of(context).showBanner(
+      NitrateBanner(
+        kind: NitrateBannerKind.success,
+        content: Text('${entry.code} remis à « non vu »'),
+      ),
+    );
   }
 
   @override

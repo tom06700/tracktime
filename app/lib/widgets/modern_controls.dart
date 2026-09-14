@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../motion.dart';
+import 'watched_check.dart';
+import 'nitrate_banner.dart';
 
 abstract final class ModernPalette {
   static const background = Color(0xFF101113);
@@ -25,6 +27,7 @@ class ModernCommand extends StatefulWidget {
       required this.label,
       required this.onPressed,
       this.selected = false,
+      this.animatedConfirmation = false,
       this.subtitle,
       this.eyebrow,
       this.labelSize,
@@ -40,6 +43,7 @@ class ModernCommand extends StatefulWidget {
   final bool trailingIndicator;
   final FutureOr<void> Function()? onPressed;
   final bool selected, compact;
+  final bool animatedConfirmation;
   final double? height;
   final bool subtitleAbove;
   @override
@@ -50,7 +54,8 @@ class _ModernCommandState extends State<ModernCommand>
     with SingleTickerProviderStateMixin {
   late final AnimationController _motion = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: widget.animatedConfirmation
+          ? WatchedCheck.duration : const Duration(milliseconds: 700),
       value: widget.selected ? 1 : 0);
   bool _busy = false;
   @override
@@ -90,15 +95,22 @@ class _ModernCommandState extends State<ModernCommand>
             milliseconds: widget.shape == CommandShape.surprise ? 1000 : 700);
         if (!reduceMotionOf(context)) {
           _motion.forward(from: 0);
-          await Future<void>.delayed(Duration(
-              milliseconds: widget.shape == CommandShape.nextUp ? 280 : 1000));
+          await Future<void>.delayed(
+            Duration(
+              milliseconds: widget.shape == CommandShape.nextUp ? 280 : 1000,
+            ),
+          );
         }
       }
       if (mounted) await widget.onPressed!();
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Impossible d’enregistrer. Réessaie.')));
+        NitrateMessenger.of(context).showBanner(
+          const NitrateBanner(
+            kind: NitrateBannerKind.error,
+            content: Text('Impossible d’enregistrer. Réessaie.'),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -250,7 +262,7 @@ class _ModernCommandState extends State<ModernCommand>
                                 children: [
                                   if (check) ...[
                                     Transform.rotate(
-                                        angle: elastic * math.pi * 2,
+                                        angle: widget.animatedConfirmation ? 0 : elastic * math.pi * 2,
                                         child: Container(
                                             width: orb,
                                             height: orb,
@@ -261,7 +273,7 @@ class _ModernCommandState extends State<ModernCommand>
                                                     t),
                                                 shape: BoxShape.circle),
                                             child: Center(
-                                                child: _busy && !done
+                                                child: !widget.animatedConfirmation && _busy && !done
                                                     ? const SizedBox(
                                                         width: 17,
                                                         height: 17,
@@ -270,7 +282,9 @@ class _ModernCommandState extends State<ModernCommand>
                                                                 strokeWidth: 2,
                                                                 color: Color(
                                                                     0xFF455E33)))
-                                                    : Icon(
+                                                    : widget.animatedConfirmation
+                                                      ? WatchedCheck(confirmed: done, busy: _busy && !done)
+                                                      : Icon(
                                                         done
                                                             ? Icons.check
                                                             : Icons

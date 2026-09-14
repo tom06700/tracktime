@@ -55,7 +55,7 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
     final shows = async.value!;
     final lastActivity =
         ref.watch(universeProvider).value?.lastActivityByShow ??
-            const <int, DateTime>{};
+        const <int, DateTime>{};
 
     // Genres disponibles, fréquence décroissante.
     final freq = <String, int>{};
@@ -222,13 +222,15 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
               icon: shows.isEmpty
                   ? Icons.video_library_outlined
                   : Icons.search_off,
-              title:
-                  shows.isEmpty ? 'Ta bibliothèque est vide' : 'Aucun résultat',
+              title: shows.isEmpty
+                  ? 'Ta bibliothèque est vide'
+                  : 'Aucun résultat',
               message: shows.isEmpty
                   ? 'Explore le catalogue pour ajouter ta première série.'
                   : 'Essaie un autre titre ou retire les filtres.',
-              actionLabel:
-                  shows.isEmpty ? 'Explorer les séries' : 'Effacer les filtres',
+              actionLabel: shows.isEmpty
+                  ? 'Explorer les séries'
+                  : 'Effacer les filtres',
               onAction: () {
                 if (shows.isEmpty) {
                   ref.read(homeTabProvider.notifier).select(HomeTab.explorer);
@@ -253,8 +255,8 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
                 gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent:
                       MediaQuery.textScalerOf(context).scale(12) > 18
-                          ? 200
-                          : 116,
+                      ? 200
+                      : 116,
                   childAspectRatio: 0.53,
                   mainAxisSpacing: 14,
                   crossAxisSpacing: 12,
@@ -317,12 +319,10 @@ class _SeriesLibraryScreenState extends ConsumerState<SeriesLibraryScreen> {
     switch (_sort) {
       case _Sort.recent:
         list.sort((a, b) {
-          final da = lastActivity[a.show.id];
-          final db = lastActivity[b.show.id];
-          if (da != null && db != null) return db.compareTo(da);
-          if (da != null) return -1;
-          if (db != null) return 1;
-          return byName(a, b);
+          final da = lastActivity[a.show.id] ?? a.show.addedAt;
+          final db = lastActivity[b.show.id] ?? b.show.addedAt;
+          final order = db.compareTo(da);
+          return order != 0 ? order : byName(a, b);
         });
       case _Sort.progress:
         list.sort((a, b) {

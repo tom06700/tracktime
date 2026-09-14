@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers.dart';
-import '../brand/nitrate_brand.dart';
+import '../widgets/portal/portal_empty.dart';
+import '../widgets/portal/portal_preview_scope.dart';
 import '../motion.dart';
 import '../series/feed.dart';
 import '../series/sync.dart';
@@ -13,11 +14,14 @@ import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
+import '../widgets/bounded_refresh_indicator.dart';
+import '../widgets/collection_layout_transition.dart';
 import '../widgets/modern_controls.dart';
 import '../widgets/states.dart';
 import '../widgets/press_response.dart';
 import '../widgets/collection_button.dart';
 import '../widgets/collection_screen_header.dart';
+import '../widgets/nitrate_banner.dart';
 
 class ShowsScreen extends ConsumerStatefulWidget {
   const ShowsScreen({super.key});
@@ -44,11 +48,12 @@ Future<SyncOutcome> _sync(WidgetRef ref, {bool force = false}) =>
 Future<void> _refresh(BuildContext context, WidgetRef ref) async {
   final outcome = await _sync(ref, force: true);
   if (!context.mounted || !outcome.hasFailures) return;
-  ScaffoldMessenger.of(context)
-    ..clearSnackBars()
-    ..showSnackBar(
-      const SnackBar(content: Text('Actualisation impossible pour le moment.')),
-    );
+  NitrateMessenger.of(context).showBanner(
+    const NitrateBanner(
+      kind: NitrateBannerKind.error,
+      content: Text('Actualisation impossible pour le moment.'),
+    ),
+  );
 }
 
 void _openEpisode(BuildContext context, NextUp n) => context.push(
@@ -60,29 +65,29 @@ Future<void> _markWatched(BuildContext context, WidgetRef ref, NextUp n) async {
   final db = ref.read(databaseProvider);
   await db.setEpisodeWatched(n.show.id, n.season, n.episode);
   if (!context.mounted) return;
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        content: Text('${n.show.name} · épisode enregistré'),
-        action: SnackBarAction(
-          label: 'Annuler',
-          onPressed: () async {
-            try {
-              await db.setEpisodeUnwatched(n.show.id, n.season, n.episode);
-            } catch (_) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Annulation impossible. Réessaie.'),
-                  ),
-                );
-              }
+  NitrateMessenger.of(context).showBanner(
+    NitrateBanner(
+      kind: NitrateBannerKind.success,
+      content: Text('${n.show.name} · épisode enregistré'),
+      action: NitrateBannerAction(
+        label: 'Annuler',
+        onPressed: () async {
+          try {
+            await db.setEpisodeUnwatched(n.show.id, n.season, n.episode);
+          } catch (_) {
+            if (context.mounted) {
+              NitrateMessenger.of(context).showBanner(
+                const NitrateBanner(
+                  kind: NitrateBannerKind.error,
+                  content: Text('Annulation impossible. Réessaie.'),
+                ),
+              );
             }
-          },
-        ),
+          }
+        },
       ),
-    );
+    ),
+  );
 }
 
 class _ShowsScreenState extends ConsumerState<ShowsScreen>
@@ -140,6 +145,13 @@ class _ToWatchTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (PortalPreviewScope.enabled(context)) {
+      return PortalEmpty(
+        movies: false,
+        onExplore: () =>
+            ref.read(homeTabProvider.notifier).select(HomeTab.explorer),
+      );
+    }
     final feedAsync = ref.watch(seriesFeedProvider);
 
     return feedAsync.when(
@@ -168,7 +180,7 @@ class _ToWatchTab extends ConsumerWidget {
               onAction: () => context.push('/series'),
             );
           }
-          return _CinemaEmpty(
+          return PortalEmpty(
             onExplore: () =>
                 ref.read(homeTabProvider.notifier).select(HomeTab.explorer),
           );
@@ -191,6 +203,22 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
   NextUp? _holding;
   int? _selectedId;
   bool _confirmed = false;
+
+  @override
+  void didUpdateWidget(covariant _ToWatchFeed oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final before = oldWidget.feed.resumeQueue;
+    final after = widget.feed.resumeQueue;
+    // A new viewing changes the priority. Metadata refreshes and manual
+    // browsing keep the chosen card; confirming still finishes on _holding.
+    if (after.isNotEmpty &&
+        (before.isEmpty ||
+            after.first.show.id != before.first.show.id ||
+            after.first.lastWatchedAt != before.first.lastWatchedAt)) {
+      _selectedId = null;
+    }
+  }
+
   Future<void> _mark(NextUp n) async {
     if (_holding != null) return;
     setState(() => _holding = n);
@@ -214,7 +242,7 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
   @override
   Widget build(BuildContext context) {
     final feed = widget.feed;
-    final queue = [...feed.toWatch, ...feed.stale];
+    final queue = feed.resumeQueue;
     final selection = queue.indexWhere((n) => n.show.id == _selectedId);
     final selectedIndex = selection < 0 ? 0 : selection;
     final hero = _holding ?? (queue.isEmpty ? null : queue[selectedIndex]);
@@ -225,118 +253,142 @@ class _ToWatchFeedState extends ConsumerState<_ToWatchFeed> {
       }
     }
 
-    return RefreshIndicator(
-      color: TtColors.amber,
-      backgroundColor: TtColors.surface,
-      onRefresh: () => _refresh(context, ref),
-      child: ListView(
-        key: const PageStorageKey('to-watch-feed'),
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(bottom: bottomNavInset(context)),
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'À reprendre.',
-                  style: TextStyle(
-                    fontSize: 23,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: -1,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Juste un épisode de plus.',
-                  style: TextStyle(color: TtColors.dim, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-          if (hero != null)
-            ContinueWatchingHero(
-              // La clé lie l'état de la carte à l'épisode : la validation ne
-              // « déteint » pas sur celui qui prend sa place.
-              key: ValueKey('${hero.show.id}-${hero.season}-${hero.episode}'),
-              next: hero,
-              onOpen: () => _openEpisode(context, hero),
-              confirmed: _confirmed,
-              onMarkWatched: () => _mark(hero),
-            ),
-          if (next.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: ModernPalette.surface,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(
-                    color: ModernPalette.lilac.withValues(alpha: .22),
-                  ),
-                ),
+    return CollectionLayoutTransition(
+      motion: CollectionMotion.cascade,
+      builder: (context, compact) => BoundedRefreshIndicator(
+        onRefresh: () => _refresh(context, ref),
+        child: CustomScrollView(
+          key: const PageStorageKey('to-watch-feed'),
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 18),
                 child: Row(
                   children: [
-                    IconButton(
-                      tooltip: 'Œuvre précédente',
-                      onPressed: _holding == null
-                          ? () => select(selectedIndex - 1)
-                          : null,
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: ModernPalette.lilac,
-                      ),
-                    ),
                     Expanded(
-                      child: Text(
-                        'À l’affiche · ${selectedIndex + 1} / ${queue.length}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: ModernPalette.lilac,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'À reprendre.',
+                            style: TextStyle(
+                              fontSize: 23,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: -1,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Juste un épisode de plus.',
+                            style: TextStyle(color: TtColors.dim, fontSize: 13),
+                          ),
+                        ],
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Œuvre suivante',
-                      onPressed: _holding == null
-                          ? () => select(selectedIndex + 1)
-                          : null,
-                      icon: const Icon(
-                        Icons.arrow_forward,
-                        color: ModernPalette.lilac,
-                      ),
-                    ),
+                    const CollectionLayoutToggle(series: true),
                   ],
                 ),
               ),
             ),
-          if (next.isNotEmpty) ...[
-            const SizedBox(height: 32),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Text(
-                'Dans ta\nrotation',
-                style: TextStyle(color: TtColors.dim),
+            if (compact)
+              _SeriesOverview(
+                queue: queue,
+                onOpen: (n) => _openEpisode(context, n),
               ),
-            ),
-            _Carousel(
-              height: 220 + (MediaQuery.textScalerOf(context).scale(40) - 40),
-              itemCount: next.length,
-              separator: 14,
-              itemBuilder: (_, i) => _QueuePoster(
-                next: next[i],
-                selected: next[i].show.id == hero?.show.id,
-                onTap: () => select(i),
-              ),
+            SliverList.list(
+              children: [
+                if (!compact && hero != null)
+                  ContinueWatchingHero(
+                    // La clé lie l'état de la carte à l'épisode : la validation ne
+                    // « déteint » pas sur celui qui prend sa place.
+                    key: ValueKey(
+                      '${hero.show.id}-${hero.season}-${hero.episode}',
+                    ),
+                    next: hero,
+                    onOpen: () => _openEpisode(context, hero),
+                    confirmed: _confirmed,
+                    onMarkWatched: () => _mark(hero),
+                  ),
+                if (!compact && next.isNotEmpty)
+                  CollectionTransitionLabels(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: ModernPalette.surface,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: ModernPalette.lilac.withValues(alpha: .22),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              tooltip: 'Œuvre précédente',
+                              onPressed: _holding == null
+                                  ? () => select(selectedIndex - 1)
+                                  : null,
+                              icon: const Icon(
+                                Icons.arrow_back,
+                                color: ModernPalette.lilac,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                'À l’affiche · ${selectedIndex + 1} / ${queue.length}',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: ModernPalette.lilac,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Œuvre suivante',
+                              onPressed: _holding == null
+                                  ? () => select(selectedIndex + 1)
+                                  : null,
+                              icon: const Icon(
+                                Icons.arrow_forward,
+                                color: ModernPalette.lilac,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                if (!compact && next.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    child: Text(
+                      'Dans ta\nrotation',
+                      style: TextStyle(color: TtColors.dim),
+                    ),
+                  ),
+                  _Carousel(
+                    height:
+                        220 + (MediaQuery.textScalerOf(context).scale(40) - 40),
+                    itemCount: next.length,
+                    separator: 14,
+                    itemBuilder: (_, i) => _QueuePoster(
+                      next: next[i],
+                      selected: next[i].show.id == hero?.show.id,
+                      onTap: () => select(i),
+                    ),
+                  ),
+                ],
+                if (feed.history.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  _HistoryLink(),
+                ],
+                SizedBox(height: bottomNavInset(context)),
+              ],
             ),
           ],
-          if (feed.history.isNotEmpty) ...[
-            const SizedBox(height: 32),
-            _HistoryLink(),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -471,9 +523,7 @@ class _UpcomingTabState extends ConsumerState<_UpcomingTab> {
         );
         // Les dates de diffusion bougent : c'est l'onglet où le geste de
         // rafraîchissement a le plus de sens.
-        return RefreshIndicator(
-          color: TtColors.amber,
-          backgroundColor: TtColors.surface,
+        return BoundedRefreshIndicator(
           onRefresh: () => _refresh(context, ref),
           child: ListView.builder(
             padding: EdgeInsets.only(top: 16, bottom: bottomNavInset(context)),
@@ -694,9 +744,17 @@ class _QueuePoster extends StatelessWidget {
                 child: SizedBox(
                   height: 164,
                   width: 112,
-                  child: MediaImage(
+                  child: CollectionTransitionPoster(
+                    id: selected
+                        ? 'series-duplicate-${next.show.id}'
+                        : 'series-${next.show.id}',
                     sources: [next.show.poster, next.still],
                     seed: next.show.name,
+                    radius: 9,
+                    child: MediaImage(
+                      sources: [next.show.poster, next.still],
+                      seed: next.show.name,
+                    ),
                   ),
                 ),
               ),
@@ -715,62 +773,6 @@ class _QueuePoster extends StatelessWidget {
   );
 }
 
-class _CinemaEmpty extends StatelessWidget {
-  const _CinemaEmpty({required this.onExplore});
-  final VoidCallback onExplore;
-  @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    padding: EdgeInsets.only(bottom: bottomNavInset(context)),
-    child: Column(
-      children: [
-        SizedBox(
-          height: 290,
-          width: double.infinity,
-          child: Image.asset(
-            'assets/images/empty_cinema.webp',
-            fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            children: [
-              Text(
-                'Ta liste est vide',
-                textAlign: TextAlign.center,
-                style: NitrateBrand.display(42),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Les histoires restent.\nRetrouve ici celles que tu veux suivre.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  height: 1.5,
-                  color: TtColors.dim,
-                ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: onExplore,
-                icon: const Icon(Icons.add),
-                label: const Text('Explorer les séries'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: NitrateBrand.ivory,
-                  foregroundColor: NitrateBrand.ink,
-                  minimumSize: const Size(double.infinity, 50),
-                  shape: const StadiumBorder(),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader(this.title);
   final String title;
@@ -780,6 +782,96 @@ class _SectionHeader extends StatelessWidget {
     child: Text(
       title,
       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w500),
+    ),
+  );
+}
+
+class _SeriesOverview extends StatelessWidget {
+  const _SeriesOverview({required this.queue, required this.onOpen});
+  final List<NextUp> queue;
+  final void Function(NextUp) onOpen;
+  @override
+  Widget build(BuildContext context) => SliverPadding(
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    sliver: SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final scaler = MediaQuery.textScalerOf(context);
+        final columns = scaler.scale(14) > 21 ? 1 : 2;
+        final width =
+            (constraints.crossAxisExtent - 13 * (columns - 1)) / columns;
+        return SliverGrid(
+          key: const ValueKey('series-overview'),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: 13,
+            mainAxisSpacing: 22,
+            mainAxisExtent:
+                width * 1.5 +
+                10 +
+                scaler.scale(14) * 2.6 +
+                scaler.scale(12) * 1.5,
+          ),
+          delegate: SliverChildBuilderDelegate((context, i) {
+            final n = queue[i];
+            return Semantics(
+              button: true,
+              label: '${n.show.name}, ${n.code}',
+              child: GestureDetector(
+                onTap: () => onOpen(n),
+                behavior: HitTestBehavior.opaque,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AspectRatio(
+                      aspectRatio: 2 / 3,
+                      child: CollectionTransitionPoster(
+                        id: 'series-${n.show.id}',
+                        sources: [n.show.poster, n.still],
+                        seed: n.show.name,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: MediaImage(
+                            sources: [n.show.poster, n.still],
+                            seed: n.show.name,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    CollectionTransitionLabels(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            n.show.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              height: 1.3,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            n.code.replaceAll(' | ', ' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.5,
+                              color: TtColors.dim,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }, childCount: queue.length),
+        );
+      },
     ),
   );
 }

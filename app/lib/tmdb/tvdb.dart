@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'artwork.dart';
+import 'search_result.dart';
 
 /// Nature d'un échec TheTVDB.
 ///
@@ -92,11 +93,11 @@ class TvdbClient {
     int maxAttempts = 3,
     Future<void> Function(Duration)? sleep,
     DateTime Function()? now,
-  })  : _http = client ?? http.Client(),
-        _timeout = timeout,
-        _maxAttempts = maxAttempts < 1 ? 1 : maxAttempts,
-        _sleep = sleep ?? Future<void>.delayed,
-        _now = now ?? DateTime.now;
+  }) : _http = client ?? http.Client(),
+       _timeout = timeout,
+       _maxAttempts = maxAttempts < 1 ? 1 : maxAttempts,
+       _sleep = sleep ?? Future<void>.delayed,
+       _now = now ?? DateTime.now;
 
   /// Clé projet TheTVDB (v4).
   final String apiKey;
@@ -318,11 +319,9 @@ class TvdbClient {
         return value as Object?;
       });
       _inFlight[key] = pending;
-      pending
-          .whenComplete(() {
-            if (identical(_inFlight[key], pending)) _inFlight.remove(key);
-          })
-          .ignore();
+      pending.whenComplete(() {
+        if (identical(_inFlight[key], pending)) _inFlight.remove(key);
+      }).ignore();
     }
 
     // La politique de repli est propre à chaque appelant : un rafraîchissement
@@ -361,6 +360,106 @@ class TvdbClient {
     }, force: force);
   }
 
+  /// Recherche dédiée : les séries du moteur omettent souvent leurs genres.
+  /// On vérifie les candidats japonais dans leur fiche, quatre à la fois.
+  Future<List<Map<String, dynamic>>> searchAnime(String query) async {
+    final raw = await search(query);
+    final matches = List<Map<String, dynamic>?>.filled(raw.length, null);
+    var cursor = 0;
+    Future<void> worker() async {
+      while (cursor < raw.length) {
+        final index = cursor++;
+        final item = raw[index];
+        final parsed = parseSearchResult(item);
+        if (parsed == null) continue;
+        if (parsed.isAnime) {
+          matches[index] = item;
+          continue;
+        }
+        if (((item['genres'] as List?)?.isNotEmpty ?? false) ||
+            parsed.tvdbId == null ||
+            (item['country'] != 'jpn' && item['primary_language'] != 'jpn')) {
+          continue;
+        }
+        final detail = parsed.type == SearchMediaType.series
+            ? await seriesExtended(parsed.tvdbId!)
+            : await movieExtended(parsed.tvdbId!);
+        final enriched = {...item, 'genres': detail['genres']};
+        if (isAnimeMetadata(enriched)) matches[index] = enriched;
+      }
+    }
+
+    await Future.wait(List.generate(raw.length.clamp(0, 4), (_) => worker()));
+    return matches.whereType<Map<String, dynamic>>().toList();
+  }
+
+  /// Deux années calendaires récentes, déjà sorties. Le filtre serveur films
+  /// déborde sur d'autres années : année et statut sont revérifiés localement.
+  Future<List<Map<String, dynamic>>> recentReleases({
+    required bool movies,
+    bool anime = false,
+  }) async {
+    final now = _now();
+    final year = now.year;
+    int? genre;
+    if (anime) {
+      genre = await _memo('anime-genre', _ttlDetails, () async {
+        final response = await _get('/genres');
+        for (final g in (response['data'] as List?) ?? const []) {
+          if (g is Map && '${g['name']}'.toLowerCase() == 'anime') {
+            return (g['id'] as num).toInt();
+          }
+        }
+        throw const TvdbException(
+          'Les animés sont indisponibles pour le moment.',
+          kind: TvdbErrorKind.malformed,
+        );
+      });
+    }
+    final batches = await Future.wait([
+      for (final y in [year, year - 1])
+        _filter(movies: movies, sort: 'score', year: y, genre: genre),
+    ]);
+    final seen = <int>{};
+    final records = <Map<String, dynamic>>[];
+    for (final item in batches.expand((b) => b)) {
+      final id = (item['id'] as num?)?.toInt();
+      final itemYear = int.tryParse('${item['year']}');
+      if (id == null ||
+          itemYear == null ||
+          itemYear < year - 1 ||
+          itemYear > year) {
+        continue;
+      }
+      final status = item['status'];
+      final statusName = '${status is Map ? status['name'] : status}'
+          .toLowerCase();
+      if (movies) {
+        if (statusName != 'released') continue;
+      } else {
+        final aired = DateTime.tryParse('${item['firstAired']}');
+        if (aired == null ||
+            aired.isAfter(now) ||
+            aired.year < year - 1 ||
+            statusName == 'upcoming') {
+          continue;
+        }
+      }
+      if (seen.add(id)) records.add(item);
+    }
+    // Stable API popularity order inside each year.
+    final indexed = records.indexed.toList()
+      ..sort((a, b) {
+        final byYear = '${b.$2['year']}'.compareTo('${a.$2['year']}');
+        if (byYear != 0) return byYear;
+        final byScore = ((b.$2['score'] as num?) ?? 0).compareTo(
+          (a.$2['score'] as num?) ?? 0,
+        );
+        return byScore != 0 ? byScore : a.$1.compareTo(b.$1);
+      });
+    return indexed.map((e) => e.$2).toList();
+  }
+
   /// Séries ou films les mieux notés, pour l'écran de découverte.
   ///
   /// TheTVDB v4 n'expose ni tendances ni nouveautés : `/{type}/filter` trié
@@ -379,13 +478,17 @@ class TvdbClient {
   Future<List<Map<String, dynamic>>> _filter({
     required bool movies,
     required String sort,
+    int? year,
+    int? genre,
     bool force = false,
   }) {
     final kind = movies ? 'movies' : 'series';
-    return _memo('filter:$kind:$sort', _ttlDiscovery, () async {
+    return _memo('filter:$kind:$sort:$year:$genre', _ttlDiscovery, () async {
       final j = await _get('/$kind/filter', {
         'sort': sort,
         'sortType': 'desc',
+        if (year != null) 'year': '$year',
+        if (genre != null) 'genre': '$genre',
       });
       return ((j['data'] as List?) ?? const [])
           .whereType<Map<String, dynamic>>()
@@ -434,8 +537,12 @@ class TvdbClient {
     int id, {
     bool force = false,
   }) {
-    return _memo('episodes:$id', _ttlEpisodes, () => _loadEpisodes(id),
-        force: force);
+    return _memo(
+      'episodes:$id',
+      _ttlEpisodes,
+      () => _loadEpisodes(id),
+      force: force,
+    );
   }
 
   Future<List<Map<String, dynamic>>> _loadEpisodes(int id) async {
@@ -478,7 +585,10 @@ class TvdbClient {
   /// Parcourt les pages de `/series/{id}/episodes/official[/{lang}]` et
   /// normalise les épisodes. Les textes vides deviennent nuls, pour que la
   /// retombée sur la version d'origine soit un simple `??=`.
-  Future<List<Map<String, dynamic>>> _episodePages(int id, {String? lang}) async {
+  Future<List<Map<String, dynamic>>> _episodePages(
+    int id, {
+    String? lang,
+  }) async {
     final path = lang == null
         ? '/series/$id/episodes/official'
         : '/series/$id/episodes/official/$lang';
@@ -527,13 +637,19 @@ class TvdbClient {
   /// L'échec, lui, n'est pas mémorisé — sinon une coupure passagère priverait
   /// la fiche de son titre français pendant une semaine.
   Future<Map<String, dynamic>> _translation(
-      String kind, int id, String lang) async {
+    String kind,
+    int id,
+    String lang,
+  ) async {
     try {
-      return await _memo('translation:$kind:$id:$lang', _ttlTranslation,
-          () async {
-        final j = await _get('/$kind/$id/translations/$lang');
-        return (j['data'] as Map<String, dynamic>?) ?? const {};
-      });
+      return await _memo(
+        'translation:$kind:$id:$lang',
+        _ttlTranslation,
+        () async {
+          final j = await _get('/$kind/$id/translations/$lang');
+          return (j['data'] as Map<String, dynamic>?) ?? const {};
+        },
+      );
     } on TvdbException catch (e) {
       debugPrint('Traduction $kind/$id/$lang indisponible : $e');
       return const {};

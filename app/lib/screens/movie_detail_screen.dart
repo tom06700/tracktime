@@ -16,6 +16,7 @@ import '../widgets/common.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/states.dart';
 import 'media_detail_parts.dart';
+import '../widgets/nitrate_banner.dart';
 
 /// Fiche d'un film. Consultable sans que le film soit dans la bibliothèque :
 /// tout vient de TheTVDB, la base locale ne servant qu'à savoir s'il y est
@@ -94,14 +95,17 @@ class _Content extends ConsumerStatefulWidget {
 class _ContentState extends ConsumerState<_Content> {
   bool _revealed = false, _busy = false;
   Future<void> _run(Future<void> Function() action) async {
-    if (_busy) return;
+    if (!mounted || _busy) return;
     setState(() => _busy = true);
     try {
       await action();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Modification impossible. Réessaie.')),
+        NitrateMessenger.of(context).showBanner(
+          const NitrateBanner(
+            kind: NitrateBannerKind.error,
+            content: Text('Modification impossible. Réessaie.'),
+          ),
         );
       }
     } finally {
@@ -145,10 +149,11 @@ class _ContentState extends ConsumerState<_Content> {
     if (!mounted) return;
     setState(() => _revealed = false);
     if (movie.watchedAt == null && saved?.watchedAt != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+      NitrateMessenger.of(context).showBanner(
+        NitrateBanner(
+          kind: NitrateBannerKind.success,
           content: const Text('Visionnage enregistré.'),
-          action: SnackBarAction(
+          action: NitrateBannerAction(
             label: 'Annuler',
             onPressed: () => _run(() async {
               final current = await db.movieById(movie.id);

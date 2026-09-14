@@ -8,6 +8,7 @@ import '../settings/prefs.dart';
 import '../theme.dart';
 import '../brand/nitrate_brand.dart';
 import '../tmdb/add.dart';
+import '../widgets/nitrate_banner.dart';
 
 /// Ajoute une série et renvoie false si TheTVDB refuse.
 Future<bool> addSeriesToLibrary(WidgetRef ref, int id) async {
@@ -88,10 +89,8 @@ class MediaSectionTitle extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Text(
-        text,
-        style: NitrateBrand.display(28).copyWith(height: 1.15),
-      );
+  Widget build(BuildContext context) =>
+      Text(text, style: NitrateBrand.display(28).copyWith(height: 1.15));
 }
 
 /// Ligne « libellé : valeur ». Le texte s'enroule au lieu d'être tronqué,
@@ -170,18 +169,23 @@ class _AddToListButtonState extends ConsumerState<AddToListButton> {
     }
     if (!mounted) return;
     if (!ok) {
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(SnackBar(content: Text(widget.failureMessage)));
+      NitrateMessenger.of(context).showBanner(
+        NitrateBanner(
+          kind: NitrateBannerKind.error,
+          content: Text(widget.failureMessage),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) => SizedBox(
-      width: 255,
-      child: ModernCommand(
-          shape: CommandShape.attach,
-          label: widget.inLibrary ? 'Dans ma liste' : widget.label,
-          selected: widget.inLibrary,
-          onPressed: _busy || widget.inLibrary ? null : _add));
+    width: 255,
+    child: ModernCommand(
+      shape: CommandShape.attach,
+      label: widget.inLibrary ? 'Dans ma liste' : widget.label,
+      selected: widget.inLibrary,
+      onPressed: _busy || widget.inLibrary ? null : _add,
+    ),
+  );
 }

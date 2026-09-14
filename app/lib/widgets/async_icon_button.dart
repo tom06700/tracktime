@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'nitrate_banner.dart';
 
 /// Keeps a database action single-flight and reports failed persistence.
 class AsyncIconButton extends StatefulWidget {
-  const AsyncIconButton(
-      {super.key,
-      required this.icon,
-      required this.tooltip,
-      required this.onPressed,
-      this.color});
+  const AsyncIconButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.color,
+  });
   final Widget icon;
   final String tooltip;
   final Future<void> Function() onPressed;
@@ -27,9 +29,14 @@ class _AsyncIconButtonState extends State<AsyncIconButton> {
     } catch (error, stack) {
       debugPrint('Action non enregistrée : $error\n$stack');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Impossible d’enregistrer la modification. Réessaie.'),
-        ));
+        NitrateMessenger.of(context).showBanner(
+          const NitrateBanner(
+            kind: NitrateBannerKind.error,
+            content: Text(
+              'Impossible d’enregistrer la modification. Réessaie.',
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);

@@ -20,6 +20,7 @@ import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/states.dart';
+import '../widgets/nitrate_banner.dart';
 
 /// Page Profil « Univers » : une frise verticale cinématographique, unique
 /// par profil (salle obscure + projecteur teinté par les genres regardés),
@@ -154,7 +155,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           padding: const EdgeInsets.fromLTRB(22, 24, 22, 0),
           child: ModernCommand(
             shape: CommandShape.surprise,
-            label: 'Quoi regarder ce soir ?',
+            label: 'Que regarder ce soir ?',
             subtitle: 'Un choix dans ta propre collection.',
             onPressed: () => showTonightPicker(context, tonight),
           ),
@@ -284,13 +285,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _export(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final messenger = NitrateMessenger.of(context);
     try {
       await exportBackup(ref.read(databaseProvider));
     } catch (e) {
       debugPrint('Export impossible : $e');
-      messenger.showSnackBar(
-        const SnackBar(
+      messenger.showBanner(
+        const NitrateBanner(
+          kind: NitrateBannerKind.error,
           content: Text('Impossible de créer la sauvegarde. Réessaie.'),
         ),
       );

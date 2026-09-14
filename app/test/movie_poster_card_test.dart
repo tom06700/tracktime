@@ -1,3 +1,5 @@
+import 'package:tracktime/widgets/watched_check.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tracktime/db/database.dart';
@@ -15,7 +17,7 @@ void main() {
     double scale = 1,
     double width = 154,
     VoidCallback? onTap,
-    ValueChanged<MovieAction>? onAction,
+    FutureOr<void> Function(MovieAction)? onAction,
   }) => MaterialApp(
     theme: buildTheme(),
     home: Scaffold(
@@ -58,6 +60,39 @@ void main() {
     await t.pump(const Duration(milliseconds: 250));
     expect(actions, [MovieAction.markWatched]);
     expect(opened, 0);
+  });
+  testWidgets('save starts immediately, failure allows retry without success', (
+    t,
+  ) async {
+    final save = Completer<void>();
+    var writes = 0;
+    await t.pumpWidget(
+      host(
+        onAction: (_) {
+          writes++;
+          return save.future;
+        },
+      ),
+    );
+    await t.tap(find.text('Vu'));
+    await t.pump();
+    expect(writes, 1);
+    expect(
+      find.byWidgetPredicate((w) => w is WatchedCheck && w.confirmed),
+      findsNothing,
+    );
+    await t.tap(find.text('Vu'));
+    expect(writes, 1);
+    save.completeError(StateError('save failed'));
+    await t.pumpAndSettle();
+    expect(find.text('Impossible d’enregistrer. Réessaie.'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate((w) => w is WatchedCheck && w.confirmed),
+      findsNothing,
+    );
+    await t.tap(find.text('Vu'));
+    await t.pumpAndSettle();
+    expect(writes, 2);
   });
   testWidgets('menu is separate from opening the poster', (t) async {
     var opened = 0;

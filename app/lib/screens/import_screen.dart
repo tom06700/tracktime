@@ -13,6 +13,7 @@ import '../providers.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/glass.dart';
+import '../widgets/nitrate_banner.dart';
 
 /// Page autonome (avec AppBar) enveloppant [ImportScreen], à pousser depuis
 /// les Réglages ou le Profil.
@@ -60,11 +61,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   bool _legacy = false;
   double _pct = 0;
 
-  void _toast(String msg) {
+  void _toast(String msg, {NitrateBannerKind kind = NitrateBannerKind.error}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(msg)));
+    NitrateMessenger.of(
+      context,
+    ).showBanner(NitrateBanner(kind: kind, content: Text(msg)));
   }
 
   Future<void> _pickFiles() async {
@@ -173,7 +174,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         );
         _parsed.clear();
       });
-      _toast('Import terminé 🎉');
+      _toast('Import terminé', kind: NitrateBannerKind.success);
     } catch (e) {
       if (!mounted) return;
       setState(() {

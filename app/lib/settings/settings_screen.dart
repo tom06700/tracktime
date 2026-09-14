@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import '../db/database.dart';
 import '../providers.dart';
 import '../theme.dart';
 import '../widgets/editorial_heading.dart';
+import '../widgets/nitrate_banner.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key, this.exportData = exportBackup});
@@ -20,16 +22,21 @@ class SettingsScreen extends ConsumerWidget {
 
   Future<void> _open(BuildContext context, String url) async {
     try {
-      if (await launchUrl(Uri.parse(url),
-          mode: LaunchMode.externalApplication)) {
+      if (await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      )) {
         return;
       }
     } catch (e) {
       debugPrint('Lien externe indisponible : $e');
     }
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible d’ouvrir ce lien. Réessaie.')),
+      NitrateMessenger.of(context).showBanner(
+        const NitrateBanner(
+          kind: NitrateBannerKind.error,
+          content: Text('Impossible d’ouvrir ce lien. Réessaie.'),
+        ),
       );
     }
   }
@@ -63,18 +70,22 @@ class SettingsScreen extends ConsumerWidget {
     } catch (error, stack) {
       debugPrint('Suppression impossible : $error\n$stack');
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Impossible d’effacer les données. Réessaie.'),
-        ));
+        NitrateMessenger.of(context).showBanner(
+          const NitrateBanner(
+            kind: NitrateBannerKind.error,
+            content: Text('Impossible d’effacer les données. Réessaie.'),
+          ),
+        );
       }
       return;
     }
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        const SnackBar(content: Text('Toutes tes données ont été effacées.')),
-      );
+    NitrateMessenger.of(context).showBanner(
+      const NitrateBanner(
+        kind: NitrateBannerKind.success,
+        content: Text('Toutes tes données ont été effacées.'),
+      ),
+    );
   }
 
   @override
@@ -96,16 +107,24 @@ class SettingsScreen extends ConsumerWidget {
                 'Garde une copie de tes souvenirs de cinéma, ou retrouve ton historique.',
           ),
           Card(
-              child: ListTile(
-            leading: const Icon(Icons.notifications_none_rounded),
-            title: const Text('Notifications'),
-            subtitle: const Text('Permission de l’appareil · alertes à venir'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                builder: (ctx) => NotificationScreen(onFinish: () async {
+            child: ListTile(
+              leading: const Icon(Icons.notifications_none_rounded),
+              title: const Text('Notifications'),
+              subtitle: const Text(
+                'Permission de l’appareil · alertes à venir',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (ctx) => NotificationScreen(
+                    onFinish: () async {
                       if (ctx.mounted) Navigator.of(ctx).pop();
-                    }))),
-          )),
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
           // Sauvegarder, puis restaurer, puis effacer : l'ordre du parcours.
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
@@ -145,14 +164,40 @@ class SettingsScreen extends ConsumerWidget {
 
           Card(
             child: ListTile(
-              leading: const Icon(Icons.auto_awesome_motion_outlined,
-                  color: TtColors.amber),
+              leading: const Icon(
+                Icons.auto_awesome_motion_outlined,
+                color: TtColors.amber,
+              ),
               title: const Text('Découvrir Nitrate'),
               subtitle: const Text('Revoir le générique d’ouverture'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push('/welcome'),
             ),
           ),
+
+          if (!kReleaseMode)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.door_front_door_outlined),
+                title: const Text('Tester le portail'),
+                subtitle: const Text(
+                  'Voir les états vides sans modifier ta collection',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/_preview/portal'),
+              ),
+            ),
+
+          if (!kReleaseMode)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.view_in_ar_outlined),
+                title: const Text('Portail · Studio 3D'),
+                subtitle: const Text('Comparer les matières et la lumière'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/_preview/portal-pbr'),
+              ),
+            ),
 
           // ── Zone dangereuse ──
           const Padding(
@@ -268,13 +313,12 @@ class _ExportTileState extends State<_ExportTile> {
     } catch (e, st) {
       debugPrint('Export de sauvegarde impossible : $e\n$st');
       if (mounted) {
-        ScaffoldMessenger.of(context)
-          ..clearSnackBars()
-          ..showSnackBar(
-            const SnackBar(
-              content: Text('Impossible de créer la sauvegarde. Réessaie.'),
-            ),
-          );
+        NitrateMessenger.of(context).showBanner(
+          const NitrateBanner(
+            kind: NitrateBannerKind.error,
+            content: Text('Impossible de créer la sauvegarde. Réessaie.'),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);

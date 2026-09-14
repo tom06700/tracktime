@@ -14,6 +14,7 @@ import '../widgets/media_image.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/states.dart';
 import 'movies_screen.dart' show movieMeta;
+import '../widgets/nitrate_banner.dart';
 
 /// Films vus, du plus récent au plus ancien. Ils quittent la grille
 /// principale, qui ne représente que ce qu'il reste à regarder.
@@ -101,11 +102,12 @@ class _WatchedRow extends ConsumerWidget {
     HapticFeedback.lightImpact();
     await ref.read(databaseProvider).toggleMovieWatched(movie);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(content: Text('${movie.title} est de retour dans ta liste')),
-      );
+    NitrateMessenger.of(context).showBanner(
+      NitrateBanner(
+        kind: NitrateBannerKind.success,
+        content: Text('${movie.title} est de retour dans ta liste'),
+      ),
+    );
   }
 
   @override
@@ -192,8 +194,9 @@ class _WatchedRow extends ConsumerWidget {
                   } catch (e, st) {
                     debugPrint('Action historique film impossible : $e\n$st');
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
+                      NitrateMessenger.of(context).showBanner(
+                        const NitrateBanner(
+                          kind: NitrateBannerKind.error,
                           content: Text('Modification impossible. Réessaie.'),
                         ),
                       );

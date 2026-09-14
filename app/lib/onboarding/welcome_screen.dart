@@ -10,6 +10,7 @@ import '../motion.dart';
 
 import 'flight_painter.dart';
 import 'notification_screen.dart';
+import '../widgets/nitrate_banner.dart';
 
 /// Resolves the local preference before displaying either destination.
 /// The library and its database are never modified by onboarding.
@@ -204,8 +205,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       // A disposed route never invokes completion later.
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ouverture impossible. Réessaie.')),
+        NitrateMessenger.of(context).showBanner(
+          const NitrateBanner(
+            kind: NitrateBannerKind.error,
+            content: Text('Ouverture impossible. Réessaie.'),
+          ),
         );
       }
     } finally {

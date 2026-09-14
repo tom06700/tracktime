@@ -1,3 +1,4 @@
+import 'dart:async';
 import '../movies/confirm_removal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,14 +11,19 @@ import '../movies/feed.dart';
 import '../movies/widgets/movie_poster_card.dart';
 import '../motion.dart';
 import '../providers.dart';
+import '../widgets/portal/portal_empty.dart';
+import '../widgets/portal/portal_preview_scope.dart';
 import '../settings/prefs.dart';
 import '../theme.dart';
 import '../widgets/collection_screen_header.dart';
 import '../widgets/films_seen_button.dart';
 import '../widgets/common.dart';
 import '../widgets/media_image.dart';
+import '../widgets/bounded_refresh_indicator.dart';
+import '../widgets/collection_layout_transition.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/states.dart';
+import '../widgets/nitrate_banner.dart';
 
 /// Deuxième ligne d'une affiche : durée, genre, et l'année quand elle apporte
 /// quelque chose.
@@ -99,6 +105,13 @@ class _LibraryTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (PortalPreviewScope.enabled(context)) {
+      return PortalEmpty(
+        movies: true,
+        onExplore: () =>
+            ref.read(homeTabProvider.notifier).select(HomeTab.explorer),
+      );
+    }
     final feedAsync = ref.watch(movieFeedProvider);
 
     return feedAsync.when(
@@ -116,14 +129,9 @@ class _LibraryTab extends ConsumerWidget {
         // leur page dédiée au lieu d'être grisés au milieu des autres.
         final library = [...feed.toWatch, ...feed.stale];
         if (library.isEmpty && feed.history.isEmpty) {
-          return EmptyPrompt(
-            icon: Icons.movie_outlined,
-            title: 'Aucun film dans ta liste',
-            message:
-                'Ajoute les films que tu veux voir '
-                'et retrouve-les ici.',
-            actionLabel: 'Explorer les films',
-            onAction: () =>
+          return PortalEmpty(
+            movies: true,
+            onExplore: () =>
                 ref.read(homeTabProvider.notifier).select(HomeTab.explorer),
           );
         }
@@ -136,17 +144,63 @@ class _LibraryTab extends ConsumerWidget {
   }
 }
 
-class _LibraryGrid extends ConsumerWidget {
+class _LibraryGrid extends ConsumerStatefulWidget {
   const _LibraryGrid({required this.library, required this.watchedCount});
 
   final List<Movie> library;
   final int watchedCount;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LibraryGrid> createState() => _LibraryGridState();
+}
+
+class _LibraryGridState extends ConsumerState<_LibraryGrid> {
+  final _held = <int, (Movie, int)>{};
+  final _release = <int, Timer>{};
+
+  Future<void> _markWithFeedback(Movie movie, int index) async {
+    if (_held.containsKey(movie.id)) return;
+    final pause = motionOf(context, const Duration(milliseconds: 550));
+    setState(() => _held[movie.id] = (movie, index));
+    try {
+      await ref.read(databaseProvider).toggleMovieWatched(movie);
+      if (!mounted) return;
+      if (pause == Duration.zero) {
+        setState(() => _held.remove(movie.id));
+      } else {
+        _release[movie.id] = Timer(pause, () {
+          _release.remove(movie.id);
+          if (mounted) setState(() => _held.remove(movie.id));
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _held.remove(movie.id));
+      rethrow;
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final timer in _release.values) {
+      timer.cancel();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final db = ref.read(databaseProvider);
+    final library = [...widget.library];
+    final held = _held.values.toList()..sort((a, b) => a.$2.compareTo(b.$2));
+    for (final entry in held) {
+      if (!library.any((movie) => movie.id == entry.$1.id)) {
+        library.insert(entry.$2.clamp(0, library.length), entry.$1);
+      }
+    }
+    final watchedCount = widget.watchedCount;
 
     Future<void> act(Movie m, MovieAction a) async {
+      if (_held.containsKey(m.id)) return;
       HapticFeedback.lightImpact();
       try {
         switch (a) {
@@ -162,84 +216,98 @@ class _LibraryGrid extends ConsumerWidget {
       } catch (error, stack) {
         debugPrint('Action film impossible : $error\n$stack');
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Modification impossible. Réessaie.')),
+        NitrateMessenger.of(context).showBanner(
+          const NitrateBanner(
+            kind: NitrateBannerKind.error,
+            content: Text('Modification impossible. Réessaie.'),
+          ),
         );
       }
     }
 
-    return RefreshIndicator(
-      color: TtColors.amber,
-      backgroundColor: TtColors.surface,
-      onRefresh: () async {
-        await _sync(ref);
-        ref.invalidate(moviesProvider);
-      },
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(child: _LibraryHeading(count: library.length)),
-          if (library.isEmpty)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(24, 48, 24, 24),
-                child: Text(
-                  'Tous tes films sont vus.\n'
-                  'Ajoute-en de nouveaux pour remplir ta liste.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.6,
-                    color: TtColors.dim,
+    return CollectionLayoutTransition(
+      motion: CollectionMotion.films,
+      builder: (context, compact) => BoundedRefreshIndicator(
+        onRefresh: () => _sync(ref),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(child: _LibraryHeading(count: library.length)),
+            if (library.isEmpty)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(24, 48, 24, 24),
+                  child: Text(
+                    'Tous tes films sont vus.\n'
+                    'Ajoute-en de nouveaux pour remplir ta liste.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.6,
+                      color: TtColors.dim,
+                    ),
                   ),
                 ),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverLayoutBuilder(
-                builder: (context, constraints) {
-                  final scaler = MediaQuery.textScalerOf(context);
-                  final columns = scaler.scale(14) > 21 ? 1 : 2;
-                  final width =
-                      (constraints.crossAxisExtent - 13 * (columns - 1)) /
-                      columns;
-                  return SliverGrid(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: columns,
-                      crossAxisSpacing: 13,
-                      mainAxisSpacing: 22,
-                      mainAxisExtent: MoviePosterCard.heightFor(width, scaler),
-                    ),
-                    delegate: SliverChildBuilderDelegate((context, i) {
-                      final m = library[i];
-                      // Apparition échelonnée sur les toutes premières affiches
-                      // seulement : au-delà, la cascade se verrait plus que la
-                      // grille. Le décalage total reste sous 150 ms.
-                      return EntranceFade(
-                        // La clé lie la carte au film, pas à sa position : quand
-                        // un film vu quitte la grille, le suivant prend sa place
-                        // sans hériter de l'état de son bouton « vu ».
-                        key: ValueKey(m.id),
-                        delay: Motion.staggerAt(i),
-                        child: MoviePosterCard(
-                          movie: m,
-                          metaLine: movieMeta(m),
-                          onTap: () =>
-                              context.push('/movie/${m.id}', extra: m.title),
-                          onAction: (a) => act(m, a),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverLayoutBuilder(
+                  builder: (context, constraints) {
+                    final scaler = MediaQuery.textScalerOf(context);
+                    final columns = scaler.scale(14) > 21
+                        ? 1
+                        : compact && scaler.scale(14) <= 17
+                        ? 3
+                        : 2;
+                    final width =
+                        (constraints.crossAxisExtent - 13 * (columns - 1)) /
+                        columns;
+                    return SliverGrid(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: columns,
+                        crossAxisSpacing: 13,
+                        mainAxisSpacing: 22,
+                        mainAxisExtent: MoviePosterCard.heightFor(
+                          width,
+                          scaler,
                         ),
-                      );
-                    }, childCount: library.length),
-                  );
-                },
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, i) {
+                          final m = library[i];
+                          // Keep action state tied to the movie when columns change.
+                          return MoviePosterCard(
+                            key: ValueKey(m.id),
+                            movie: m,
+                            metaLine: movieMeta(m),
+                            onTap: () =>
+                                context.push('/movie/${m.id}', extra: m.title),
+                            onAction: (a) => act(m, a),
+                            onMarkWatched: () => _markWithFeedback(m, i),
+                            actionsEnabled: !_held.containsKey(m.id),
+                          );
+                        },
+                        childCount: library.length,
+                        findChildIndexCallback: (key) {
+                          if (key is! ValueKey<int>) return null;
+                          final index = library.indexWhere(
+                            (movie) => movie.id == key.value,
+                          );
+                          return index < 0 ? null : index;
+                        },
+                      ),
+                    );
+                  },
+                ),
               ),
+            if (watchedCount > 0)
+              SliverToBoxAdapter(child: _WatchedLink(count: watchedCount)),
+            SliverToBoxAdapter(
+              child: SizedBox(height: bottomNavInset(context)),
             ),
-          if (watchedCount > 0)
-            SliverToBoxAdapter(child: _WatchedLink(count: watchedCount)),
-          SliverToBoxAdapter(child: SizedBox(height: bottomNavInset(context))),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -252,24 +320,31 @@ class _LibraryHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    child: Row(
       children: [
-        const Text(
-          'Ta prochaine séance.',
-          style: TextStyle(
-            fontSize: 23,
-            fontWeight: FontWeight.w500,
-            letterSpacing: -1,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Ta prochaine séance.',
+                style: TextStyle(
+                  fontSize: 23,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                count == 0
+                    ? 'Ta liste est à jour.'
+                    : '$count ${count == 1 ? 'film à découvrir' : 'films à découvrir'}.',
+                style: const TextStyle(color: TtColors.dim, fontSize: 13),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          count == 0
-              ? 'Ta liste est à jour.'
-              : '$count ${count == 1 ? 'film à découvrir' : 'films à découvrir'}.',
-          style: const TextStyle(color: TtColors.dim, fontSize: 13),
-        ),
+        if (count > 0) const CollectionLayoutToggle(),
       ],
     ),
   );

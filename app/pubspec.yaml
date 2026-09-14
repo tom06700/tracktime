@@ -21,6 +21,11 @@ dependencies:
   go_router: ^17.3.0
   url_launcher: ^6.3.2
   flutter_sticky_header: ^0.8.0
+  lottie: ^3.3.2
+  cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.2
+  thermion_flutter: 0.5.0
+  vector_math: ^2.2.0
 
 dev_dependencies:
   flutter_test:
@@ -28,11 +33,15 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.34.0
   build_runner: ^2.9.0
+  file: ^7.0.1
 
 flutter:
   uses-material-design: true
   assets:
+    - assets/animations/nitrate-loader.json
+    - assets/animations/watched-check.json
     - assets/objects/
+    - assets/portal/
     - assets/images/launch_mark.png
     - assets/images/empty_cinema.webp
     - assets/images/collection_posters.png

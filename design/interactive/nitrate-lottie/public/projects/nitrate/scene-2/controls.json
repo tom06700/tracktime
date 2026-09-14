@@ -1,0 +1,8 @@
+{
+  "controls": [
+    {
+      "sid": "checkColor",
+      "label": "Couleur de la coche"
+    }
+  ]
+}

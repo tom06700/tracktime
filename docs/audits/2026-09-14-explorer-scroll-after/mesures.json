@@ -1,0 +1,46 @@
+{
+  "01-arrivee": {
+    "offset": 0.0,
+    "extent": 330.7249999999999,
+    "headerY": 143.0,
+    "pinnedHeight": 142.0
+  },
+  "02-defilement": {
+    "offset": 330.7249999999999,
+    "extent": 330.7249999999999,
+    "headerY": 59.0,
+    "pinnedHeight": 142.0
+  },
+  "03-grille": {
+    "offset": 0.0,
+    "extent": 2780.1249999999995,
+    "headerY": 143.0,
+    "pinnedHeight": 142.0
+  },
+  "gridScrolled": {
+    "offset": 581.1666666666666,
+    "extent": 2780.1249999999995,
+    "headerY": 59.0,
+    "pinnedHeight": 142.0
+  },
+  "backVisibleWhenScrolled": true,
+  "04-retour-decouverte": {
+    "offset": 330.7249999999999,
+    "extent": 330.7249999999999,
+    "headerY": 59.0,
+    "pinnedHeight": 142.0
+  },
+  "discoveryBeforeGrid": 330.7249999999999,
+  "05-recherche": {
+    "offset": 81.0,
+    "extent": 2759.1249999999995,
+    "headerY": 62.0,
+    "pinnedHeight": 142.0
+  },
+  "06-grand-texte": {
+    "offset": 180.0,
+    "extent": 1043.8000000000002,
+    "headerY": 59.0,
+    "pinnedHeight": 178.0
+  }
+}

@@ -75,6 +75,8 @@ void main() {
     await t.tap(find.text('Marquer comme vu'));
     await t.pumpAndSettle();
     expect((await db.movieById(42))!.watchedAt, isNotNull);
+    await t.tap(find.byTooltip('Fermer le message'));
+    await t.pumpAndSettle();
     await t.tap(find.byTooltip('Actions pour Dune'));
     await t.pumpAndSettle();
     expect(find.text('Remettre à voir'), findsOneWidget);

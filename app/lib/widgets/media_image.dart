@@ -1,3 +1,4 @@
+import 'artwork_image.dart';
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
@@ -58,7 +59,7 @@ class MediaImage extends StatelessWidget {
     if (url == null) return _fallback;
 
     final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    return Image.network(
+    return ArtworkImage(
       url,
       fit: fit,
       alignment: alignment,

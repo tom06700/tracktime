@@ -38,7 +38,8 @@ void main() {
     expect(find.text('Films'), findsOneWidget);
     expect(find.text('Explorer'), findsOneWidget);
     expect(find.text('Profil'), findsOneWidget);
-    expect(find.text('Ta liste est vide'), findsOneWidget);
+    expect(find.text('Un nouveau monde t’attend.'), findsOneWidget);
+    expect(find.text('Explorer les séries'), findsOneWidget);
 
     // Démonte l'arbre puis avance l'horloge simulée pour déclencher les
     // timers de fermeture des streams drift, sinon le framework de test

@@ -1,3 +1,5 @@
+import '../media/artwork_cache.dart';
+import 'artwork_image.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -74,7 +76,7 @@ class _HeroArtworkState extends State<HeroArtwork> {
   void _trySource(List<String> urls, int index, int request) {
     if (!mounted || request != _request || index >= urls.length) return;
     _detach();
-    final stream = NetworkImage(urls[index])
+    final stream = ArtworkImages.provider(urls[index])
         .resolve(createLocalImageConfiguration(context));
     final listener = ImageStreamListener((info, synchronousCall) {
       final pixels =
@@ -148,7 +150,7 @@ class _HeroArtworkState extends State<HeroArtwork> {
                             ],
                             stops: [0, .72, 1],
                           ).createShader(rect),
-                          child: Image.network(
+                          child: ArtworkImage(
                             _selected!,
                             fit: BoxFit.cover,
                             filterQuality: FilterQuality.medium,

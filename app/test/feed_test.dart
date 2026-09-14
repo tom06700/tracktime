@@ -27,6 +27,34 @@ void main() {
   final now = DateTime(2026, 7, 6);
   final past = DateTime(2026, 1, 1);
 
+  test('reprise : visionnages récents avant anciens puis séries jamais vues', () {
+    final feed = buildSeriesFeed(
+      shows: [
+        _swp(_show(1, 'Nouvelle', addedAt: now), 0),
+        _swp(_show(2, 'Ancienne'), 1),
+        _swp(_show(3, 'Récente'), 1),
+      ],
+      episodes: const [],
+      watched: [
+        _w(2, 1, 1, now.subtract(const Duration(days: 50))),
+        _w(3, 1, 1, now.subtract(const Duration(hours: 2))),
+      ],
+      now: now,
+    );
+    expect(feed.resumeQueue.map((n) => n.show.id), [3, 2, 1]);
+  });
+
+  test('reprise : dates identiques gardent un ordre stable', () {
+    SeriesFeed feed(List<int> ids) => buildSeriesFeed(
+      shows: [for (final id in ids) _swp(_show(id, 'Série $id'), 1)],
+      episodes: const [],
+      watched: [for (final id in ids) _w(id, 1, 1, now)],
+      now: now,
+    );
+    expect(feed([3, 1, 2]).resumeQueue.map((n) => n.show.id), [1, 2, 3]);
+    expect(feed([2, 3, 1]).resumeQueue.map((n) => n.show.id), [1, 2, 3]);
+  });
+
   test('fin de saison 22 : reprise en 23, jamais sur les spéciaux', () {
     final show = _show(81797, 'One Piece');
     final watched = [_w(81797, 22, 1155, now)];

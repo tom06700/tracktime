@@ -1,3 +1,4 @@
+import 'artwork_cache.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
 
@@ -198,7 +199,8 @@ class MediaRef {
 /// partagent donc la même ambiance, ce qui est exactement ce qu'on veut.
 class PaletteCache {
   PaletteCache({ImageProvider Function(String url)? provider})
-    : _provider = provider ?? NetworkImage.new;
+    : _provider = provider ?? ((url) => ResizeImage(ArtworkImages.provider(url),
+        width: 64, height: 64, policy: ResizeImagePolicy.fit));
 
   final ImageProvider Function(String url) _provider;
   final Map<String, MediaPalette> _done = {};
@@ -253,23 +255,25 @@ const _sampleHeight = 18;
 /// Redessine [provider] en miniature et en extrait ses couleurs dominantes.
 Future<List<Color>> swatchesOfImage(ImageProvider provider) async {
   final image = await _resolve(provider);
-  final recorder = ui.PictureRecorder();
-  Canvas(recorder).drawImageRect(
-    image,
-    Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-    const Rect.fromLTWH(0, 0, _sampleWidth * 1.0, _sampleHeight * 1.0),
-    Paint()..filterQuality = FilterQuality.medium,
-  );
-  final small = await recorder.endRecording().toImage(
-    _sampleWidth,
-    _sampleHeight,
-  );
+  ui.Picture? picture;
+  ui.Image? small;
   try {
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      const Rect.fromLTWH(0, 0, _sampleWidth * 1.0, _sampleHeight * 1.0),
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+    picture = recorder.endRecording();
+    small = await picture.toImage(_sampleWidth, _sampleHeight);
     final data = await small.toByteData(format: ui.ImageByteFormat.rawRgba);
     if (data == null) return const [];
     return dominantColors(data.buffer.asUint8List());
   } finally {
-    small.dispose();
+    small?.dispose();
+    picture?.dispose();
+    image.dispose();
   }
 }
 
@@ -281,7 +285,11 @@ Future<ui.Image> _resolve(ImageProvider provider) {
   late ImageStreamListener listener;
   listener = ImageStreamListener(
     (info, _) {
-      if (!completer.isCompleted) completer.complete(info.image);
+      if (!completer.isCompleted) {
+        completer.complete(info.image);
+      } else {
+        info.dispose();
+      }
       stream.removeListener(listener);
     },
     onError: (error, stack) {

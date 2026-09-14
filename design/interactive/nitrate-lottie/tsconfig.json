@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    // General
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "target": "ESNext",
+
+    // Modules
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+
+    // Type Checking & Safety
+    "strict": true,
+    // Upstream Kobalte/Lucide declaration files contain incompatible type exports.
+    // Keep strict checks on player source; omit third-party declaration checking.
+    "skipLibCheck": true,
+    "types": ["vite/client"],
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}

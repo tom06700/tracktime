@@ -5,8 +5,12 @@ import 'package:flutter/services.dart';
 import '../../db/database.dart';
 import '../../theme.dart';
 import '../../widgets/media_image.dart';
+import '../../widgets/collection_layout_transition.dart';
+import '../../widgets/watched_check.dart';
+import '../../widgets/modern_controls.dart';
 
 import 'movie_actions_menu.dart';
+import '../../widgets/nitrate_banner.dart';
 export 'movie_actions_menu.dart' show MovieAction;
 
 /// Affiche d'un film dans la grille. L'image porte la carte ; les actions
@@ -19,6 +23,8 @@ class MoviePosterCard extends StatelessWidget {
     required this.onTap,
     this.metaLine,
     this.watched = false,
+    this.onMarkWatched,
+    this.actionsEnabled = true,
   });
 
   final Movie movie;
@@ -32,6 +38,8 @@ class MoviePosterCard extends StatelessWidget {
   final String? metaLine;
 
   final bool watched;
+  final Future<void> Function()? onMarkWatched;
+  final bool actionsEnabled;
 
   /// Reserve two lines for both title and metadata, including larger text.
   static double heightFor(double width, TextScaler scaler) =>
@@ -64,84 +72,99 @@ class MoviePosterCard extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 2 / 3,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: MediaImage(
-                      sources: [movie.poster],
-                      seed: movie.title,
-                      icon: Icons.movie_outlined,
+              child: CollectionTransitionPoster(
+                id: 'movie-${movie.id}',
+                sources: [movie.poster],
+                seed: movie.title,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: MediaImage(
+                        sources: [movie.poster],
+                        seed: movie.title,
+                        icon: Icons.movie_outlined,
+                      ),
                     ),
-                  ),
-                  IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0x24FFFFFF)),
-                        gradient: const LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.transparent,
-                            Color(0x66080B13),
-                          ],
-                          stops: [0, .6, 1],
+                    IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0x24FFFFFF)),
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.transparent,
+                              Color(0x66080B13),
+                            ],
+                            stops: [0, .6, 1],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: MovieActionsMenu(
-                      watched: watched,
-                      title: movie.title,
-                      onAction: onAction,
-                    ),
-                  ),
-                  if (!watched)
                     Positioned(
-                      left: 8,
-                      bottom: 6,
-                      child: _MarkWatchedButton(
+                      top: 4,
+                      right: 4,
+                      child: MovieActionsMenu(
+                        watched: watched,
                         title: movie.title,
-                        onConfirmed: () => onAction(MovieAction.markWatched),
+                        onAction: onAction,
+                        enabled: actionsEnabled,
                       ),
                     ),
+                    if (!watched)
+                      Positioned(
+                        left: 8,
+                        bottom: 6,
+                        child: _MarkWatchedButton(
+                          title: movie.title,
+                          onConfirmed: () => onMarkWatched != null
+                              ? onMarkWatched!()
+                              : onAction(MovieAction.markWatched),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            CollectionTransitionLabels(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: scaler.scale(14.5) * 1.3 * 2,
+                    child: Text(
+                      movie.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w500,
+                        height: 1.3,
+                        letterSpacing: -.25,
+                        color: TtColors.text,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    height: scaler.scale(12) * 1.4 * 2,
+                    child: Text(
+                      metaLine ?? '',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: TtColors.dim,
+                      ),
+                    ),
+                  ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              height: scaler.scale(14.5) * 1.3 * 2,
-              child: Text(
-                movie.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w500,
-                  height: 1.3,
-                  letterSpacing: -.25,
-                  color: TtColors.text,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            SizedBox(
-              height: scaler.scale(12) * 1.4 * 2,
-              child: Text(
-                metaLine ?? '',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  height: 1.4,
-                  color: TtColors.dim,
-                ),
               ),
             ),
           ],
@@ -157,7 +180,7 @@ class _MarkWatchedButton extends StatefulWidget {
   const _MarkWatchedButton({required this.title, required this.onConfirmed});
 
   final String title;
-  final VoidCallback onConfirmed;
+  final FutureOr<void> Function() onConfirmed;
 
   @override
   State<_MarkWatchedButton> createState() => _MarkWatchedButtonState();
@@ -165,18 +188,27 @@ class _MarkWatchedButton extends StatefulWidget {
 
 class _MarkWatchedButtonState extends State<_MarkWatchedButton> {
   bool _confirmed = false;
+  bool _busy = false;
 
   Future<void> _tap() async {
-    if (_confirmed) return;
+    if (_confirmed || _busy) return;
     HapticFeedback.lightImpact();
-    setState(() => _confirmed = true);
-
-    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    if (!reduceMotion) {
-      await Future<void>.delayed(const Duration(milliseconds: 220));
-      if (!mounted) return;
+    setState(() => _busy = true);
+    try {
+      await widget.onConfirmed();
+      if (mounted) setState(() => _confirmed = true);
+    } catch (_) {
+      if (mounted) {
+        NitrateMessenger.of(context).showBanner(
+          const NitrateBanner(
+            kind: NitrateBannerKind.error,
+            content: Text('Impossible d’enregistrer. Réessaie.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
-    widget.onConfirmed();
   }
 
   @override
@@ -203,17 +235,22 @@ class _MarkWatchedButtonState extends State<_MarkWatchedButton> {
               curve: Curves.easeOutCubic,
               padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
               decoration: BoxDecoration(
-                color: _confirmed ? TtColors.amber : const Color(0xE61A1B25),
+                color: _confirmed
+                    ? ModernPalette.lime
+                    : const Color(0xE61A1B25),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: _confirmed ? TtColors.amber : const Color(0x66D6CBE5),
+                  color: _confirmed
+                      ? ModernPalette.lime
+                      : const Color(0x66D6CBE5),
                 ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.check,
+                  WatchedCheck(
+                    confirmed: _confirmed,
+                    busy: _busy && !_confirmed,
                     size: 16,
                     color: _confirmed ? TtColors.bg : const Color(0xFFE5D9F6),
                   ),

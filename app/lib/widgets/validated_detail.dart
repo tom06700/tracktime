@@ -14,14 +14,17 @@ class ValidatedDetailHero extends StatelessWidget {
     this.film = false,
     this.onManage,
     this.managementAction,
+    this.showNavigation = true,
   });
   final String title, kicker, subtitle;
   final List<String?> sources;
   final bool film;
+  final bool showNavigation;
   final VoidCallback? onManage;
   final Widget? managementAction;
-  @override
-  Widget build(BuildContext context) {
+  double heightFor(BuildContext context) => _geometry(context).height;
+
+  ({double height, TextStyle titleStyle}) _geometry(BuildContext context) {
     final small = MediaQuery.sizeOf(context).width < 370;
     final top = MediaQuery.paddingOf(context).top;
     final shortFilm = film && title.length <= 18;
@@ -64,8 +67,16 @@ class ValidatedDetailHero extends StatelessWidget {
     final baseHeight =
         (film ? (small ? 330.0 : 365.0) : (small ? 300.0 : 330.0)) + top;
     final height = baseHeight.clamp(top + 90 + contentHeight, double.infinity);
+    return (height: height, titleStyle: titleStyle);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final small = MediaQuery.sizeOf(context).width < 370;
+    final top = MediaQuery.paddingOf(context).top;
+    final geometry = _geometry(context);
     return SizedBox(
-      height: height,
+      height: geometry.height,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -109,37 +120,38 @@ class ValidatedDetailHero extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            top: top + 12,
-            left: 12,
-            right: 16,
-            child: Row(
-              children: [
-                IconButton.filledTonal(
-                  tooltip: 'Retour',
-                  onPressed: () => Navigator.maybePop(context),
-                  style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xBC15171B),
-                    foregroundColor: Colors.white,
-                  ),
-                  icon: const Icon(Icons.arrow_back, size: 20),
-                ),
-                const Spacer(),
-                if (managementAction != null)
-                  managementAction!
-                else if (onManage != null)
+          if (showNavigation)
+            Positioned(
+              top: top + 12,
+              left: 12,
+              right: 16,
+              child: Row(
+                children: [
                   IconButton.filledTonal(
-                    tooltip: 'Gérer',
-                    onPressed: onManage,
+                    tooltip: 'Retour',
+                    onPressed: () => Navigator.maybePop(context),
                     style: IconButton.styleFrom(
                       backgroundColor: const Color(0xBC15171B),
                       foregroundColor: Colors.white,
                     ),
-                    icon: const Icon(Icons.more_horiz, size: 20),
+                    icon: const Icon(Icons.arrow_back, size: 20),
                   ),
-              ],
+                  const Spacer(),
+                  if (managementAction != null)
+                    managementAction!
+                  else if (onManage != null)
+                    IconButton.filledTonal(
+                      tooltip: 'Gérer',
+                      onPressed: onManage,
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xBC15171B),
+                        foregroundColor: Colors.white,
+                      ),
+                      icon: const Icon(Icons.more_horiz, size: 20),
+                    ),
+                ],
+              ),
             ),
-          ),
           Positioned(
             left: small ? 18 : 24,
             right: 24,
@@ -158,7 +170,7 @@ class ValidatedDetailHero extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(height: 11),
-                Text(title, style: titleStyle),
+                Text(title, style: geometry.titleStyle),
                 if (subtitle.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),

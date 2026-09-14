@@ -1,3 +1,4 @@
+import '../widgets/artwork_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -261,7 +262,7 @@ class _MarqueePoster extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 if (path != null && path.isNotEmpty)
-                  Image.network(
+                  ArtworkImage(
                     imageUrl(path, size: 'w500'),
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) =>
@@ -383,7 +384,7 @@ class SeriesPosterTile extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               if (path != null && path.isNotEmpty)
-                Image.network(
+                ArtworkImage(
                   imageUrl(path, size: 'w342'),
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => _posterFallback(show.name),

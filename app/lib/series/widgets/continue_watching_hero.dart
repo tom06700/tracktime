@@ -2,18 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers.dart';
 import '../../theme.dart';
-import '../../widgets/hero_artwork.dart';
+import '../../widgets/media_image.dart';
+import '../../widgets/collection_layout_transition.dart';
 import '../../widgets/modern_controls.dart';
 import '../feed.dart';
 
 /// Image, title and actions are one scrolling card, as in reference 03.
 class ContinueWatchingHero extends ConsumerWidget {
-  const ContinueWatchingHero(
-      {super.key,
-      required this.next,
-      required this.onOpen,
-      required this.onMarkWatched,
-      this.confirmed = false});
+  const ContinueWatchingHero({
+    super.key,
+    required this.next,
+    required this.onOpen,
+    required this.onMarkWatched,
+    this.confirmed = false,
+  });
   final NextUp next;
   final VoidCallback onOpen;
   final Future<void> Function() onMarkWatched;
@@ -25,161 +27,196 @@ class ContinueWatchingHero extends ConsumerWidget {
     final shows = ref.watch(showsProvider).value ?? const [];
     final matches = shows.where((s) => s.show.id == n.show.id);
     final progress = matches.isEmpty ? null : matches.first;
-    final total = n.show.totalEpisodes;
+    final total = progress?.progressTotal;
     final known = total != null && total > 0 && progress != null;
     return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: ClipRRect(
-            borderRadius: BorderRadius.circular(29),
-            child: Material(
-                color: const Color(0xFF14171E),
-                child: InkWell(
-                    key: const ValueKey('continue-watching-open'),
-                    onTap: onOpen,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(29),
+        child: Material(
+          color: const Color(0xFF14171E),
+          child: InkWell(
+            key: const ValueKey('continue-watching-open'),
+            onTap: onOpen,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: MediaQuery.sizeOf(context).width < 380 ? 275 : 302,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CollectionTransitionPoster(
+                        id: 'series-${n.show.id}',
+                        sources: [n.show.poster, detail?.poster, n.still],
+                        seed: n.show.name,
+                        radius: 29,
+                        child: MediaImage(
+                          sources: [n.show.poster, detail?.poster, n.still],
+                          seed: n.show.name,
+                        ),
+                      ),
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0x22101113),
+                              Colors.transparent,
+                              Color(0x8814171E),
+                              Color(0xFF14171E),
+                            ],
+                            stops: [0, .48, .8, 1],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 21,
+                        right: 21,
+                        bottom: 20,
+                        child: CollectionTransitionLabels(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                n.code.replaceAll(' | ', ' · '),
+                                style: const TextStyle(
+                                  color: ModernPalette.lime,
+                                  fontSize: 12,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                n.show.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  height: 1.1,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                n.episodeName?.isNotEmpty == true
+                                    ? n.episodeName!
+                                    : 'La suite t’attend.',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFFDDDFE6),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                CollectionTransitionLabels(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 3, 16, 17),
                     child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          SizedBox(
-                              height: MediaQuery.sizeOf(context).width < 380
-                                  ? 275
-                                  : 302,
-                              child: Stack(fit: StackFit.expand, children: [
-                                HeroArtwork(sources: [
-                                  detail?.poster,
-                                  n.show.poster,
-                                  detail?.backdrop,
-                                  n.still
-                                ], seed: n.show.name),
-                                const DecoratedBox(
-                                    decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [
-                                      Color(0x22101113),
-                                      Colors.transparent,
-                                      Color(0x8814171E),
-                                      Color(0xFF14171E)
-                                    ],
-                                            stops: [
-                                      0,
-                                      .48,
-                                      .8,
-                                      1
-                                    ]))),
-                                Positioned(
-                                    left: 21,
-                                    right: 21,
-                                    bottom: 20,
-                                    child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(n.code.replaceAll(' | ', ' · '),
-                                              style: const TextStyle(
-                                                  color: ModernPalette.lime,
-                                                  fontSize: 12,
-                                                  letterSpacing: 1)),
-                                          const SizedBox(height: 6),
-                                          Text(n.show.name,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                  fontSize: 24,
-                                                  height: 1.1,
-                                                  fontWeight: FontWeight.w500,
-                                                  color: Colors.white)),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                              n.episodeName?.isNotEmpty == true
-                                                  ? n.episodeName!
-                                                  : 'La suite t’attend.',
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                  fontSize: 13,
-                                                  color: Color(0xFFDDDFE6))),
-                                        ])),
-                              ])),
-                          Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 3, 16, 17),
-                              child: Column(children: [
-                                Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                          child: Text(
-                                              known
-                                                  ? '${progress.watchedCount} / $total épisodes'
-                                                  : 'Prochain épisode à voir',
-                                              style: const TextStyle(
-                                                  fontSize: 12,
-                                                  color: TtColors.dim))),
-                                      if (known)
-                                        Text(
-                                            '${(progress.progress * 100).round()} %',
-                                            style: const TextStyle(
-                                                fontSize: 12,
-                                                color: TtColors.dim)),
-                                    ]),
-                                if (known) ...[
-                                  const SizedBox(height: 10),
-                                  Semantics(
-                                      label: 'Progression',
-                                      value:
-                                          '${progress.watchedCount} sur $total épisodes',
-                                      child: ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          child: LinearProgressIndicator(
-                                              value: progress.progress,
-                                              minHeight: 4,
-                                              backgroundColor:
-                                                  const Color(0xFF34383F),
-                                              color: ModernPalette.lime)))
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                known
+                                    ? '${progress.progressWatchedCount} / $total épisodes'
+                                    : 'Prochain épisode à voir',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: TtColors.dim,
+                                ),
+                              ),
+                            ),
+                            if (known)
+                              Text(
+                                '${(progress.progress * 100).round()} %',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: TtColors.dim,
+                                ),
+                              ),
+                          ],
+                        ),
+                        if (known) ...[
+                          const SizedBox(height: 10),
+                          Semantics(
+                            label: 'Progression',
+                            value:
+                                '${progress.progressWatchedCount} sur $total épisodes',
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: LinearProgressIndicator(
+                                value: progress.progress,
+                                minHeight: 4,
+                                backgroundColor: const Color(0xFF34383F),
+                                color: ModernPalette.lime,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        LayoutBuilder(
+                          builder: (context, c) {
+                            final open = ModernCommand(
+                              shape: CommandShape.nextUp,
+                              compact: true,
+                              label: 'Ouvrir',
+                              onPressed: onOpen,
+                            );
+                            final watched = GestureDetector(
+                              // Consume taps while the nested command is busy/disabled.
+                              behavior: HitTestBehavior.opaque,
+                              excludeFromSemantics: true,
+                              onTap: () {},
+                              child: ModernCommand(
+                                shape: CommandShape.softCheck,
+                                compact: true,
+                                label: confirmed ? 'Vu !' : 'Marquer vu',
+                                selected: confirmed,
+                                animatedConfirmation: true,
+                                onPressed: confirmed ? null : onMarkWatched,
+                              ),
+                            );
+                            if (c.maxWidth < 310 ||
+                                MediaQuery.textScalerOf(context).scale(13) >
+                                    18) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  open,
+                                  const SizedBox(height: 9),
+                                  watched,
                                 ],
-                                const SizedBox(height: 16),
-                                LayoutBuilder(builder: (context, c) {
-                                  final open = ModernCommand(
-                                      shape: CommandShape.nextUp,
-                                      compact: true,
-                                      label: 'Ouvrir',
-                                      onPressed: onOpen);
-                                  final watched = GestureDetector(
-                                      // Consume taps while the nested command is busy/disabled.
-                                      behavior: HitTestBehavior.opaque,
-                                      excludeFromSemantics: true,
-                                      onTap: () {},
-                                      child: ModernCommand(
-                                          shape: CommandShape.softCheck,
-                                          compact: true,
-                                          label:
-                                              confirmed ? 'Vu !' : 'Marquer vu',
-                                          selected: confirmed,
-                                          onPressed: confirmed
-                                              ? null
-                                              : onMarkWatched));
-                                  if (c.maxWidth < 310 ||
-                                      MediaQuery.textScalerOf(context)
-                                              .scale(13) >
-                                          18) {
-                                    return Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          open,
-                                          const SizedBox(height: 9),
-                                          watched
-                                        ]);
-                                  }
-                                  return Row(children: [
-                                    Expanded(child: open),
-                                    const SizedBox(width: 9),
-                                    Expanded(child: watched)
-                                  ]);
-                                }),
-                              ])),
-                        ])))));
+                              );
+                            }
+                            return Row(
+                              children: [
+                                Expanded(child: open),
+                                const SizedBox(width: 9),
+                                Expanded(child: watched),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

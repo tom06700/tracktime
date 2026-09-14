@@ -1,3 +1,4 @@
+import 'package:tracktime/widgets/modern_controls.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -110,7 +111,7 @@ void main() {
 
         final image = tester.widget<Image>(find.byType(Image));
         expect(
-          (image.image as NetworkImage).url,
+          ((image.image as ResizeImage).imageProvider as NetworkImage).url,
           'https://artworks.thetvdb.com/banners/v4/episode/1/screencap/a.jpg',
         );
 
@@ -185,14 +186,14 @@ void main() {
       int confirmedButtons() => tester
           .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
           .where(
-            (c) => (c.decoration as BoxDecoration?)?.color == TtColors.amber,
+            (c) => (c.decoration as BoxDecoration?)?.color == ModernPalette.lime,
           )
           .length;
 
       expect(confirmedButtons(), 0);
 
       // Dune est marqué vu : il quitte la grille, Inception prend sa place.
-      await tester.tap(find.byIcon(Icons.check).first);
+      await tester.tap(find.byTooltip('Marquer comme vu').first);
       for (var i = 0; i < 12; i++) {
         await tester.pump(const Duration(milliseconds: 60));
       }

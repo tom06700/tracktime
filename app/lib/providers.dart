@@ -106,6 +106,23 @@ final upcomingReleasesProvider = FutureProvider<List<Map<String, dynamic>>>(
             .take(20)
             .toList());
 
+/// Les catalogues gardent assez de candidats pour masquer les titres déjà
+/// suivis avant de limiter chaque sélection à vingt affiches dans Explorer.
+final recentSeriesProvider = FutureProvider<List<Map<String, dynamic>>>(
+  (ref) => ref.watch(tvdbClientProvider).recentReleases(movies: false),
+);
+final recentMoviesProvider = FutureProvider<List<Map<String, dynamic>>>(
+  (ref) => ref.watch(tvdbClientProvider).recentReleases(movies: true),
+);
+final recentAnimeSeriesProvider = FutureProvider<List<Map<String, dynamic>>>(
+  (ref) =>
+      ref.watch(tvdbClientProvider).recentReleases(movies: false, anime: true),
+);
+final recentAnimeMoviesProvider = FutureProvider<List<Map<String, dynamic>>>(
+  (ref) =>
+      ref.watch(tvdbClientProvider).recentReleases(movies: true, anime: true),
+);
+
 /// Fiche d'une série, chargée à la demande et mise en cache par le provider :
 /// les rebuilds ne relancent pas la requête, et `ref.invalidate` la rejoue
 /// pour le bouton « Réessayer ».

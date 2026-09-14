@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../profile/sections.dart' show watchlistItems;
 import '../profile/tonight.dart';
 import '../motion.dart';
+import '../movies/confirm_removal.dart';
 import '../widgets/nitrate_home_button.dart';
 import '../providers.dart';
 import '../settings/prefs.dart';
@@ -20,6 +22,7 @@ import '../widgets/common.dart';
 import '../widgets/media_image.dart';
 import '../widgets/states.dart';
 import '../profile/profile.dart';
+import '../widgets/nitrate_banner.dart';
 
 /// Ouvre la fiche du média. La navigation porte l'identifiant TheTVDB choisi,
 /// jamais le titre : deux « One Piece » distincts doivent charger chacun le
@@ -32,7 +35,7 @@ void openMediaDetail(
 }) => context.push(isSeries ? '/show/$id' : '/movie/$id', extra: title);
 
 /// Filtre appliqué aux résultats de recherche.
-enum SearchFilter { all, series, movies }
+enum SearchFilter { all, series, movies, anime }
 
 /// Onglet Explorer : recherche TheTVDB, et — tant qu'on n'a rien tapé — une
 /// page de découverte. L'écran ne doit jamais paraître vide : sans idée
@@ -47,6 +50,11 @@ class ExplorerScreen extends ConsumerStatefulWidget {
 class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   final _controller = TextEditingController();
   Timer? _debounce;
+  final _scroll = ScrollController();
+  final _brandKey = GlobalKey();
+  String? _selection;
+  double _discoveryOffset = 0;
+  Set<int>? _excludedShows, _excludedMovies;
 
   List<MediaSearchResult> _results = const [];
   bool _loading = false;
@@ -62,12 +70,24 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   void dispose() {
     _debounce?.cancel();
     _controller.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
   void _onChanged(String value) {
     _requestToken++;
-    setState(() {}); // rafraîchit le bouton d'effacement
+    if (_scroll.hasClients) {
+      final brand = _brandKey.currentContext?.findRenderObject() as RenderSliver?;
+      final headerExtent = brand?.geometry?.scrollExtent ?? 84;
+      // Show the first results while preserving the field’s current position,
+      // including when it was already pinned during discovery.
+      _scroll.jumpTo(_scroll.offset.clamp(0, headerExtent));
+    }
+    setState(() {
+      _results = const [];
+      _error = null;
+      _loading = value.trim().isNotEmpty;
+    });
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), () => _search(value));
   }
@@ -90,7 +110,10 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
       _error = null;
     });
     try {
-      final raw = await ref.read(tvdbClientProvider).search(q);
+      final client = ref.read(tvdbClientProvider);
+      final raw = _filter == SearchFilter.anime
+          ? await client.searchAnime(q)
+          : await client.search(q);
       if (!mounted || token != _requestToken) return;
       setState(() {
         _results = rankSearchResults(parseSearchResults(raw), q);
@@ -105,96 +128,146 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     }
   }
 
-  /// Le filtre s'applique localement : la requête a déjà tout ramené, inutile
-  /// de rappeler l'API pour restreindre.
+  /// Séries et films se filtrent localement. Animés enrichit si nécessaire
+  /// les genres absents du moteur de recherche avant de filtrer.
   List<MediaSearchResult> get _filtered => switch (_filter) {
     SearchFilter.all => _results,
+    SearchFilter.anime => _results.where((r) => r.isAnime).toList(),
     SearchFilter.series =>
       _results.where((r) => r.type == SearchMediaType.series).toList(),
     SearchFilter.movies =>
       _results.where((r) => r.type == SearchMediaType.movie).toList(),
   };
 
+  void _returnToDiscovery() {
+    setState(() => _selection = null);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scroll.hasClients) {
+        _scroll.jumpTo(
+          _discoveryOffset.clamp(0, _scroll.position.maxScrollExtent),
+        );
+      }
+    });
+  }
+
+  void _toTop() {
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+  }
+
+  List<MediaSearchResult> _catalogue(
+    AsyncValue<List<Map<String, dynamic>>> data,
+    SearchMediaType type,
+  ) {
+    final found = <String>{};
+    final series = type == SearchMediaType.series;
+    final shows = ref.watch(showsProvider);
+    final movies = ref.watch(moviesProvider);
+    final known = series
+        ? (shows.value ?? []).map((s) => s.show.id).toSet()
+        : (movies.value ?? []).map((m) => m.id).toSet();
+    // Exclude the collection as it stood when this visit began. An addition
+    // must stay under the finger long enough to show its confirmed state.
+    if (series && shows.hasValue) _excludedShows ??= known;
+    if (!series && movies.hasValue) _excludedMovies ??= known;
+    final excluded =
+        (series ? _excludedShows : _excludedMovies) ?? const <int>{};
+    return [
+      for (final m in data.value ?? <Map<String, dynamic>>[])
+        if (!(known.contains(m['id']) && excluded.contains(m['id'])) &&
+            found.add('${m['id']}-${m['name']}'))
+          MediaSearchResult(
+            tvdbId: (m['id'] as num?)?.toInt(),
+            name: '${m['name'] ?? ''}',
+            type: type,
+            aliases: const [],
+            isAnime: _filter == SearchFilter.anime,
+            image: m['image'] as String?,
+            year: m['year']?.toString(),
+          ),
+    ].take(20).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen(homeTabProvider, (previous, next) {
+      if (previous != HomeTab.explorer && next == HomeTab.explorer) {
+        setState(() {
+          _excludedShows = null;
+          _excludedMovies = null;
+        });
+      }
+    });
     final searching = _controller.text.trim().isNotEmpty;
-    final series = ref.watch(popularSeriesProvider),
-        films = ref.watch(popularMoviesProvider),
-        upcoming = ref.watch(upcomingReleasesProvider);
+    final anime = _filter == SearchFilter.anime;
+    final seriesProvider = anime
+        ? recentAnimeSeriesProvider
+        : recentSeriesProvider;
+    final filmsProvider = anime
+        ? recentAnimeMoviesProvider
+        : recentMoviesProvider;
     final groups = [
       if (_filter != SearchFilter.movies)
         (
-          title: 'Séries populaires',
-          data: series,
-          provider: popularSeriesProvider,
+          title: anime ? 'Nouveaux animés' : 'Nouvelles séries',
+          data: ref.watch(seriesProvider),
+          provider: seriesProvider,
           type: SearchMediaType.series,
         ),
       if (_filter != SearchFilter.series)
         (
-          title: 'Films populaires',
-          data: films,
-          provider: popularMoviesProvider,
-          type: SearchMediaType.movie,
-        ),
-      if (_filter != SearchFilter.series)
-        (
-          title: 'Sorties annoncées',
-          data: upcoming,
-          provider: upcomingReleasesProvider,
+          title: anime ? 'Films animés récents' : 'Films récents',
+          data: ref.watch(filmsProvider),
+          provider: filmsProvider,
           type: SearchMediaType.movie,
         ),
     ];
-    final found = <String>{};
-    final discovery = <MediaSearchResult>[];
-    for (final g in groups) {
-      for (final m in g.data.value ?? <Map<String, dynamic>>[]) {
-        final id = (m['id'] as num?)?.toInt();
-        final name = '${m['name'] ?? ''}';
-        if (!found.add('${g.type}-$id-$name')) continue;
-        discovery.add(
-          MediaSearchResult(
-            tvdbId: id,
-            name: name,
-            type: g.type,
-            aliases: const [],
-            image: m['image'] as String?,
-            year: m['year']?.toString(),
-          ),
-        );
-      }
-    }
-    final items = searching ? _filtered : discovery;
-    final featured = discovery
-        .where((m) => m.type == SearchMediaType.series && m.tvdbId != null)
-        .firstOrNull;
+    final selected = groups.where((g) => g.title == _selection).firstOrNull;
+    final grid = searching || selected != null;
+    final items = searching
+        ? _filtered
+        : selected == null
+        ? <MediaSearchResult>[]
+        : _catalogue(selected.data, selected.type);
+    final loading = searching ? _loading : selected?.data.isLoading ?? false;
     final profile = ref.watch(profileProvider).value;
     final scale = MediaQuery.textScalerOf(context).scale(1);
+    final screenWidth = MediaQuery.sizeOf(context).width;
     final columns = scale > 1.6
         ? 1
-        : MediaQuery.sizeOf(context).width > 600
+        : screenWidth > 600
         ? 3
         : 2;
-    final width =
-        (MediaQuery.sizeOf(context).width - 44 - (columns - 1) * 13) / columns;
+    final width = (screenWidth - 44 - (columns - 1) * 13) / columns;
+    final railWidth = (screenWidth * .35).clamp(132.0, 180.0);
     final tonight = watchlistItems(
       ref.watch(moviesProvider).value ?? [],
       ref.watch(showsProvider).value ?? [],
     );
-    return CustomScrollView(
-      key: const PageStorageKey('explorer-feed'),
-      slivers: [
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(
-            22,
-            MediaQuery.paddingOf(context).top + 20,
-            22,
-            0,
-          ),
-          sliver: SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
+    final active = TickerMode.valuesOf(context).enabled;
+    return PopScope(
+      canPop: !active || !grid,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop || !active) return;
+        if (searching) {
+          _controller.clear();
+          _search('');
+          FocusScope.of(context).unfocus();
+        } else {
+          _returnToDiscovery();
+        }
+      },
+      child: SafeArea(
+        bottom: false,
+        child: CustomScrollView(
+          key: const PageStorageKey('explorer-feed'),
+          controller: _scroll,
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          slivers: [
+            SliverPadding(
+              key: _brandKey,
+              padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
+              sliver: SliverToBoxAdapter(
+                child: Row(
                   children: [
                     const Expanded(child: NitrateHomeButton()),
                     IconButton.filledTonal(
@@ -212,251 +285,403 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 27),
-                const Text(
-                  'LA PROCHAINE HISTOIRE',
-                  style: TextStyle(
-                    fontSize: 10,
-                    letterSpacing: 1.7,
-                    color: Color(0xFFC1ADC9),
-                  ),
-                ),
-                const SizedBox(height: 9),
-                const Text(
-                  'Tu pars où ?',
-                  style: TextStyle(
-                    fontSize: 36,
-                    height: 1.1,
-                    letterSpacing: -1.7,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 11),
-                const Text(
-                  'Films, séries et anime. Suis ton envie.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFFA79BAD)),
-                ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: _controller,
-                  autocorrect: false,
-                  textInputAction: TextInputAction.search,
-                  onChanged: _onChanged,
-                  onSubmitted: _search,
-                  decoration: InputDecoration(
-                    hintText: 'Un titre, une nouvelle obsession…',
-                    prefixIcon: const Icon(Icons.search, size: 18),
-                    suffixIcon: _controller.text.isEmpty
-                        ? null
-                        : IconButton(
-                            tooltip: 'Effacer',
-                            onPressed: () {
-                              _controller.clear();
-                              _search('');
-                            },
-                            icon: const Icon(Icons.close),
+              ),
+            ),
+            PinnedHeaderSliver(
+              key: const ValueKey('explorer-search-header'),
+              child: ColoredBox(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _controller,
+                        autocorrect: false,
+                        textInputAction: TextInputAction.search,
+                        onChanged: _onChanged,
+                        onSubmitted: _search,
+                        onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                        decoration: InputDecoration(
+                          hintText: 'Rechercher un film, une série',
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            size: 21,
                           ),
-                    filled: true,
-                    fillColor: const Color(0xFF25212C),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(21),
-                      borderSide: const BorderSide(color: Color(0xFF41354E)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(21),
-                      borderSide: const BorderSide(color: Color(0xFF41354E)),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 15),
-                GlideControl(
-                  dense: true,
-                  labels: const ['Tout', 'Séries', 'Films'],
-                  index: _filter.index,
-                  onSelected: (i) =>
-                      setState(() => _filter = SearchFilter.values[i]),
-                ),
-                const SizedBox(height: 22),
-                if (!searching && featured != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 23),
-                    child: Material(
-                      borderRadius: BorderRadius.circular(24),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: () => openMediaDetail(
-                          context,
-                          id: featured.tvdbId!,
-                          isSeries: true,
-                          title: featured.name,
-                        ),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(minHeight: 150),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Positioned.fill(
-                                child: MediaImage(
-                                  sources: [featured.image],
-                                  seed: featured.name,
-                                  icon: Icons.tv,
+                          suffixIcon: _controller.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Effacer',
+                                  onPressed: () {
+                                    _controller.clear();
+                                    _toTop();
+                                    _search('');
+                                  },
+                                  icon: const Icon(Icons.close, size: 20),
                                 ),
-                              ),
-                              const Positioned.fill(
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Color(0xE615141E),
-                                        Color(0x55000000),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const Padding(
-                                padding: EdgeInsets.all(20),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            'À DÉCOUVRIR',
-                                            style: TextStyle(
-                                              fontSize: 9,
-                                              letterSpacing: 1.5,
-                                            ),
-                                          ),
-                                          SizedBox(height: 6),
-                                          Text(
-                                            'Change\nd’univers.',
-                                            style: TextStyle(
-                                              fontSize: 24,
-                                              height: 1.15,
-                                              letterSpacing: -.7,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Icon(Icons.north_east),
-                                  ],
-                                ),
-                              ),
-                            ],
+                          filled: true,
+                          fillColor: const Color(0xFF25212C),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(19),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF41354E),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(19),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF41354E),
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 17,
                           ),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final minimumWidth = 4 * (50 * scale + 16);
+                          return SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: SizedBox(
+                              width: constraints.maxWidth < minimumWidth
+                                  ? minimumWidth
+                                  : constraints.maxWidth,
+                              child: GlideControl(
+                                dense: true,
+                                labels: const [
+                                  'Tout',
+                                  'Séries',
+                                  'Films',
+                                  'Animés',
+                                ],
+                                index: _filter.index,
+                                onSelected: (i) {
+                                  _toTop();
+                                  final previous = _filter;
+                                  setState(() {
+                                    _filter = SearchFilter.values[i];
+                                    _selection = null;
+                                  });
+                                  if (searching &&
+                                      (previous == SearchFilter.anime ||
+                                          _filter == SearchFilter.anime)) {
+                                    _results = const [];
+                                    _search(_controller.text);
+                                  }
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        searching ? 'Résultats' : 'À explorer',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '${items.length} titres',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFB5A6C1),
-                      ),
-                    ),
-                  ],
                 ),
-                const SizedBox(height: 12),
-                if (searching && _error != null)
-                  ErrorRetry(
-                    title: 'Recherche indisponible',
-                    message: 'Vérifie ta connexion et réessaie.',
-                    onRetry: () => _search(_controller.text),
-                  ),
-                if (!searching)
-                  for (final g in groups)
-                    if (g.data.hasError)
-                      ListTile(
-                        title: Text(g.title),
-                        subtitle: const Text('Chargement indisponible'),
-                        trailing: IconButton(
-                          tooltip: 'Réessayer : ${g.title}',
-                          onPressed: () => ref.invalidate(g.provider),
-                          icon: const Icon(Icons.refresh),
+              ),
+            ),
+            if (grid) ...[
+              PinnedHeaderSliver(
+                child: ColoredBox(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 4, 22, 8),
+                    child: Row(
+                      children: [
+                        if (!searching)
+                          IconButton(
+                            tooltip: 'Retour à la découverte',
+                            onPressed: _returnToDiscovery,
+                            icon: const Icon(
+                              Icons.arrow_back_rounded,
+                              size: 21,
+                            ),
+                          ),
+                        Expanded(
+                          child: Text(
+                            searching ? 'Résultats' : selected!.title,
+                            style: const TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: -.4,
+                            ),
+                          ),
                         ),
-                      ),
-                if (searching ? _loading : groups.any((g) => g.data.isLoading))
-                  const Padding(
-                    padding: EdgeInsets.all(20),
-                    child: LinearProgressIndicator(),
+                        const SizedBox(width: 8),
+                        if (!loading)
+                          Text(
+                            '${items.length} titres',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFFB5A6C1),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                if (items.isEmpty &&
-                    !(searching
-                        ? _loading
-                        : groups.any((g) => g.data.isLoading)))
-                  Padding(
-                    padding: const EdgeInsets.all(24),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 4, 22, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (loading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          child: LinearProgressIndicator(minHeight: 2),
+                        ),
+                      if (searching && _error != null)
+                        ErrorRetry(
+                          title: 'Recherche indisponible',
+                          message: 'Vérifie ta connexion et réessaie.',
+                          onRetry: () => _search(_controller.text),
+                        ),
+                      if (!searching && selected!.data.hasError)
+                        ErrorRetry(
+                          title: 'Chargement indisponible',
+                          message: 'Vérifie ta connexion et réessaie.',
+                          onRetry: () => ref.invalidate(selected.provider),
+                        ),
+                      if (items.isEmpty &&
+                          !loading &&
+                          _error == null &&
+                          !(selected?.data.hasError ?? false))
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 36),
+                          child: Text(
+                            searching
+                                ? 'Aucun résultat. Essaie une autre orthographe.'
+                                : 'Pas de nouveauté à découvrir pour le moment.\nTu peux rechercher un titre en haut.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                sliver: SliverGrid.builder(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    crossAxisSpacing: 13,
+                    mainAxisSpacing: 23,
+                    mainAxisExtent: width * 1.325 + 72 * scale,
+                  ),
+                  itemCount: items.length,
+                  itemBuilder: (context, i) => EntranceFade(
+                    key: ValueKey(
+                      '${items[i].type}-${items[i].tvdbId}-${items[i].name}',
+                    ),
+                    child: _CatalogueCard(
+                      result: items[i],
+                      localizeTitle: !searching,
+                    ),
+                  ),
+                ),
+              ),
+            ] else ...[
+              if (tonight.length >= 2)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 4, 22, 20),
+                    child: ModernCommand(
+                      shape: CommandShape.surprise,
+                      label: 'Que regarder ce soir ?',
+                      subtitle: 'Dans ta propre collection',
+                      onPressed: () => showTonightPicker(context, tonight),
+                    ),
+                  ),
+                ),
+              for (final g in groups)
+                if (g.data.isLoading ||
+                    g.data.hasError ||
+                    _catalogue(g.data, g.type).isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: _DiscoveryRail(
+                      title: g.title,
+                      items: _catalogue(g.data, g.type),
+                      loading: g.data.isLoading,
+                      hasError: g.data.hasError,
+                      onRetry: () => ref.invalidate(g.provider),
+                      width: railWidth,
+                      scale: scale,
+                      onSeeAll: () {
+                        _discoveryOffset = _scroll.hasClients
+                            ? _scroll.offset
+                            : 0;
+                        _toTop();
+                        setState(() => _selection = g.title);
+                      },
+                    ),
+                  ),
+              if (groups.every(
+                (g) =>
+                    !g.data.isLoading &&
+                    !g.data.hasError &&
+                    _catalogue(g.data, g.type).isEmpty,
+              ))
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
                     child: Text(
-                      searching
-                          ? 'Aucun résultat. Essaie une autre orthographe.'
-                          : 'Aucun titre disponible pour le moment.',
+                      'Pas de nouveauté à découvrir pour le moment.\nTu peux rechercher un titre en haut.',
                       textAlign: TextAlign.center,
                     ),
                   ),
-              ],
+                ),
+            ],
+            SliverToBoxAdapter(
+              child: SizedBox(height: bottomNavInset(context)),
             ),
-          ),
+          ],
         ),
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 22),
-          sliver: SliverGrid.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: columns,
-              crossAxisSpacing: 13,
-              mainAxisSpacing: 23,
-              mainAxisExtent: width * 1.325 + 72 * scale,
-            ),
-            itemCount: items.length,
-            itemBuilder: (context, i) => EntranceFade(
-              key: ValueKey(
-                '${items[i].type}-${items[i].tvdbId}-${items[i].name}',
-              ),
-              child: _CatalogueCard(result: items[i]),
-            ),
-          ),
-        ),
-        if (!searching && tonight.length >= 2)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(22),
-              child: ModernCommand(
-                shape: CommandShape.surprise,
-                label: 'Quoi regarder ce soir ?',
-                subtitle: 'Dans ta propre collection',
-                onPressed: () => showTonightPicker(context, tonight),
-              ),
-            ),
-          ),
-        SliverToBoxAdapter(child: SizedBox(height: bottomNavInset(context))),
-      ],
+      ),
     );
   }
 }
 
+class _DiscoveryRail extends StatelessWidget {
+  const _DiscoveryRail({
+    required this.title,
+    required this.items,
+    required this.loading,
+    required this.hasError,
+    required this.onRetry,
+    required this.width,
+    required this.scale,
+    required this.onSeeAll,
+  });
+  final String title;
+  final List<MediaSearchResult> items;
+  final bool loading, hasError;
+  final VoidCallback onRetry, onSeeAll;
+  final double width, scale;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 22),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 0, 14, 6),
+          child: Flex(
+            direction: scale > 1.4 ? Axis.vertical : Axis.horizontal,
+            crossAxisAlignment: scale > 1.4
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.center,
+            children: [
+              Flexible(
+                flex: scale > 1.4 ? 0 : 1,
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -.5,
+                  ),
+                ),
+              ),
+              if (items.isNotEmpty)
+                Tooltip(
+                  message: 'Tout voir : $title',
+                  child: TextButton(
+                    onPressed: onSeeAll,
+                    style: TextButton.styleFrom(
+                      foregroundColor: ModernPalette.lilac,
+                      minimumSize: const Size(48, 48),
+                    ),
+                    child: const Text(
+                      'Tout voir',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (loading)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(22, 8, 22, 20),
+            child: LinearProgressIndicator(minHeight: 2),
+          ),
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22),
+            child: ErrorRetry(
+              title: 'Chargement indisponible',
+              message: 'Vérifie ta connexion et réessaie.',
+              onRetry: onRetry,
+            ),
+          ),
+        if (items.isNotEmpty)
+          SizedBox(
+            height: width * 1.325 + 72 * scale,
+            child: ListView.separated(
+              key: PageStorageKey('explorer-rail-$title'),
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              itemCount: items.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 13),
+              itemBuilder: (context, i) => SizedBox(
+                width: width,
+                child: EntranceFade(
+                  key: ValueKey(
+                    '${items[i].type}-${items[i].tvdbId}-${items[i].name}',
+                  ),
+                  child: _CatalogueCard(result: items[i], localizeTitle: true),
+                ),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+// Chargement paresseux : seules les affiches montées demandent une traduction.
+final _catalogueTitleProvider =
+    FutureProvider.family<
+      String?,
+      ({int id, bool movies, bool englishFallback})
+    >((ref, key) async {
+      final client = ref.watch(tvdbClientProvider);
+      for (final language in ['fra', if (key.englishFallback) 'eng']) {
+        final data = key.movies
+            ? await client.movieTranslation(key.id, language)
+            : await client.seriesTranslation(key.id, language);
+        final name = '${data['name'] ?? ''}'.trim();
+        if (name.isNotEmpty) return name;
+      }
+      return null;
+    });
+
 class _CatalogueCard extends ConsumerWidget {
-  const _CatalogueCard({required this.result});
+  const _CatalogueCard({required this.result, this.localizeTitle = false});
   final MediaSearchResult result;
+  final bool localizeTitle;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final r = result, isSeries = r.type == SearchMediaType.series;
+    final nonLatinTitle = RegExp(
+      r'[\u3040-\u30ff\u3400-\u9fff]',
+    ).hasMatch(r.name);
+    final translated = r.tvdbId != null && (localizeTitle || nonLatinTitle)
+        ? ref
+              .watch(
+                _catalogueTitleProvider((
+                  id: r.tvdbId!,
+                  movies: !isSeries,
+                  englishFallback: nonLatinTitle,
+                )),
+              )
+              .value
+        : null;
+    final name = translated ?? r.name;
     final already = isSeries
         ? (ref.watch(showsProvider).value ?? []).any(
             (s) => s.show.id == r.tvdbId,
@@ -474,7 +699,7 @@ class _CatalogueCard extends ConsumerWidget {
               children: [
                 Semantics(
                   button: true,
-                  label: 'Ouvrir la fiche de ${r.name}',
+                  label: 'Ouvrir la fiche de $name',
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: r.tvdbId == null
@@ -483,7 +708,7 @@ class _CatalogueCard extends ConsumerWidget {
                             context,
                             id: r.tvdbId!,
                             isSeries: isSeries,
-                            title: r.name,
+                            title: name,
                           ),
                     child: MediaImage(
                       sources: [r.image],
@@ -499,7 +724,7 @@ class _CatalogueCard extends ConsumerWidget {
                     child: AddButton(
                       id: r.tvdbId!,
                       isSeries: isSeries,
-                      name: r.name,
+                      name: name,
                       already: already,
                       compact: true,
                     ),
@@ -510,7 +735,7 @@ class _CatalogueCard extends ConsumerWidget {
         ),
         const SizedBox(height: 9),
         Text(
-          r.name,
+          name,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
@@ -522,7 +747,9 @@ class _CatalogueCard extends ConsumerWidget {
         const SizedBox(height: 4),
         Text(
           [
-            isSeries ? 'Série' : 'Film',
+            r.isAnime
+                ? (isSeries ? 'Animé' : 'Film animé')
+                : (isSeries ? 'Série' : 'Film'),
             if (r.year != null) r.year!,
             if (r.originalName != null) r.originalName!,
           ].join(' · '),
@@ -535,8 +762,7 @@ class _CatalogueCard extends ConsumerWidget {
   }
 }
 
-/// Bouton d'ajout, du « + » à la coche. Il dit explicitement « Ajouté » plutôt
-/// que d'afficher une icône sans contexte.
+/// Bascule la présence dans la collection, du « + » à la coche et inversement.
 class AddButton extends ConsumerStatefulWidget {
   const AddButton({
     super.key,
@@ -562,23 +788,124 @@ class AddButton extends ConsumerStatefulWidget {
 class _AddButtonState extends ConsumerState<AddButton> {
   bool _busy = false;
 
+  Future<void> _remove() async {
+    if (_busy) return;
+    HapticFeedback.lightImpact();
+    setState(() => _busy = true);
+    final db = ref.read(databaseProvider);
+    final messenger = NitrateMessenger.of(context);
+    final id = widget.id, isSeries = widget.isSeries;
+    final name = widget.name;
+    try {
+      if (isSeries) {
+        final watched = await db.hasWatchedEpisodes(id);
+        if (!mounted) return;
+        if (watched) {
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text('Retirer « $name » ?'),
+              content: const Text(
+                'La série et sa progression seront supprimées.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Annuler'),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: TtColors.danger,
+                  ),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Retirer'),
+                ),
+              ],
+            ),
+          );
+          if (confirmed != true || !mounted) return;
+        }
+        await db.deleteShow(id);
+      } else {
+        final movie = await db.movieById(id);
+        if (!mounted || movie == null) return;
+        if (movie.watchedAt != null) {
+          final confirmed = await confirmMovieRemoval(context, movie);
+          if (!confirmed || !mounted) return;
+        }
+        await db.deleteMovie(id);
+      }
+      if (messenger.mounted) {
+        messenger.showBanner(
+          NitrateBanner(
+            kind: NitrateBannerKind.success,
+            content: Text(
+              isSeries
+                  ? '$name retirée de Mes séries'
+                  : '$name retiré de mes films',
+              style: const TextStyle(color: Colors.white),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (_) {
+      if (messenger.mounted) {
+        messenger.showBanner(
+          const NitrateBanner(
+            kind: NitrateBannerKind.error,
+            content: Text(
+              'Impossible de retirer ce titre. Réessaie.',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _add() async {
     if (_busy || widget.already) return;
     HapticFeedback.lightImpact();
     setState(() => _busy = true);
     final db = ref.read(databaseProvider);
     final tvdb = ref.read(tvdbClientProvider);
+    // Capture the host before the database notification can rebuild a card.
+    final messenger = NitrateMessenger.of(context);
+    final router = GoRouter.maybeOf(context);
+    final id = widget.id, isSeries = widget.isSeries;
     try {
-      if (widget.isSeries) {
-        await addShowFromTvdb(db, tvdb, widget.id);
-      } else {
-        await addMovieFromTvdb(db, tvdb, widget.id);
+      final name = isSeries
+          ? await addShowFromTvdb(db, tvdb, id)
+          : await addMovieFromTvdb(db, tvdb, id);
+      if (messenger.mounted) {
+        messenger.showBanner(
+          NitrateBanner(
+            kind: NitrateBannerKind.success,
+            title: isSeries
+                ? 'Ajouté à Mes séries'
+                : 'Ajouté à mes films à voir',
+            content: Text(name),
+            duration: const Duration(seconds: 6),
+
+            action: NitrateBannerAction(
+              label: isSeries ? 'Voir la série' : 'Voir le film',
+
+              onPressed: () => router?.push(
+                isSeries ? '/show/$id' : '/movie/$id',
+                extra: name,
+              ),
+            ),
+          ),
+        );
       }
     } on TvdbException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(SnackBar(content: Text('$e')));
+      NitrateMessenger.of(context).showBanner(
+        NitrateBanner(kind: NitrateBannerKind.error, content: Text('$e')),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -592,7 +919,7 @@ class _AddButtonState extends ConsumerState<AddButton> {
         : const Duration(milliseconds: 200);
 
     final label = widget.already
-        ? 'Déjà dans ta liste : ${widget.name}'
+        ? 'Retirer ${widget.name} de ma liste'
         : 'Ajouter ${widget.name}';
 
     Widget content;
@@ -608,14 +935,14 @@ class _AddButtonState extends ConsumerState<AddButton> {
           : Row(
               mainAxisSize: MainAxisSize.min,
               children: const [
-                Icon(Icons.check, size: 17, color: TtColors.bg),
+                Icon(Icons.check, size: 17, color: ModernPalette.lilac),
                 SizedBox(width: 5),
                 Text(
                   'Ajouté',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: TtColors.bg,
+                    color: Colors.white,
                   ),
                 ),
               ],
@@ -629,10 +956,13 @@ class _AddButtonState extends ConsumerState<AddButton> {
     }
 
     return Semantics(
-      button: !widget.already,
+      button: true,
+      enabled: !_busy,
+      toggled: widget.already,
       label: label,
       child: GestureDetector(
-        onTap: widget.already ? null : _add,
+        behavior: HitTestBehavior.opaque,
+        onTap: _busy ? null : (widget.already ? _remove : _add),
         child: SizedBox(
           width: widget.already && !widget.compact ? 96 : 44,
           height: 48,

@@ -1,3 +1,4 @@
+import 'artwork_image.dart';
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
@@ -112,7 +113,7 @@ class _Poster extends StatelessWidget {
       ),
     );
     final child = (path != null && path!.isNotEmpty)
-        ? Image.network(
+        ? ArtworkImage(
             imageUrl(path!, size: 'w185'),
             width: w,
             height: double.infinity,

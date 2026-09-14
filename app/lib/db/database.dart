@@ -70,15 +70,27 @@ class Movies extends Table {
 
 /// Série + nombre d'épisodes vus, pour les listes et les stats.
 class ShowWithProgress {
-  const ShowWithProgress(this.show, this.watchedCount);
+  const ShowWithProgress(
+    this.show,
+    this.watchedCount, {
+    this.catalogTotal,
+    this.catalogWatchedCount,
+  });
 
   final Show show;
+
+  /// Tout l'historique, y compris spéciaux et anciennes références importées.
   final int watchedCount;
+  final int? catalogTotal;
+  final int? catalogWatchedCount;
+
+  int? get progressTotal => catalogTotal ?? show.totalEpisodes;
+  int get progressWatchedCount => catalogWatchedCount ?? watchedCount;
 
   double get progress {
-    final total = show.totalEpisodes;
+    final total = progressTotal;
     if (total == null || total == 0) return 0;
-    final p = watchedCount / total;
+    final p = progressWatchedCount / total;
     return p > 1 ? 1 : p;
   }
 
@@ -118,30 +130,30 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) => m.createAll(),
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.createTable(episodes);
-            await m.addColumn(shows, shows.episodesSyncedAt);
-          }
-          if (from < 3) {
-            await m.addColumn(shows, shows.genres);
-            await m.addColumn(movies, movies.genres);
-          }
-          if (from < 4) {
-            await m.addColumn(movies, movies.releaseDate);
-          }
-          if (from < 5) {
-            // Passage à TheTVDB : les données existantes utilisent des
-            // identifiants TMDB, incompatibles (404 côté TheTVDB). On repart
-            // proprement — l'utilisateur ré-ajoute / ré-importe.
-            await delete(watchedEpisodes).go();
-            await delete(episodes).go();
-            await delete(shows).go();
-            await delete(movies).go();
-          }
-        },
-      );
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.createTable(episodes);
+        await m.addColumn(shows, shows.episodesSyncedAt);
+      }
+      if (from < 3) {
+        await m.addColumn(shows, shows.genres);
+        await m.addColumn(movies, movies.genres);
+      }
+      if (from < 4) {
+        await m.addColumn(movies, movies.releaseDate);
+      }
+      if (from < 5) {
+        // Passage à TheTVDB : les données existantes utilisent des
+        // identifiants TMDB, incompatibles (404 côté TheTVDB). On repart
+        // proprement — l'utilisateur ré-ajoute / ré-importe.
+        await delete(watchedEpisodes).go();
+        await delete(episodes).go();
+        await delete(shows).go();
+        await delete(movies).go();
+      }
+    },
+  );
 
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'tracktime');
@@ -151,20 +163,42 @@ class AppDatabase extends _$AppDatabase {
 
   Stream<List<ShowWithProgress>> watchShowsWithProgress() {
     final count = watchedEpisodes.showId.count();
-    final query = select(shows).join([
-      leftOuterJoin(
-        watchedEpisodes,
-        watchedEpisodes.showId.equalsExp(shows.id),
-        useColumns: false,
-      ),
-    ])
-      ..addColumns([count])
-      ..groupBy([shows.id])
-      ..orderBy([OrderingTerm.asc(shows.name)]);
+    final matched = episodes.showId.count();
+    const catalog = CustomExpression<int>(
+      '(SELECT COUNT(*) FROM episodes e WHERE e.show_id = shows.id AND e.season > 0)',
+    );
+    final query =
+        select(shows).join([
+            leftOuterJoin(
+              watchedEpisodes,
+              watchedEpisodes.showId.equalsExp(shows.id),
+              useColumns: false,
+            ),
+            leftOuterJoin(
+              episodes,
+              episodes.showId.equalsExp(watchedEpisodes.showId) &
+                  episodes.season.equalsExp(watchedEpisodes.season) &
+                  episodes.episode.equalsExp(watchedEpisodes.episode) &
+                  episodes.season.isBiggerThanValue(0),
+              useColumns: false,
+            ),
+          ])
+          ..addColumns([count, matched, catalog])
+          ..groupBy([shows.id])
+          ..orderBy([OrderingTerm.asc(shows.name)]);
 
-    return query.watch().map((rows) => rows
-        .map((r) => ShowWithProgress(r.readTable(shows), r.read(count) ?? 0))
-        .toList());
+    return query.watch().map(
+      (rows) => rows
+          .map(
+            (r) => ShowWithProgress(
+              r.readTable(shows),
+              r.read(count) ?? 0,
+              catalogTotal: r.read(catalog) ?? 0,
+              catalogWatchedCount: r.read(matched) ?? 0,
+            ),
+          )
+          .toList(),
+    );
   }
 
   Future<Show?> showById(int id) =>
@@ -178,24 +212,28 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<Show>> watchAllShows() => select(shows).watch();
 
   Future<void> setShowGenres(int id, String genres) =>
-      (update(shows)..where((s) => s.id.equals(id)))
-          .write(ShowsCompanion(genres: Value(genres)));
+      (update(shows)..where((s) => s.id.equals(id))).write(
+        ShowsCompanion(genres: Value(genres)),
+      );
 
   /// Met à jour les compteurs d'une série après synchro des épisodes.
-  Future<void> updateShowCounts(int id,
-          {required int total, required int seasons}) =>
-      (update(shows)..where((s) => s.id.equals(id))).write(ShowsCompanion(
-        totalEpisodes: Value(total),
-        seasonCount: Value(seasons),
-      ));
+  Future<void> updateShowCounts(
+    int id, {
+    required int total,
+    required int seasons,
+  }) => (update(shows)..where((s) => s.id.equals(id))).write(
+    ShowsCompanion(totalEpisodes: Value(total), seasonCount: Value(seasons)),
+  );
 
   Future<void> setMovieGenres(int id, String genres) =>
-      (update(movies)..where((m) => m.id.equals(id)))
-          .write(MoviesCompanion(genres: Value(genres)));
+      (update(movies)..where((m) => m.id.equals(id))).write(
+        MoviesCompanion(genres: Value(genres)),
+      );
 
   Future<void> setMovieReleaseDate(int id, DateTime date) =>
-      (update(movies)..where((m) => m.id.equals(id)))
-          .write(MoviesCompanion(releaseDate: Value(date)));
+      (update(movies)..where((m) => m.id.equals(id))).write(
+        MoviesCompanion(releaseDate: Value(date)),
+      );
 
   // ---- Épisodes (cache TMDB) ----
 
@@ -203,8 +241,9 @@ class AppDatabase extends _$AppDatabase {
       batch((b) => b.insertAllOnConflictUpdate(episodes, rows));
 
   Future<void> markShowSynced(int showId, DateTime at) =>
-      (update(shows)..where((s) => s.id.equals(showId)))
-          .write(ShowsCompanion(episodesSyncedAt: Value(at)));
+      (update(shows)..where((s) => s.id.equals(showId))).write(
+        ShowsCompanion(episodesSyncedAt: Value(at)),
+      );
 
   Stream<List<Episode>> watchAllEpisodes() => select(episodes).watch();
 
@@ -229,20 +268,28 @@ class AppDatabase extends _$AppDatabase {
   /// Efface toutes les données utilisateur (séries, épisodes, films et
   /// historique de visionnage). Irréversible.
   Future<void> clearAll() => transaction(() async {
-        await delete(watchedEpisodes).go();
-        await delete(episodes).go();
-        await delete(shows).go();
-        await delete(movies).go();
-      });
+    await delete(watchedEpisodes).go();
+    await delete(episodes).go();
+    await delete(shows).go();
+    await delete(movies).go();
+  });
 
   Future<void> upsertShow(ShowsCompanion entry) =>
       into(shows).insertOnConflictUpdate(entry);
 
-  Future<void> deleteShow(int id) =>
-      (delete(shows)..where((s) => s.id.equals(id))).go();
+  Future<void> deleteShow(int id) => transaction(() async {
+    // Keep removal complete even on connections without SQLite FK enforcement.
+    await (delete(watchedEpisodes)..where((e) => e.showId.equals(id))).go();
+    await (delete(episodes)..where((e) => e.showId.equals(id))).go();
+    await (delete(shows)..where((s) => s.id.equals(id))).go();
+  });
 
-  Future<void> setEpisodeWatched(int showId, int season, int episode,
-      {DateTime? at}) {
+  Future<void> setEpisodeWatched(
+    int showId,
+    int season,
+    int episode, {
+    DateTime? at,
+  }) {
     return into(watchedEpisodes).insert(
       WatchedEpisodesCompanion.insert(
         showId: showId,
@@ -255,41 +302,58 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> setEpisodeUnwatched(int showId, int season, int episode) {
-    return (delete(watchedEpisodes)
-          ..where((e) =>
+    return (delete(watchedEpisodes)..where(
+          (e) =>
               e.showId.equals(showId) &
               e.season.equals(season) &
-              e.episode.equals(episode)))
+              e.episode.equals(episode),
+        ))
         .go();
   }
 
   Stream<List<WatchedEpisode>> watchEpisodesOf(int showId) =>
       (select(watchedEpisodes)..where((e) => e.showId.equals(showId))).watch();
 
+  Future<bool> hasWatchedEpisodes(int showId) async =>
+      await (select(watchedEpisodes)
+            ..where((e) => e.showId.equals(showId))
+            ..limit(1))
+          .getSingleOrNull() !=
+      null;
+
   /// L'épisode vu (avec sa date), ou null s'il ne l'est pas.
   Stream<WatchedEpisode?> watchWatchedEpisode(
-          int showId, int season, int episode) =>
-      (select(watchedEpisodes)
-            ..where((e) =>
+    int showId,
+    int season,
+    int episode,
+  ) =>
+      (select(watchedEpisodes)..where(
+            (e) =>
                 e.showId.equals(showId) &
                 e.season.equals(season) &
-                e.episode.equals(episode)))
+                e.episode.equals(episode),
+          ))
           .watchSingleOrNull();
 
   /// Marque comme vu tout épisode (en cache) jusqu'à (season, episode) inclus
   /// — « rattraper jusqu'ici ». S'appuie sur la table episodes (remplie par la
   /// synchro / la page série).
   Future<void> markWatchedUpTo(int showId, int season, int episode) async {
-    final eps =
-        await (select(episodes)..where((e) => e.showId.equals(showId))).get();
-    final toMark = eps.where((e) =>
-        e.season < season || (e.season == season && e.episode <= episode));
+    final eps = await (select(
+      episodes,
+    )..where((e) => e.showId.equals(showId))).get();
+    final toMark = eps.where(
+      (e) => e.season < season || (e.season == season && e.episode <= episode),
+    );
     await batch((b) {
       for (final e in toMark) {
         b.insert(
           watchedEpisodes,
           WatchedEpisodesCompanion.insert(
-              showId: showId, season: e.season, episode: e.episode),
+            showId: showId,
+            season: e.season,
+            episode: e.episode,
+          ),
           mode: InsertMode.insertOrIgnore,
         );
       }
@@ -298,9 +362,9 @@ class AppDatabase extends _$AppDatabase {
 
   /// Diffuse l'ensemble des clés "SxEy" vues pour une série, pratique pour
   /// l'écran de détail (rendu réactif des coches).
-  Stream<Set<String>> watchWatchedKeys(int showId) =>
-      watchEpisodesOf(showId).map((eps) =>
-          {for (final e in eps) 'S${e.season}E${e.episode}'});
+  Stream<Set<String>> watchWatchedKeys(int showId) => watchEpisodesOf(
+    showId,
+  ).map((eps) => {for (final e in eps) 'S${e.season}E${e.episode}'});
 
   /// Marque plusieurs épisodes comme vus en une seule transaction.
   ///
@@ -331,7 +395,11 @@ class AppDatabase extends _$AppDatabase {
 
   /// Coche/décoche toute une saison d'un coup à partir des numéros d'épisodes.
   Future<void> setSeasonWatched(
-      int showId, int season, List<int> episodeNumbers, bool watched) {
+    int showId,
+    int season,
+    List<int> episodeNumbers,
+    bool watched,
+  ) {
     return transaction(() async {
       if (watched) {
         for (final ep in episodeNumbers) {
@@ -380,21 +448,31 @@ class AppDatabase extends _$AppDatabase {
         (SELECT COUNT(*) FROM shows) AS show_count,
         (SELECT COUNT(*) FROM movies WHERE watched_at IS NULL) AS watchlist,
         (SELECT COUNT(*) FROM shows s
-           WHERE s.total_episodes IS NOT NULL AND s.total_episodes > 0
-             AND (SELECT COUNT(*) FROM watched_episodes w
-                    WHERE w.show_id = s.id) >= s.total_episodes) AS done_shows
+           WHERE EXISTS (SELECT 1 FROM episodes e
+                           WHERE e.show_id = s.id AND e.season > 0)
+             AND NOT EXISTS (
+               SELECT 1 FROM episodes e
+               WHERE e.show_id = s.id AND e.season > 0
+                 AND NOT EXISTS (
+                   SELECT 1 FROM watched_episodes w
+                   WHERE w.show_id = e.show_id AND w.season = e.season
+                     AND w.episode = e.episode
+                 )
+             )) AS done_shows
       ''',
-      readsFrom: {shows, watchedEpisodes, movies},
+      readsFrom: {shows, watchedEpisodes, episodes, movies},
     );
 
-    return query.watchSingle().map((row) => WatchStats(
-          episodeCount: row.read<int>('ep_count'),
-          tvMinutes: row.read<int>('tv_min'),
-          moviesSeen: row.read<int>('mv_seen'),
-          movieMinutes: row.read<int>('mv_min'),
-          showCount: row.read<int>('show_count'),
-          doneShowCount: row.read<int>('done_shows'),
-          watchlistCount: row.read<int>('watchlist'),
-        ));
+    return query.watchSingle().map(
+      (row) => WatchStats(
+        episodeCount: row.read<int>('ep_count'),
+        tvMinutes: row.read<int>('tv_min'),
+        moviesSeen: row.read<int>('mv_seen'),
+        movieMinutes: row.read<int>('mv_min'),
+        showCount: row.read<int>('show_count'),
+        doneShowCount: row.read<int>('done_shows'),
+        watchlistCount: row.read<int>('watchlist'),
+      ),
+    );
   }
 }

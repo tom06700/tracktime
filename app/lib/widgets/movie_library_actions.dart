@@ -5,6 +5,7 @@ import '../db/database.dart';
 import '../providers.dart';
 import '../theme.dart';
 import 'modern_controls.dart';
+import 'nitrate_banner.dart';
 
 /// Actions de la fiche : la bibliothèque reste la source du statut affiché.
 class MovieLibraryActions extends ConsumerStatefulWidget {
@@ -28,8 +29,9 @@ class _MovieLibraryActionsState extends ConsumerState<MovieLibraryActions> {
     } catch (e, st) {
       debugPrint('Action film impossible : $e\n$st');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+        NitrateMessenger.of(context).showBanner(
+          const NitrateBanner(
+            kind: NitrateBannerKind.error,
             content: Text('Modification impossible. Réessaie dans un instant.'),
           ),
         );

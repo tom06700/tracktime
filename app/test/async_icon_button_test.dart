@@ -27,7 +27,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Impossible d’enregistrer la modification. Réessaie.'),
         findsOneWidget);
-    expect(tester.widget<IconButton>(find.byType(IconButton)).onPressed,
+    expect(tester.widget<IconButton>(find.descendant(
+      of: find.byType(AsyncIconButton), matching: find.byType(IconButton),
+    )).onPressed,
         isNotNull);
     expect(tester.takeException(), isNull);
   });

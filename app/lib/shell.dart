@@ -1,3 +1,5 @@
+import 'widgets/portal/portal_transition_host.dart';
+import 'widgets/portal/portal_geometry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,7 +12,7 @@ import 'widgets/nav_bar.dart';
 import 'widgets/scroll_navigation.dart';
 
 /// Coquille principale : 4 onglets (Séries · Films · Explorer · Profil) dans
-/// un IndexedStack, surmontant le socle de navigation.
+/// une pile qui conserve les écrans, avec une traversée dédiée à Explorer.
 class HomeShell extends ConsumerWidget {
   const HomeShell({super.key});
 
@@ -33,26 +35,33 @@ class HomeShell extends ConsumerWidget {
       ExplorerScreen(),
       ProfileScreen(),
     ];
-    // Each screen owns its header; Séries and Films share the same geometry.
-    return ScrollNavigationScaffold(
-      tabIndex: tab,
-      // TickerMode : gèle les animations des onglets cachés (ex. le fond
-      // vivant du Profil), l'IndexedStack gardant leur état.
-      // Changement d'onglet instantané : aucune couche d'opacité ni de
-      // translation par-dessus l'IndexedStack. La version animée produisait
-      // un double mouvement — la page apparaissait d'abord telle quelle, puis
-      // l'animation repartait de zéro et la faisait remonter.
-      body: IndexedStack(
-        index: tab,
-        children: [
-          for (var i = 0; i < screens.length; i++)
-            TickerMode(enabled: i == tab, child: screens[i]),
-        ],
-      ),
-      bottomNavigationBar: NitrateNavBar(
-        items: _navItems,
-        selectedIndex: tab,
-        onSelected: ref.read(homeTabProvider.notifier).select,
+    return PortalTransitionHost(
+      index: tab,
+      screens: screens,
+      onSelected: ref.read(homeTabProvider.notifier).select,
+      scaffoldBuilder: (body, portal) => ScrollNavigationScaffold(
+        tabIndex: tab,
+        body: body,
+        bottomNavigationBar: AnimatedBuilder(
+          animation: portal ?? const AlwaysStoppedAnimation<double>(0),
+          child: NitrateNavBar(
+            items: _navItems,
+            selectedIndex: tab,
+            onSelected: ref.read(homeTabProvider.notifier).select,
+          ),
+          builder: (context, child) => IgnorePointer(
+            ignoring: portal != null,
+            child: ExcludeSemantics(
+              excluding: portal != null,
+              child: Opacity(
+                opacity: portal == null
+                    ? 1
+                    : 1 - portalEase(0, .42, portal.value * 2.2),
+                child: child,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

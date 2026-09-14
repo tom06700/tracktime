@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nitrate · Sélecteur animé</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header><a class="brand" href="#">nitrate<span>.</span></a><span>ÉTUDE INTERACTIVE / 02</span><span class="local">Aperçu local</span></header>
+<main>
+<section class="notes"><p class="eyebrow">SÉRIES / CHOIX DE L’ÉPISODE</p><h1>Un sélecteur<br>qui prend vie.</h1><p class="intro">Des chiffres qui roulent séparément.<br>Une sélection que tu peux faire glisser.</p>
+<div class="explanation"><span>01</span><div><strong>Des chiffres sur rouleaux</strong><p>Chaque chiffre tourne. Essaie le passage de 9 à 10.</p></div></div>
+<div class="explanation"><span>02</span><div><strong>Une réglette à faire glisser</strong><p>Les repères suivent le doigt et se calent sur l’épisode.</p></div></div>
+<div class="explanation"><span>03</span><div><strong>Un panneau avec de la profondeur</strong><p>La page recule. Tire la poignée pour refermer le panneau.</p></div></div>
+<div class="tools"><button id="replay" class="replay">Rejouer l’ouverture <span aria-hidden="true">↗</span></button><label><input type="checkbox" id="slow"> Ralenti ×3</label><label><input type="checkbox" id="reduced"> Mouvement réduit</label></div>
+<p class="footnote">Flèches, réglette ou saisie directe : tout est interactif.<br>Données de démonstration · aucun visionnage enregistré.</p>
+<p class="sources"><a href="v1/">Comparer avec la première version</a></p><p class="sources">Inspiré de <a href="https://number-flow.barvian.me/" target="_blank" rel="noreferrer">NumberFlow</a> et <a href="https://emilkowal.ski/ui/building-a-drawer-component" target="_blank" rel="noreferrer">Vaul / Emil Kowalski</a></p>
+</section>
+<section class="stage" aria-label="Aperçu interactif du panneau Nitrate"><div class="phone">
+<div class="app-background" aria-hidden="true"></div><button class="open-trigger" id="open">Choisir un épisode</button><div class="scrim" id="scrim"></div>
+<section class="sheet" id="sheet" role="dialog" aria-labelledby="sheet-title"><div class="handle-zone" id="handle" title="Tirer pour fermer"><div class="grab" aria-hidden="true"></div></div><div class="sheet-heading"><h2 id="sheet-title">Choisir un épisode</h2><button id="close" class="icon close" aria-label="Fermer le panneau"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div><p class="season">Saison 23 · 12 épisodes</p>
+<div class="stepper"><button id="previous" class="icon step" aria-label="Épisode précédent"><svg viewBox="0 0 24 24"><path d="m14 7-5 5 5 5"/></svg></button><div class="number-area"><label for="number">ÉPISODE</label><div class="number-slot"><div id="digits" aria-hidden="true"></div><input id="number" aria-label="Numéro d’épisode" inputmode="numeric" pattern="[0-9]*" value="4" autocomplete="off" maxlength="4"></div></div><button id="next" class="icon step" aria-label="Épisode suivant"><svg viewBox="0 0 24 24"><path d="m10 7 5 5-5 5"/></svg></button></div>
+<div class="ruler" id="ruler" role="slider" tabindex="0" aria-label="Choisir un épisode en glissant" aria-valuemin="1" aria-valuemax="12" aria-valuenow="4"><div class="ruler-track" id="ruler-track"></div><span class="ruler-marker" aria-hidden="true"></span></div><p class="hint">Glisse les repères ou touche le numéro</p><div class="preview" id="preview" aria-live="polite"><div id="preview-copy"></div></div><button id="confirm" class="primary"><svg viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>Ouvrir la fiche</button><div class="home-indicator" aria-hidden="true"></div></section>
+<section class="detail" id="detail" hidden><button id="back" class="icon" aria-label="Revenir au sélecteur"><svg viewBox="0 0 24 24"><path d="m14 7-5 5 5 5"/></svg></button><p class="eyebrow">ONE PIECE / SAISON 23</p><h2 id="detail-number"></h2><p id="detail-title"></p><span>Fiche de démonstration</span><button id="choose-again" class="primary">Choisir un autre épisode</button></section>
+</div></section></main><script src="app.js"></script><script src="advanced.js"></script></body></html>

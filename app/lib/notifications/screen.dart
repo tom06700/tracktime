@@ -7,6 +7,7 @@ import '../widgets/media_image.dart';
 import '../widgets/states.dart';
 import 'feed.dart';
 import 'providers.dart';
+import '../widgets/nitrate_banner.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -28,8 +29,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+        NitrateMessenger.of(context).showBanner(
+          const NitrateBanner(
+            kind: NitrateBannerKind.error,
             content: Text('Impossible de marquer comme lu. Réessaie.'),
           ),
         );

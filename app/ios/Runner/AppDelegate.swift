@@ -13,6 +13,21 @@ import UserNotifications
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    let navigationRegistrar = engineBridge.applicationRegistrar
+    navigationRegistrar.register(
+      NitrateNavigationFactory(messenger: navigationRegistrar.messenger()),
+      withId: "nitrate/native_navigation"
+    )
+    FlutterMethodChannel(
+      name: "nitrate/native_navigation",
+      binaryMessenger: navigationRegistrar.messenger()
+    ).setMethodCallHandler { call, result in
+      guard call.method == "isAvailable" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      if #available(iOS 26.0, *) { result(true) } else { result(false) }
+    }
     let channel = FlutterMethodChannel(
       name: "nitrate/notification_permission",
       binaryMessenger: engineBridge.applicationRegistrar.messenger()

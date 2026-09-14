@@ -1,3 +1,4 @@
+import 'package:tracktime/widgets/watched_check.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import 'package:tracktime/settings/prefs.dart';
 import 'package:tracktime/tmdb/tvdb.dart';
 import 'package:tracktime/screens/movies_screen.dart';
 import 'package:tracktime/theme.dart';
+import 'package:tracktime/movies/widgets/movie_poster_card.dart';
 
 /// Démonte l'arbre puis avance l'horloge : sans ça, les timers de fermeture
 /// des streams drift restent en attente et sont signalés comme fuite.
@@ -20,7 +22,11 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 1));
 }
 
-Future<void> _mount(WidgetTester tester, AppDatabase db, {Widget? child}) async {
+Future<void> _mount(
+  WidgetTester tester,
+  AppDatabase db, {
+  Widget? child,
+}) async {
   // Surface d'iPhone : la surface de test par défaut (800×600) donnerait des
   // cellules de grille démesurées, poussant les boutons hors de l'écran.
   tester.view.physicalSize = const Size(390 * 3, 844 * 3);
@@ -51,11 +57,44 @@ Future<void> _mount(WidgetTester tester, AppDatabase db, {Widget? child}) async 
 TvdbClient _silentTvdb() => TvdbClient(
   'test',
   client: MockClient(
-    (_) async => http.Response('{"data":{"token":"t"},"status":"success"}', 200),
+    (_) async =>
+        http.Response('{"data":{"token":"t"},"status":"success"}', 200),
   ),
 );
 
 void main() {
+  testWidgets(
+    'la grille compacte passe à trois colonnes et garde les actions',
+    (tester) async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+      for (var i = 0; i < 6; i++) {
+        await db.upsertMovie(
+          MoviesCompanion.insert(id: Value(i + 1), title: 'Film $i'),
+        );
+      }
+      await _mount(tester, db);
+      final wide = tester.getSize(find.byType(MoviePosterCard).first).width;
+      await tester.tap(find.byTooltip('Vue d’ensemble'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump();
+      final cards = find.byType(MoviePosterCard);
+      expect(tester.getSize(cards.first).width, lessThan(wide));
+      expect(
+        tester.getTopLeft(cards.at(0)).dy,
+        tester.getTopLeft(cards.at(2)).dy,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byTooltip('Grandes affiches'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pump();
+      expect(tester.getSize(cards.first).width, wide);
+      await _settle(tester);
+    },
+  );
+
   testWidgets('une liste vide propose d\'aller explorer', (tester) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
@@ -72,7 +111,8 @@ void main() {
       ),
     );
 
-    expect(find.text('Aucun film dans ta liste'), findsOneWidget);
+    expect(find.text('Ton prochain film t’attend.'), findsOneWidget);
+    expect(find.bySemanticsLabel('Traverser la porte vers Explorer'), findsOneWidget);
 
     await tester.tap(find.text('Explorer les films'));
     await tester.pump();
@@ -111,15 +151,9 @@ void main() {
     await _mount(tester, db);
     expect(find.text('Dune'), findsOneWidget);
 
-    // Ciblage par icône plutôt que par label sémantique : find.bySemanticsLabel
-    // exige d'activer l'arbre sémantique, que ce test n'a pas besoin d'ouvrir.
-    await tester.tap(find.byIcon(Icons.check));
+    await tester.tap(find.text('Vu'));
     await tester.pump();
-    // Le bouton attend 220 ms avant d'écrire. Ce délai vit dans l'horloge
-    // simulée : seul pump(Duration) le fait avancer — runAsync, qui bascule sur
-    // l'horloge réelle, laisserait le timer en suspens.
-    await tester.pump(const Duration(milliseconds: 300));
-    // Puis du temps réel : l'écriture drift ne dépend pas de l'horloge simulée.
+    // L’écriture démarre immédiatement, sans délai d’animation préalable.
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 80)),
     );
@@ -127,10 +161,14 @@ void main() {
     final movies = await db.allMovies();
     expect(movies.single.watchedAt, isNotNull);
 
-    // Le film quitte la collection et bascule vers la page des films vus.
-    for (var i = 0; i < 5; i++) {
-      await tester.pump(const Duration(milliseconds: 40));
-    }
+    // La carte reste en place pour la coche, puis rejoint l’historique.
+    await tester.pump();
+    expect(find.text('Dune'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate((w) => w is WatchedCheck && w.confirmed),
+      findsOneWidget,
+    );
+    await tester.pump(const Duration(milliseconds: 600));
     expect(find.text('Dune'), findsNothing);
     expect(find.textContaining('Films vus'), findsOneWidget);
 
@@ -155,10 +193,7 @@ void main() {
         rel('B', DateTime(2026, 9, 24)),
       ]);
 
-      expect(groups.map((g) => g.label), [
-        'septembre 2026',
-        'décembre 2026',
-      ]);
+      expect(groups.map((g) => g.label), ['septembre 2026', 'décembre 2026']);
       // Chronologique à l'intérieur d'un mois.
       expect(groups.first.movies.map((m) => m.movie.title), ['A', 'B']);
     });

@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+import 'screens/portal_preview_screen.dart';
+import 'screens/portal_pbr_preview_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,20 +24,36 @@ import 'onboarding/welcome_screen.dart';
 /// seule page au-dessus de la coquille, d'où une seule animation de retour.
 final router = GoRouter(
   routes: [
+    if (!kReleaseMode)
+      GoRoute(
+        path: '/_preview/portal-pbr',
+        builder: (_, _) => const PortalPbrPreviewScreen(),
+      ),
+    if (!kReleaseMode)
+      GoRoute(
+        path: '/_preview/portal',
+        builder: (_, _) => const PortalPreviewScreen(),
+      ),
     GoRoute(
-        path: '/', builder: (_, _) => const WelcomeGate(child: HomeShell())),
+      path: '/',
+      builder: (_, _) => const WelcomeGate(child: HomeShell()),
+    ),
     GoRoute(
-        path: '/welcome',
-        builder: (context, _) => IntroFlow(
-              onFinish: () async {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/');
-                }
-              },
-            )),
-    GoRoute(path: '/notifications', builder: (_, _) => const NotificationsScreen()),
+      path: '/welcome',
+      builder: (context, _) => IntroFlow(
+        onFinish: () async {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/');
+          }
+        },
+      ),
+    ),
+    GoRoute(
+      path: '/notifications',
+      builder: (_, _) => const NotificationsScreen(),
+    ),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
     GoRoute(path: '/import', builder: (_, _) => const ImportPage()),
     GoRoute(path: '/series', builder: (_, _) => const SeriesLibraryScreen()),
@@ -73,18 +92,17 @@ final router = GoRouter(
           reverseTransitionDuration: const Duration(milliseconds: 260),
           transitionsBuilder: (context, anim, _, child) =>
               reduceMotionOf(context)
-                  ? child
-                  : SlideTransition(
-                      position:
-                          Tween(begin: const Offset(0, 1), end: Offset.zero)
-                              .animate(
+              ? child
+              : SlideTransition(
+                  position: Tween(begin: const Offset(0, 1), end: Offset.zero)
+                      .animate(
                         CurvedAnimation(
                           parent: anim,
                           curve: Curves.easeOutCubic,
                         ),
                       ),
-                      child: child,
-                    ),
+                  child: child,
+                ),
           child: EpisodeSheet(
             showId: int.parse(p['showId']!),
             season: int.parse(p['season']!),

@@ -15,16 +15,18 @@ import '../widgets/common.dart';
 import '../widgets/media_image.dart';
 import '../widgets/modern_controls.dart';
 import '../widgets/states.dart';
+import '../widgets/nitrate_banner.dart';
 
 /// Pack 03: one catalogue load, a lazy season carousel and explicit watch writes.
 class EpisodeSheet extends ConsumerStatefulWidget {
-  const EpisodeSheet(
-      {super.key,
-      required this.showId,
-      required this.showName,
-      required this.season,
-      required this.initialEpisode,
-      this.posterPath});
+  const EpisodeSheet({
+    super.key,
+    required this.showId,
+    required this.showName,
+    required this.season,
+    required this.initialEpisode,
+    this.posterPath,
+  });
   final int showId, season, initialEpisode;
   final String showName;
   final String? posterPath;
@@ -144,15 +146,23 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
     } on CatchUpChanged {
       _message('La progression a changé. Vérifie et confirme à nouveau.');
     } catch (_) {
-      _message('Impossible de modifier la progression. Réessaie.');
+      _message(
+        'Impossible de modifier la progression. Réessaie.',
+        kind: NitrateBannerKind.error,
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  void _message(String text) {
+  void _message(
+    String text, {
+    NitrateBannerKind kind = NitrateBannerKind.info,
+  }) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+      NitrateMessenger.of(
+        context,
+      ).showBanner(NitrateBanner(kind: kind, content: Text(text)));
     }
   }
 
@@ -171,30 +181,38 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('Annuler')),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Ajouter')),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ajouter'),
+          ),
         ],
       ),
     );
     if (add == true && mounted) {
-      await addShowFromTvdb(db, ref.read(tvdbClientProvider), widget.showId,
-          preferredName: widget.showName);
-      _message('Série ajoutée. Tu peux maintenant marquer tes épisodes vus.');
+      await addShowFromTvdb(
+        db,
+        ref.read(tvdbClientProvider),
+        widget.showId,
+        preferredName: widget.showName,
+      );
+      _message(
+        'Série ajoutée. Tu peux maintenant marquer tes épisodes vus.',
+        kind: NitrateBannerKind.success,
+      );
     }
     // Adding is explicit and never also records a viewing.
     return false;
   }
 
   Future<void> _toggle(int number, bool watched) => _run(() async {
-        final db = ref.read(databaseProvider);
-        if (watched) {
-          await db.setEpisodeUnwatched(widget.showId, widget.season, number);
-        } else {
-          if (!await _requireFollowed() || !mounted) return;
-          await db.setEpisodeWatched(widget.showId, widget.season, number);
-        }
-        if (mounted) HapticFeedback.lightImpact();
-      });
+    final db = ref.read(databaseProvider);
+    if (watched) {
+      await db.setEpisodeUnwatched(widget.showId, widget.season, number);
+    } else {
+      if (!await _requireFollowed() || !mounted) return;
+      await db.setEpisodeWatched(widget.showId, widget.season, number);
+    }
+    if (mounted) HapticFeedback.lightImpact();
+  });
 
   Future<void> _catchUp(int number) => _run(() async {
         final db = ref.read(databaseProvider);
@@ -240,25 +258,31 @@ class _EpisodeSheetState extends ConsumerState<EpisodeSheet>
       });
 
   Future<void> _undo() => _run(() async {
-        final receipt = _receipt;
-        if (receipt == null) return;
-        final removed =
-            await EpisodeCatchUp(ref.read(databaseProvider)).undo(receipt);
-        if (mounted) setState(() => _receipt = null);
-        _message('$removed visionnages du rattrapage annulés.');
-      });
+    final receipt = _receipt;
+    if (receipt == null) return;
+    final removed = await EpisodeCatchUp(
+      ref.read(databaseProvider),
+    ).undo(receipt);
+    if (mounted) setState(() => _receipt = null);
+    _message(
+      '$removed visionnages du rattrapage annulés.',
+      kind: NitrateBannerKind.success,
+    );
+  });
 
   Future<void> _all() async {
     if (_busy) return;
     final index = await showModalBottomSheet<int>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: const Color(0xFF19191F),
-        builder: (_) => _EpisodePicker(
-            showId: widget.showId,
-            season: widget.season,
-            episodes: _episodes!,
-            current: _current));
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF19191F),
+      builder: (_) => _EpisodePicker(
+        showId: widget.showId,
+        season: widget.season,
+        episodes: _episodes!,
+        current: _current,
+      ),
+    );
     if (mounted && index != null) await _select(index);
   }
 

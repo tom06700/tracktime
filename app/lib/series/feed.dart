@@ -11,6 +11,7 @@ class NextUp {
     this.remaining,
     required this.precise,
     this.lastActivity,
+    this.lastWatchedAt,
   });
 
   final Show show;
@@ -30,6 +31,9 @@ class NextUp {
   /// Dernier visionnage sur cette série, ou son ajout si rien n'a été vu.
   /// Sert au libellé « ça fait un moment » de la section « À reprendre ».
   final DateTime? lastActivity;
+
+  /// Dernier visionnage uniquement : un ajout ne vaut pas un épisode vu.
+  final DateTime? lastWatchedAt;
 
   String get code =>
       'S${season.toString().padLeft(2, '0')} | E${episode.toString().padLeft(2, '0')}';
@@ -69,6 +73,19 @@ class SeriesFeed {
   final List<HistoryEntry> history;
   final List<NextUp> toWatch;
   final List<NextUp> stale;
+
+  /// La reprise privilégie le visionnage, même au-delà du seuil « délaissé ».
+  /// Les séries jamais commencées suivent, par date d'ajout décroissante.
+  List<NextUp> get resumeQueue => [...toWatch, ...stale]..sort((a, b) {
+    final aw = a.lastWatchedAt;
+    final bw = b.lastWatchedAt;
+    if (aw != null && bw == null) return -1;
+    if (aw == null && bw != null) return 1;
+    final recent = aw != null && bw != null
+        ? bw.compareTo(aw)
+        : b.show.addedAt.compareTo(a.show.addedAt);
+    return recent != 0 ? recent : a.show.id.compareTo(b.show.id);
+  });
 
   bool get isEmpty => history.isEmpty && toWatch.isEmpty && stale.isEmpty;
 }
@@ -273,6 +290,7 @@ SeriesFeed buildSeriesFeed({
       remaining: s.next.remaining,
       precise: s.next.precise,
       lastActivity: s.activity,
+      lastWatchedAt: lastWatchedByShow[s.next.show.id]?.watchedAt,
     );
     (s.activity.isBefore(threshold) ? stale : toWatch).add(next);
   }

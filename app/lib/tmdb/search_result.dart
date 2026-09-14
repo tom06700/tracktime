@@ -15,6 +15,7 @@ class MediaSearchResult {
     this.originalName,
     this.image,
     this.year,
+    this.isAnime = false,
   });
 
   /// Identifiant TheTVDB. Peut être nul : le résultat reste affichable, mais
@@ -32,6 +33,7 @@ class MediaSearchResult {
 
   final String? image;
   final String? year;
+  final bool isAnime;
 
   /// Titres alternatifs, utilisés pour le classement.
   final List<String> aliases;
@@ -127,7 +129,24 @@ MediaSearchResult? parseSearchResult(Map<String, dynamic> raw) {
     image: image == null || '$image'.isEmpty ? null : '$image',
     year: year == null || '$year'.isEmpty ? null : '$year',
     aliases: aliases,
+    isAnime: isAnimeMetadata(raw),
   );
+}
+
+/// Une œuvre japonaise n'est pas forcément animée : le genre est nécessaire.
+/// Les films emploient parfois Animation à la place du genre Anime.
+bool isAnimeMetadata(Map<String, dynamic> raw) {
+  final genres = ((raw['genres'] as List?) ?? const [])
+      .map((g) => normalizeTitle(g is Map ? '${g['name'] ?? ''}' : '$g'))
+      .toSet();
+  if (genres.contains('anime')) return true;
+  final japanese = [
+    raw['country'],
+    raw['originalCountry'],
+    raw['primary_language'],
+    raw['originalLanguage'],
+  ].any((value) => '$value'.toLowerCase() == 'jpn');
+  return genres.contains('animation') && japanese;
 }
 
 /// Convertit et déduplique une réponse brute.
