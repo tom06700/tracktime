@@ -9,7 +9,8 @@ import '../widgets/portal/portal_geometry.dart';
 import '../widgets/portal/pbr/portal_pbr_renderer.dart';
 import 'explorer_screen.dart';
 
-/// A comparison lab only exposed by a non-release route. Collections stay intact.
+/// Comparison lab accessible from Settings, including TestFlight builds.
+/// Collections stay intact.
 class PortalPbrPreviewScreen extends StatefulWidget {
   const PortalPbrPreviewScreen({super.key});
   @override

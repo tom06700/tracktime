@@ -24,11 +24,10 @@ import 'onboarding/welcome_screen.dart';
 /// seule page au-dessus de la coquille, d'où une seule animation de retour.
 final router = GoRouter(
   routes: [
-    if (!kReleaseMode)
-      GoRoute(
-        path: '/_preview/portal-pbr',
-        builder: (_, _) => const PortalPbrPreviewScreen(),
-      ),
+    GoRoute(
+      path: '/_preview/portal-pbr',
+      builder: (_, _) => const PortalPbrPreviewScreen(),
+    ),
     if (!kReleaseMode)
       GoRoute(
         path: '/_preview/portal',

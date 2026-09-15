@@ -188,16 +188,15 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
 
-          if (!kReleaseMode)
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.view_in_ar_outlined),
-                title: const Text('Portail · Studio 3D'),
-                subtitle: const Text('Comparer les matières et la lumière'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/_preview/portal-pbr'),
-              ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.view_in_ar_outlined),
+              title: const Text('Portail · Studio 3D'),
+              subtitle: const Text('Comparer les matières et la lumière'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/_preview/portal-pbr'),
             ),
+          ),
 
           // ── Zone dangereuse ──
           const Padding(

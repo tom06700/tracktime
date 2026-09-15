@@ -1,8 +1,12 @@
 # Prototype PBR — Nitrate
 
 Prototype demandé et approuvé : comparer la porte validée avec un vrai moteur
-PBR avant de remplacer la version des états vides. Entrée hors release :
+PBR avant de remplacer la version des états vides. Entrée dans les réglages :
 Réglages → Portail · Studio 3D ; route /_preview/portal-pbr.
+
+Le 15 septembre, accès activé également en release à la demande de l’utilisateur
+pour tester via TestFlight. La route et la carte des réglages sont toutes deux
+disponibles ; le rendu des états vides n’est pas remplacé par ce prototype.
 
 ## Rendu et comparaison
 
