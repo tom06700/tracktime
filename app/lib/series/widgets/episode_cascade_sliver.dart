@@ -70,8 +70,7 @@ class _EpisodeCascadeSliverState extends State<EpisodeCascadeSliver>
         index,
         (context, animation) => IgnorePointer(
           child: ExcludeSemantics(
-            child: SizeTransition(
-              axisAlignment: -1,
+            child: _EpisodeSizeTransition(
               sizeFactor: animation.drive(
                 CurveTween(
                   curve: const Interval(0, .66, curve: Curves.easeOutCubic),
@@ -162,10 +161,9 @@ class _EpisodeCascadeSliverState extends State<EpisodeCascadeSliver>
           findChildIndexCallback: widget.findChildIndexCallback,
           itemBuilder: (context, index, animation) {
             final child = item(context, dataIndexes[_ids[index]]!, index);
-            return SizeTransition(
+            return _EpisodeSizeTransition(
               key: child.key,
               sizeFactor: animation,
-              axisAlignment: -1,
               child: FadeTransition(opacity: animation, child: child),
             );
           },
@@ -179,6 +177,30 @@ class _EpisodeCascadeSliverState extends State<EpisodeCascadeSliver>
         },
       );
     },
+  );
+}
+
+/// Top-anchored vertical reveal, compatible with both the local Flutter 3.41
+/// and newer CI SDKs (SizeTransition's alignment API differs between them).
+class _EpisodeSizeTransition extends AnimatedWidget {
+  const _EpisodeSizeTransition({
+    super.key,
+    required Animation<double> sizeFactor,
+    required this.child,
+  }) : super(listenable: sizeFactor);
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ClipRect(
+    child: Align(
+      alignment: AlignmentDirectional.topStart,
+      heightFactor: (listenable as Animation<double>).value.clamp(
+        0.0,
+        double.infinity,
+      ),
+      child: child,
+    ),
   );
 }
 
